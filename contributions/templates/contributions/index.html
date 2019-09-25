@@ -1,0 +1,9 @@
+{% if latest_commit_list %}
+    <ul>
+    {% for commit in latest_commit_list %}
+        <li><a href="/contributions/{{ commit.id }}/">{{ commit.msg }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No commits are available.</p>
+{% endif %}
