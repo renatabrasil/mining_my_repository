@@ -1,7 +1,11 @@
+<strong>Projeto:</strong> {{ project.project_name}}
+<br/>
+<strong>Tag:</strong> rel/1.3
+
 {% if latest_commit_list %}
     <ul>
     {% for commit in latest_commit_list %}
-        <li><a href="/contributions/{{ commit.id }}/">{{ commit.msg }}</a></li>
+        <li><a href="/contributions/{{ commit.id }}/">{{ commit.author.name}} - {{commit.author_date}}</a></li>
     {% endfor %}
     </ul>
 {% else %}

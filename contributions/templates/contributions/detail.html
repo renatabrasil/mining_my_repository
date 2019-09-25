@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<table>
+    <tr>
+        <th>Autor:</th>
+        <td>{{commit.author.name}}</td>
+    </tr>
+    <tr>
+        <th>Committer:</th>
+        <td>{{commit.committer.name}}</td>
+    </tr>
+    <tr>
+        <th>Data:</th>
+        <td>{{commmit.committer_date}}</td>
+    </tr>
+    <tr>
+        <th>Hash</th>
+        <td>{{commit.hash}}</td>
+    </tr>
+    <tr>
+        <th>Mensagem do commit:</th>
+        <td>{{commit.msg}}</td>
+    </tr>
+    <tr>
+        {% for modification in commit.modification.all %}
+    <li>{{ choice.choice_text }}</li>
+{% endfor %}
+    </tr>
+
+
+</table>
+</body>
+</html>

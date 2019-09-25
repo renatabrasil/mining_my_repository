@@ -6,14 +6,14 @@ class Developer(models.Model):
 	name = models.CharField(max_length=200)
 	email = models.CharField(max_length=200)
     # def __str__(self):
-    #     return self.developer_text
+    #     return self.name
 
 class Project(models.Model):
 	project_name = models.CharField(max_length=200)
 	project_path = models.CharField(max_length=200)
 
 class Commit(models.Model):
-	project = models.ForeignKey(Project, on_delete=models.CASCADE)
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='commits')
 	hash = models.CharField(max_length=300)
 	msg = models.CharField(max_length=300)
 	author = models.ForeignKey(Developer, related_name='author_id', on_delete=models.CASCADE)
@@ -26,6 +26,7 @@ class Method(models.Model):
 	name = models.CharField(max_length=150)
 
 class Modification(models.Model):
+	commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
 	old_path = models.CharField(max_length=100)
 	new_path = models.CharField(max_length=100)
 	ADDED = 'ADD'
