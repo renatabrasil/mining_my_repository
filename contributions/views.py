@@ -29,21 +29,32 @@ def index(request):
                     if author.count() == 0:
                         author = Developer(name=commit_repository.author.name, email=commit_repository.author.email)
                         author.save()
-                    committer = Developer.objects.filter(name=commit_repository.committer.name)
-                    if committer.count() == 0:
-                        committer = Developer(name=commit_repository.committer.name, email=commit_repository.committer.email)
-                        committer.save()
+                    else:
+                        author = author[0]
+                    if commit_repository.author.name == commit_repository.committer.name:
+                        committer = author
+                    else:
+                        committer = Developer.objects.filter(name=commit_repository.committer.name)
+                        if committer.count() == 0:
+                            committer = Developer(name=commit_repository.committer.name, email=commit_repository.committer.email)
+                            committer.save()
+                        else:
+                            committer = committer[0]
                     commit = Commit.objects.create(project=project, hash=commit_repository.hash, msg=commit_repository.msg,
                                     author=author, author_date = commit_repository.author_date, committer=committer,
                                     committer_date=commit_repository.committer_date)
                     for modification_repo in commit_repository.modifications:
+                        if hasattr(modification_repo, 'token_count'):
+                            token_count = modification_repo.token_count
+                        else:
+                            token_count = None
                         modification = Modification(commit=commit, old_path=modification_repo.old_path,
                                                     new_path=modification_repo.new_path, change_type=modification_repo.change_type,
                                                     diff=modification_repo.diff, source_code=modification_repo.source_code,
                                                     source_code_before=modification_repo.source_code_before,
                                                     added=modification_repo.added, removed=modification_repo.removed,
                                                     nloc=modification_repo.nloc, complexity=modification_repo.complexity,
-                                                    token_count=modification_repo.token_count)
+                                                    token_count=token_count)
                         modification.save()
 
 

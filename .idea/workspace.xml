@@ -2,14 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9732ccea-e498-4327-9570-e0e68ba4d51d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/contributions/templates/contributions/detail.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/contributions/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/contributions/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/contributions/templates/contributions/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/contributions/templates/contributions/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/contributions/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/contributions/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/contributions/templates/contributions/detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/contributions/templates/contributions/detail.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/contributions/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/contributions/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mining_my_repository/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/mining_my_repository/settings.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -21,6 +20,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -134,26 +134,18 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>
     </option>
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/contributions/views.py</url>
-          <line>27</line>
-          <option name="timeStamp" value="8" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
-        <watch expression="author.count()" language="Python" />
-        <watch expression="committer.count()" language="Python" />
+        <watch expression="modification_repo.token_count" language="Python" />
       </configuration>
     </watches-manager>
   </component>

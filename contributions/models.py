@@ -27,8 +27,8 @@ class Method(models.Model):
 
 class Modification(models.Model):
 	commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
-	old_path = models.CharField(max_length=100)
-	new_path = models.CharField(max_length=100)
+	old_path = models.CharField(max_length=100, null=True)
+	new_path = models.CharField(max_length=100, null=True)
 	ADDED = 'ADD'
 	DELETED = 'DEL'
 	MODIFIED = 'MOD'
@@ -45,11 +45,11 @@ class Modification(models.Model):
 		default=MODIFIED,
 	)
 	diff = models.TextField()
-	source_code = models.TextField()
-	source_code_before = models.TextField()
-	added = models.IntegerField()
-	removed = models.IntegerField()
-	nloc = models.IntegerField()
-	complexity = models.IntegerField()
-	token_count = models.IntegerField()
+	source_code = models.TextField(null=True)
+	source_code_before = models.TextField(null=True)
+	added = models.IntegerField(null=True)
+	removed = models.IntegerField(null=True)
+	nloc = models.IntegerField(null=True)
+	complexity = models.IntegerField(null=True)
+	token_count = models.CharField(max_length=200,null=True)
 

@@ -1,37 +1,81 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    {% load mathfilters %}
 </head>
 <body>
 
 <table>
     <tr>
-        <th>Autor:</th>
-        <td>{{commit.author.name}}</td>
+        <th style="text-align: right">Autor:</th>
+        <td colspan="2">{{commit.author.name}}</td>
     </tr>
     <tr>
-        <th>Committer:</th>
-        <td>{{commit.committer.name}}</td>
+        <th style="text-align: right">Committer:</th>
+        <td colspan="2">{{commit.committer.name}}</td>
     </tr>
     <tr>
-        <th>Data:</th>
-        <td>{{commmit.committer_date}}</td>
+        <th style="text-align: right">Data:</th>
+        <td colspan="2">{{commmit.committer_date}}</td>
     </tr>
     <tr>
-        <th>Hash</th>
-        <td>{{commit.hash}}</td>
+        <th style="text-align: right">Hash</th>
+        <td colspan="2">{{commit.hash}}</td>
     </tr>
     <tr>
-        <th>Mensagem do commit:</th>
-        <td>{{commit.msg}}</td>
+        <th style="text-align: right">Mensagem do commit:</th>
+        <td colspan="2">{{commit.msg}}</td>
     </tr>
-    <tr>
-        {% for modification in commit.modification.all %}
-    <li>{{ choice.choice_text }}</li>
-{% endfor %}
-    </tr>
+
+    {% for modification in commit.modifications.all %}
+        <tr>
+            <th style="text-align: right; vertical-align: top" rowspan="8">
+                File {{forloop.counter}}:
+            </th>
+            <td>
+                <tr>
+                    <td width="14%" style="text-decoration: underline">New path:</td>
+                    <td>{{ modification.new_path }}</td>
+                </tr>
+                <tr>
+                    <td width="14%" style="text-decoration: underline">Old path:</td>
+                    <td>{{ modification.old_path }}</td>
+                </tr>
+                <tr>
+                    <td width="14%" style="text-decoration: underline">Change type:</td>
+                    <td>{{ modification.change_type }}</td>
+                </tr>
+                <tr>
+                    <td style="text-decoration: underline">Delta:</td>
+                    <td>
+                        {{ modification.added |sub:modification.removed }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-decoration: underline">Number of lines added:</td>
+                    <td>
+                        {{ modification.added }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-decoration: underline">Number of lines removed:</td>
+                    <td>
+                        {{ modification.removed }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-decoration: underline">Number of lines:</td>
+                    <td>
+                        {{ modification.nloc }}
+                    </td>
+                </tr>
+            </td>
+        </tr>
+    {% endfor %}
+
 
 
 </table>
