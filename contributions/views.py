@@ -61,15 +61,21 @@ def index(request):
                                                     token_count=token_count)
                         modification.save()
 
+    url_path = 'contributions/index.html'
     if request.GET.get('commits'):
+        latest_commit_list = process_commits(project.commits.all())
+        url_path = 'developers/detail.html'
+    elif request.GET.get('directories'):
+        latest_commit_list = process_commits_by_directories(project.commits.all())
+        url_path = 'contributions/detail_by_directories.html'
+    else:
         latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
                                                                                                       "committer_date")
-    else:
-        latest_commit_list = process_commits(project.commits.all())
+
 
     # latest_commit_list = Commit.objects.all()[:10]
     # commits_by_author = Commit.objects.raw("SELECT * FROM contributions_Commit GROUP BY author_id")
-    template = loader.get_template('contributions/index.html')
+    template = loader.get_template(url_path)
     context = {
         'latest_commit_list': latest_commit_list,
         # 'latest_commit_list': processed_commits,
@@ -142,7 +148,37 @@ def process_commits(commits):
         commit_by_committer[key][2] = (weight*number_of_commits)/(total_delta*total_commits)
     return commit_by_committer
 
+# Other methods (most auxiliary)
+# dictionary = key: directory
+#              value: dictionary author
+# dictionary author:
+#       key: author
+#       [0] list of commits
+#       [1] total number of files committed
+#       [2] % contribution
 def process_commits_by_directories(commits):
     commits_by_directory = {}
+    for commit in commits:
+        number_of_files = 0
+
+        # for directory in commit.directories2():
+        #     if directory not in commits_by_directory:
+        #         commits_by_directory.setdefault(directory, {})
+        #     if commit.committer not in commits_by_directory[directory]:
+        #         commits_by_directory[directory].setdefault(commit.committer, [[], 0, 0])
+        #     commits_by_directory[directory][commit.committer][1] = commits_by_directory[directory][commit.committer][1] + commit.number_of_java_files
+        #     commits_by_directory[directory][commit.committer][0].append(commit)
+
+        for modification in commit.modifications.all():
+
+            if modification.directory not in commits_by_directory:
+                commits_by_directory.setdefault(modification.directory, {})
+            if commit.committer not in commits_by_directory[modification.directory]:
+                commits_by_directory[modification.directory].setdefault(commit.committer, [[], 0, 0])
+            if modification.is_java_file:
+                commits_by_directory[modification.directory][commit.committer][1] = commits_by_directory[modification.directory][commit.committer][1] + 1
+            if commit not in commits_by_directory[modification.directory][commit.committer][0]:
+                commits_by_directory[modification.directory][commit.committer][0].append(commit)
+
 
     return commits_by_directory

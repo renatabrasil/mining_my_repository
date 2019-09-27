@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load contributions_extra %}
+
+{% block title %}Detalhes dos commits{% endblock %}
+
+{% block content %}
+<h3>Commits por diretórios</h3>
+
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Committer</th>
+                <th style="text-align:right"># de commits</th>
+                <th style="text-align:right"># de .java commitados</th>
+                <th>% Contribuicao</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if latest_commit_list %}
+                {% for directory,infos in latest_commit_list.items %}
+                    <tr class="p-3 mb-2 bg-secondary text-white">
+                        <td colspan="4"><strong>{{directory}}</strong></td>
+                    </tr>
+                    {% for committer,info in infos.items %}
+                    <tr >
+                        <td>{{committer.name}}</td>
+                        <td style="text-align:right"> {{info|get:0|length}}</td>
+                        <td style="text-align:right"> {{info|get:1}}</td>
+                        <td></td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="p-3 mb-2 bg-info text-white">
+                        <th colspan="4">Total:</th>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="3" style="text-align:center;">No commits are available.</td>
+                </tr>
+            {% endif %}
+
+        </tbody>
+{% endblock %}

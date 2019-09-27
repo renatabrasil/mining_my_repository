@@ -3,16 +3,22 @@
 {% block title %}Commits{% endblock %}
 
 {% block content %}
-<h2>Commits</h2>
 
-<strong>Projeto:</strong> {{ project.project_name}}
-<br/>
-<strong>Tag:</strong> rel/1.3
+<div class="shadow p-3 mb-5 bg-white rounded">
+    <h5 class="text-info">Informações:</h5>
+    <strong>Projeto:</strong> {{ project.project_name}}
+    <br/>
+    <strong>Tag:</strong> rel/1.3
+</div>
+
+<h3>Commits</h3>
+
 
 <div class="alert alert-warning" role="alert">
   <h4 class="alert-heading">Aviso</h4>
   <p>Apenas commits que possuem arquivos <strong>.java</strong> serão mostrados.</p>
   <hr>
+    <p><strong>{{ latest_commit_list|length }}</strong> commits encontrados.</p>
 </div>
 
 

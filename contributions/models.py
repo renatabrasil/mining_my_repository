@@ -31,6 +31,17 @@ class Commit(models.Model):
 		return total_java_files
 
 
+	def directories2(self):
+
+		directoriesD =list()
+
+		for modification in self.modifications.all():
+			if modification.is_java_file:
+				if modification.directory not in directoriesD:
+					directoriesD.append(modification.directory)
+		return directoriesD
+
+
 class Method(models.Model):
 	name = models.CharField(max_length=150)
 
@@ -66,10 +77,11 @@ class Modification(models.Model):
 
 	@property
 	def directory(self):
-		index = self.path.rfind("/")
-		if index > -1:
-			return self.path[:index]
-		return self.path
+		if self.path:
+			index = self.path.rfind("/")
+			if index > -1:
+				return self.path[:index]
+		return "/"
 
 	@property
 	def file(self):
