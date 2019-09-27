@@ -8,6 +8,16 @@ def get(value, arg):
     return value[arg]
 
 @register.filter()
+def div(value, arg):
+    if arg == 0:
+        return 0
+    return value/arg
+
+@register.filter
+def percentage(value):
+    return format(value, ".2%")
+
+@register.filter()
 def get_field(value, args):
     if args is None:
         return False

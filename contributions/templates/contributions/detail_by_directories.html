@@ -14,14 +14,15 @@
                 <th>Committer</th>
                 <th style="text-align:right"># de commits</th>
                 <th style="text-align:right"># de .java commitados</th>
-                <th>% Contribuicao</th>
+                <th style="text-align:right">% Contribuicao (commits)</th>
+                <th style="text-align:right">% Contribuicao (arquivos)</th>
             </tr>
         </thead>
         <tbody>
             {% if latest_commit_list %}
                 {% for directory,infos in latest_commit_list.items %}
                     <tr class="p-3 mb-2 bg-secondary text-white">
-                        <td colspan="5"><strong>{{directory}}</strong></td>
+                        <td colspan="7"><strong>{{directory}}</strong></td>
                     </tr>
 
                     {% for committer,info in infos.0.items %}
@@ -30,13 +31,15 @@
                         <td>{{committer.name}}</td>
                         <td style="text-align:right"> {{info|get:0|length}}</td>
                         <td style="text-align:right"> {{info|get:1}}</td>
-                        <td></td>
+                        <td style="text-align:right">{{info|get:0|length|div:infos.1|percentage}}</td>
+                        <td style="text-align:right">{{info|get:1|div:infos.2|percentage}}</td>
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">
                         <th colspan="2">Total:</th>
                         <th style="text-align:right">{{infos.1}}</th>
                         <th style="text-align:right">{{infos.2}}</th>
+                        <td></td>
                         <td></td>
                     </tr>
                 {% endfor %}
