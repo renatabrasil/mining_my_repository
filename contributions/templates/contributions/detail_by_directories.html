@@ -23,7 +23,8 @@
                     <tr class="p-3 mb-2 bg-secondary text-white">
                         <td colspan="5"><strong>{{directory}}</strong></td>
                     </tr>
-                    {% for committer,info in infos.items %}
+
+                    {% for committer,info in infos.0.items %}
                     <tr >
                         <td>{{forloop.counter}}</td>
                         <td>{{committer.name}}</td>
@@ -33,7 +34,10 @@
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">
-                        <th colspan="5">Total:</th>
+                        <th colspan="2">Total:</th>
+                        <th style="text-align:right">{{infos.1}}</th>
+                        <th style="text-align:right">{{infos.2}}</th>
+                        <td></td>
                     </tr>
                 {% endfor %}
             {% else %}
