@@ -35,7 +35,7 @@
                 <td colspan="3" style="text-align: center;"><strong>File {{forloop.counter}} - é java? {{modification.is_java_file}}</strong></td>
             </tr>
             <tr>
-                <th style="text-align: right; vertical-align: top" rowspan="9">
+                <th style="text-align: right; vertical-align: top" rowspan="10">
                     {{modification.file}}:
                 </th>
                 <td>
@@ -58,7 +58,21 @@
                     <tr>
                         <td style="text-decoration: underline">Delta:</td>
                         <td>
-                            {{ modification.delta}}
+                            <a data-toggle="collapse" href="#collapseExample{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample">
+                               {{ modification.delta}}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr >
+                        <td colspan="2">
+                            <div class="collapse" id="collapseExample{{forloop.counter}}">
+                              <div class="card card-body">
+                                  <h5>Diff:</h5>
+                                {% autoescape on %}
+                                    {{modification.diff}}
+                                {% endautoescape %}
+                              </div>
+                            </div>
                         </td>
                     </tr>
                     <tr>

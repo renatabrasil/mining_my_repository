@@ -8,6 +8,8 @@ from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
 from contributions.models import Commit, Project, Developer, Modification
+GR = GitRepository('https://github.com/apache/ant.git')
+
 
 def index(request):
     # latest_commit_list = Commit.objects.all()[:10]
@@ -49,6 +51,7 @@ def index(request):
                             token_count = modification_repo.token_count
                         else:
                             token_count = None
+                        diff = GitRepository.parse_diff(modification.diff)
                         modification = Modification(commit=commit, old_path=modification_repo.old_path,
                                                     new_path=modification_repo.new_path, change_type=modification_repo.change_type,
                                                     diff=modification_repo.diff, source_code=modification_repo.source_code,
@@ -77,7 +80,18 @@ def index(request):
 
 def detail(request, commit_id):
     try:
+        diff = ""
+
         commit = Commit.objects.get(pk=commit_id)
+        # TODO: implement diff to show in commit details page
+        # for modification in commit.modifications.all():
+        #     parsed_lines = GR.parse_diff(modification.diff)
+        #
+        #     added = parsed_lines['added']
+        #     deleted = parsed_lines['deleted']
+        #
+        #     print('Added: {}'.format(added))  # result: Added: [(4, 'log.debug("b")')]
+        #     print('Deleted: {}'.format(deleted))  # result: Deleted: [(3, 'cc')]
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
     return render(request, 'contributions/detail.html', {'commit': commit})
