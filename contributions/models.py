@@ -22,13 +22,23 @@ class Commit(models.Model):
 	committer_date = models.DateField()
     # pub_date = models.DateTimeField('date published')
 
+	@property
+	def number_of_java_files(self):
+		total_java_files = 0
+		for modification in self.modifications.all():
+			if modification.is_java_file:
+				total_java_files = total_java_files + 1
+		return total_java_files
+
+
 class Method(models.Model):
 	name = models.CharField(max_length=150)
 
 class Modification(models.Model):
 	commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
-	old_path = models.CharField(max_length=100, null=True)
-	new_path = models.CharField(max_length=100, null=True)
+	old_path = models.CharField(max_length=200, null=True)
+	new_path = models.CharField(max_length=200, null=True)
+	path = models.CharField(max_length=200, null=True, default="-")
 	ADDED = 'ADD'
 	DELETED = 'DEL'
 	MODIFIED = 'MOD'
@@ -49,7 +59,45 @@ class Modification(models.Model):
 	source_code_before = models.TextField(null=True)
 	added = models.IntegerField(null=True)
 	removed = models.IntegerField(null=True)
+	delta = models.IntegerField(default=0)
 	nloc = models.IntegerField(null=True)
 	complexity = models.IntegerField(null=True)
 	token_count = models.CharField(max_length=200,null=True)
+
+	@property
+	def directory(self):
+		index = self.path.rfind("/")
+		if index > -1:
+			return self.path[:index]
+		return self.path
+
+	@property
+	def file(self):
+		index = self.path.rfind("/")
+		if index > -1:
+			return self.path[index+1:]
+		return self.path
+
+	@property
+	def is_java_file(self):
+		if self.path:
+			index = self.path.rfind(".")
+			if index > -1:
+				return self.path[index:] == ".java"
+		return False
+
+
+	def save(self, *args, **kwargs):
+		if self.old_path:
+			self.old_path = self.old_path.replace("\\","/")
+		if self.new_path:
+			self.new_path = self.new_path.replace("\\", "/")
+		if self.change_type == "ModificationType.DEL":
+			self.path = self.old_path
+		else:
+			self.path = self.new_path
+
+		self.delta = abs(self.added-self.removed)
+		super().save(*args, **kwargs)  # Call the "real" save() method.
+
 

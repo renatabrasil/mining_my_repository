@@ -1,83 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Detalhes dos commits{% endblock %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    {% load mathfilters %}
-</head>
-<body>
-
-<table>
-    <tr>
-        <th style="text-align: right">Autor:</th>
-        <td colspan="2">{{commit.author.name}}</td>
-    </tr>
-    <tr>
-        <th style="text-align: right">Committer:</th>
-        <td colspan="2">{{commit.committer.name}}</td>
-    </tr>
-    <tr>
-        <th style="text-align: right">Data:</th>
-        <td colspan="2">{{commmit.committer_date}}</td>
-    </tr>
-    <tr>
-        <th style="text-align: right">Hash</th>
-        <td colspan="2">{{commit.hash}}</td>
-    </tr>
-    <tr>
-        <th style="text-align: right">Mensagem do commit:</th>
-        <td colspan="2">{{commit.msg}}</td>
-    </tr>
-
-    {% for modification in commit.modifications.all %}
+{% block content %}
+<h2>Detalhes do commit</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
         <tr>
-            <th style="text-align: right; vertical-align: top" rowspan="8">
-                File {{forloop.counter}}:
-            </th>
-            <td>
-                <tr>
-                    <td width="14%" style="text-decoration: underline">New path:</td>
-                    <td>{{ modification.new_path }}</td>
-                </tr>
-                <tr>
-                    <td width="14%" style="text-decoration: underline">Old path:</td>
-                    <td>{{ modification.old_path }}</td>
-                </tr>
-                <tr>
-                    <td width="14%" style="text-decoration: underline">Change type:</td>
-                    <td>{{ modification.change_type }}</td>
-                </tr>
-                <tr>
-                    <td style="text-decoration: underline">Delta:</td>
-                    <td>
-                        {{ modification.added |sub:modification.removed }}
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-decoration: underline">Number of lines added:</td>
-                    <td>
-                        {{ modification.added }}
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-decoration: underline">Number of lines removed:</td>
-                    <td>
-                        {{ modification.removed }}
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-decoration: underline">Number of lines:</td>
-                    <td>
-                        {{ modification.nloc }}
-                    </td>
-                </tr>
-            </td>
+            <th style="text-align: right">Autor:</th>
+            <td colspan="2">{{commit.author.name}}</td>
         </tr>
-    {% endfor %}
+        <tr>
+            <th style="text-align: right">Committer:</th>
+            <td colspan="2">{{commit.committer.name}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Data:</th>
+            <td colspan="2">{{commmit.committer_date}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Hash</th>
+            <td colspan="2">{{commit.hash}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Mensagem do commit:</th>
+            <td colspan="2">{{commit.msg}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Quantidade de arquivos:</th>
+            <td colspan="2">{{commit.modifications.all.count}}</td>
+        </tr>
+
+        {% for modification in commit.modifications.all %}
+            <tr>
+                <td colspan="3" style="text-align: center;"><strong>File {{forloop.counter}} - é java? {{modification.is_java_file}}</strong></td>
+            </tr>
+            <tr>
+                <th style="text-align: right; vertical-align: top" rowspan="9">
+                    {{modification.file}}:
+                </th>
+                <td>
+                    <tr>
+                        <td width="14%" style="text-decoration: underline">Path:</td>
+                        <td>{{ modification.path }}</td>
+                    </tr>
+                    <tr>
+                        <td width="14%" style="text-decoration: underline">New path:</td>
+                        <td>{{ modification.new_path }}</td>
+                    </tr>
+                    <tr>
+                        <td width="14%" style="text-decoration: underline">Old path:</td>
+                        <td>{{ modification.old_path }}</td>
+                    </tr>
+                    <tr>
+                        <td width="14%" style="text-decoration: underline">Change type:</td>
+                        <td>{{ modification.change_type }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-decoration: underline">Delta:</td>
+                        <td>
+                            {{ modification.delta}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-decoration: underline">Number of lines added:</td>
+                        <td>
+                            {{ modification.added }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-decoration: underline">Number of lines removed:</td>
+                        <td>
+                            {{ modification.removed }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-decoration: underline">Number of lines:</td>
+                        <td>
+                            {{ modification.nloc }}
+                        </td>
+                    </tr>
+                </td>
+            </tr>
+        {% endfor %}
+
+    </table>
+</div>
 
 
-
-</table>
-</body>
-</html>
+{% endblock %}
