@@ -28,7 +28,7 @@
                     {% for committer,info in infos.0.items %}
                     <tr >
                         <td>{{forloop.counter}}</td>
-                        <td>{{committer.name}}</td>
+                        <td><a href="{{request.path}}{{committer.pk}}">{{committer.name}}</a> </td>
                         <td style="text-align:right"> {{info|get:0|length}}</td>
                         <td style="text-align:right"> {{info|get:1}}</td>
                         <td style="text-align:right">{{info|get:0|length|div:infos.1|percentage}}</td>

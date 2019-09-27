@@ -190,3 +190,6 @@ def process_commits_by_directories(commits):
 
 
     return commits_by_directory
+
+    # TODO: implentar as consultas usando jquery
+    # Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")
