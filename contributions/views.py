@@ -150,14 +150,18 @@ def process_commits(commits):
 
 # Other methods (most auxiliary)
 # dictionary = key: directory
-#              value: dictionary author
+#               [0]: value: author dictionary
+#               [1]: total number of commits
+#               [2]: total number of java files committed
 # dictionary author:
 #       key: author
 #       [0] list of commits
-#       [1] total number of files committed
+#       [1] total number of java files committed
 #       [2] % contribution
+#
 def process_commits_by_directories(commits):
     commits_by_directory = {}
+    directories_statistics = {}
     for commit in commits:
         number_of_files = 0
 
@@ -173,12 +177,16 @@ def process_commits_by_directories(commits):
 
             if modification.directory not in commits_by_directory:
                 commits_by_directory.setdefault(modification.directory, {})
+                directories_statistics.setdefault(modification.directory, [0.0,0.0])
             if commit.committer not in commits_by_directory[modification.directory]:
                 commits_by_directory[modification.directory].setdefault(commit.committer, [[], 0, 0])
             if modification.is_java_file:
                 commits_by_directory[modification.directory][commit.committer][1] = commits_by_directory[modification.directory][commit.committer][1] + 1
+                directories_statistics[modification.directory] = directories_statistics[modification.directory][0] + 1
             if commit not in commits_by_directory[modification.directory][commit.committer][0]:
                 commits_by_directory[modification.directory][commit.committer][0].append(commit)
+            directories_statistics[modification.directory] = directories_statistics[modification.directory][1] + 1
+
 
 
     return commits_by_directory
