@@ -2,3 +2,4 @@ GitPython==3.0.2
 PyDriller==1.9.2
 Django==2.2.5
 django-mathfilters==0.4.0
+whitenoise
