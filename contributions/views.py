@@ -1,5 +1,6 @@
 import csv
 from django.db import transaction
+from django.db.models import Sum
 from django.http import HttpResponse, Http404, StreamingHttpResponse
 
 # Create your views here.
@@ -10,6 +11,7 @@ from pydriller.git_repository import GitRepository
 
 from contributions.models import Commit, Project, Developer, Modification
 GR = GitRepository('https://github.com/apache/ant.git')
+
 
 
 def index(request):
@@ -26,7 +28,7 @@ def index(request):
     if save_commits:
         if not project.commits.all():
             for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.4", only_modifications_with_file_types=['.java'],
+                                                      to_tag="rel/1.5", only_modifications_with_file_types=['.java'],
                                                       only_no_merge=True).traverse_commits():
         #             # Commit.save(commit)
                 with transaction.atomic():
@@ -53,22 +55,37 @@ def index(request):
                             token_count = modification_repo.token_count
                         else:
                             token_count = None
-                        diff = GitRepository.parse_diff(modification.diff)
-                        modification = Modification(commit=commit, old_path=modification_repo.old_path,
-                                                    new_path=modification_repo.new_path, change_type=modification_repo.change_type,
-                                                    diff=modification_repo.diff, source_code=modification_repo.source_code,
-                                                    source_code_before=modification_repo.source_code_before,
-                                                    added=modification_repo.added, removed=modification_repo.removed,
-                                                    nloc=modification_repo.nloc, complexity=modification_repo.complexity,
-                                                    token_count=token_count)
-                        modification.save()
+                        if hasattr(modification_repo, 'nloc'):
+                            nloc = modification_repo.nloc
+                        else:
+                            nloc = None
+                        # diff = GitRepository.parse_diff(modification.diff)
+                        try:
+                            print("nLoc: " + str(modification_repo.nloc))
+                            modification = Modification(commit=commit, old_path=modification_repo.old_path,
+                                                        new_path=modification_repo.new_path, change_type=modification_repo.change_type,
+                                                        diff=modification_repo.diff, source_code=modification_repo.source_code,
+                                                        source_code_before=modification_repo.source_code_before,
+                                                        added=modification_repo.added, removed=modification_repo.removed,
+                                                        nloc=nloc,
+                                                        complexity=modification_repo.complexity,
+                                                        token_count=token_count)
+                            modification.save()
+                        except Exception as e:
+                            # raise  # reraises the exceptio
+                            print(str(e))
 
     url_path = 'contributions/index.html'
     if request.GET.get('commits'):
+
         latest_commit_list = process_commits(project.commits.all())
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
-        latest_commit_list = process_commits_by_directories(project.commits.all())
+        # latest_commit_list = process_commits_by_directories(project.commits.all())
+        # teste = Commit.objects.filter(modifications__in=Modification.objects.filter(path__contains=".java").annotate(nloc_add=Sum('nloc')))[0]
+
+        latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
+                                                                                  Modification.objects.filter(path__contains=".java")))
         url_path = 'contributions/detail_by_directories.html'
     else:
         latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
@@ -121,7 +138,7 @@ def detail_in_committer(request, committer_id):
 
 
         latest_commit_list = list(Commit.objects.filter(committer__id=committer_id,
-                                                   modifications__in=Modification.objects.filter(path__startswith=path,
+                                                   modifications__in=Modification.objects.filter(directory=path,
                                                                                                  path__contains=".java"))
                                                                                                 .distinct())
         # latest_commit_list = []

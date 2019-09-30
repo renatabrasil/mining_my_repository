@@ -1,4 +1,8 @@
 /.idea
+/mining_my_repository/__pycache__
+/contributions/__pycache__
+/contributions/migrations/__pycache__
+/contributions/templatetags/__pycache__
 /backup-banco
 /venv
 /staticfiles

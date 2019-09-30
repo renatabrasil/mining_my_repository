@@ -50,6 +50,7 @@ class Modification(models.Model):
 	old_path = models.CharField(max_length=200, null=True)
 	new_path = models.CharField(max_length=200, null=True)
 	path = models.CharField(max_length=200, null=True, default="-")
+	directory = models.CharField(max_length=200, null=True, default="-")
 	ADDED = 'ADD'
 	DELETED = 'DEL'
 	MODIFIED = 'MOD'
@@ -75,13 +76,13 @@ class Modification(models.Model):
 	complexity = models.IntegerField(null=True)
 	token_count = models.CharField(max_length=200,null=True)
 
-	@property
-	def directory(self):
-		if self.path:
-			index = self.path.rfind("/")
-			if index > -1:
-				return self.path[:index]
-		return "/"
+	# @property
+	# def directory(self):
+	# 	if self.path:
+	# 		index = self.path.rfind("/")
+	# 		if index > -1:
+	# 			return self.path[:index]
+	# 	return "/"
 
 	@property
 	def file(self):
@@ -104,10 +105,17 @@ class Modification(models.Model):
 			self.old_path = self.old_path.replace("\\","/")
 		if self.new_path:
 			self.new_path = self.new_path.replace("\\", "/")
-		if self.change_type == "ModificationType.DEL":
+		if self.change_type.name == 'DELETE':
 			self.path = self.old_path
 		else:
 			self.path = self.new_path
+
+
+		index = self.path.rfind("/")
+		if index > -1:
+			self.directory = self.path[:index]
+		else:
+			self.directory = "/"
 
 		self.delta = abs(self.added-self.removed)
 		super().save(*args, **kwargs)  # Call the "real" save() method.
