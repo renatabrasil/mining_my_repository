@@ -1,5 +1,6 @@
+import csv
 from django.db import transaction
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, StreamingHttpResponse
 
 # Create your views here.
 from django.shortcuts import render
@@ -15,6 +16,7 @@ def index(request):
     # latest_commit_list = Commit.objects.all()[:10]
     # output = ", ".join([c.msg for c in latest_commit_list])
     # return HttpResponse(output)
+
     project = Project.objects.get(project_name="Apache Ant")
 
     save_commits = False
@@ -24,7 +26,7 @@ def index(request):
     if save_commits:
         if not project.commits.all():
             for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.3", only_modifications_with_file_types=['.java'],
+                                                      to_tag="rel/1.4", only_modifications_with_file_types=['.java'],
                                                       only_no_merge=True).traverse_commits():
         #             # Commit.save(commit)
                 with transaction.atomic():
@@ -105,10 +107,72 @@ def detail(request, commit_id):
 
 def detail_in_committer(request, committer_id):
     try:
-        committer = Developer.objects.get(pk=committer_id)
+
+        # committer = Developer.objects.get(pk=committer_id)
+        # template = loader.get_template(url_path)
+        project = Project.objects.get(project_name="Apache Ant")
+        # latest_commit_list = list(Commit.objects.raw('SELECT * FROM contributions_modification m JOIN contributions_commit c '
+        #                                         'ON (c.id = m.commit_id) JOIN contributions_developer d ON (d.id = c.committer_id)'
+        #                                              'WHERE d.id = '+str(committer_id)).prefetch_related('modifications'))
+
+        path = ""
+        if request.GET.get('path'):
+            path = request.GET.get('path')
+
+
+        latest_commit_list = list(Commit.objects.filter(committer__id=committer_id,
+                                                   modifications__in=Modification.objects.filter(path__startswith=path,
+                                                                                                 path__contains=".java"))
+                                                                                                .distinct())
+        # latest_commit_list = []
+        # for commit in objs:
+        #     latest_commit_list.append(commit)
+        context = {
+            'latest_commit_list': latest_commit_list,
+            # 'latest_commit_list': processed_commits,
+            'project': project,
+        }
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
-    return render(request, 'developers/detail.html', {'committer': committer})
+    return render(request, 'contributions/index.html', context)
+
+
+def export_to_csv(request):
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="ownership_metrics.csv"'
+
+    project = Project.objects.get(project_name="Apache Ant")
+    commits_by_directories= process_commits_by_directories(project.commits.all())
+
+    writer = csv.writer(response)
+    writer.writerow(['#', 'Committer', '# de commits', '# de arquivos java', '% de contribuicao por commit', '% de contribuicao por arquivos'])
+
+    for directory, infos in commits_by_directories.items():
+        i = 1
+        writer.writerow([directory, "", "", "", "", ""])
+        total_percentage_commits = 0.0
+        total_percentage_files = 0.0
+        for committer, info_contribution in infos[0].items():
+            row = [i]
+            number_of_commits = len(info_contribution[0])
+            number_of_java_files = info_contribution[1]
+            row.append(committer.name)
+            row.append(number_of_commits)
+            row.append(info_contribution[1])
+            row.append(number_of_commits / infos[1])
+            total_percentage_commits = total_percentage_commits + number_of_commits / infos[1]
+            try:
+                row.append(number_of_java_files / infos[2])
+                total_percentage_files = total_percentage_files + (number_of_java_files / infos[2])
+            except ZeroDivisionError:
+                row.append(0.0)
+            writer.writerow(row)
+            i = i +1
+        writer.writerow(
+            ["", "Total", infos[1], infos[2], total_percentage_commits, total_percentage_files])
+
+    return response
 
 def strip_end(text, suffix):
     if text:
@@ -134,8 +198,6 @@ def process_commits(commits):
             commit_by_committer.setdefault(commit.committer, [[], 0, 0.0])
         for modification in commit.modifications.all():
             delta_by_commit = delta_by_commit + modification.delta
-            if strip_end(modification.path, "/") == "src/main/org/apache/tools/ant/taskdefs/optional/depend":
-                print("proposal/anteater/source/coretasks/buildtarget/org/apache/ant/buildtarget")
         commit_by_committer[commit.committer][0].append(commit)
         commit_by_committer[commit.committer][1] = commit_by_committer[commit.committer][1] + delta_by_commit
         total_delta = total_delta + delta_by_commit
@@ -145,7 +207,10 @@ def process_commits(commits):
     for key, value in commit_by_committer.items():
         weight = commit_by_committer[key][1]
         number_of_commits = len(commit_by_committer[key][0])
-        commit_by_committer[key][2] = (weight*number_of_commits)/(total_delta*total_commits)
+        try:
+            commit_by_committer[key][2] = (weight*number_of_commits)/(total_delta*total_commits)
+        except ZeroDivisionError:
+            commit_by_committer[key][2] = 0.0
     return commit_by_committer
 
 # Other methods (most auxiliary)
@@ -186,10 +251,15 @@ def process_commits_by_directories(commits):
                 commits_by_directory[modification.directory][0][commit.committer][0].append(commit)
                 commits_by_directory[modification.directory][1] = commits_by_directory[modification.directory][1] + 1
 
+        # Commit.objects.filter(committer__name="James Duncan Davidson", modificiantions_path"src/main/org/apache/tools/ant/taskdefs")
+        # Modification.objects.raw('SELECT * FROM contributions_modification m JOIN contributions_commit c ON
+        # (c.id = m.commit_id) JOIN contributions_developer d ON (d.id = c.committer_id)
+        # WHERE d.name LIKE "James %"
 
+        #
 
 
     return commits_by_directory
 
-    # TODO: implentar as consultas usando jquery
+    # TODO: implementar as consultas usando jquery
     # Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")

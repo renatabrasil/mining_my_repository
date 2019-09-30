@@ -1,2 +1,5 @@
 /.idea
+/backup-banco
+/venv
+/staticfiles
 db.sqlite3
