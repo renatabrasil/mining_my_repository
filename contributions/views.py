@@ -1,5 +1,6 @@
 import csv
 from django.db import transaction
+from collections import OrderedDict
 from django.db.models import Sum
 from django.http import HttpResponse, Http404, StreamingHttpResponse
 
@@ -28,7 +29,7 @@ def index(request):
     if save_commits:
         if not project.commits.all():
             for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.5", only_modifications_with_file_types=['.java'],
+                                                      to_tag="rel/1.3", only_modifications_with_file_types=['.java'],
                                                       only_no_merge=True).traverse_commits():
         #             # Commit.save(commit)
                 with transaction.atomic():
@@ -241,18 +242,11 @@ def process_commits(commits):
 #       [1] total number of java files committed
 #       [2] % contribution
 #
+# TODO: Create a model to embed this report (a transient object)
 def process_commits_by_directories(commits):
     commits_by_directory = {}
     for commit in commits:
         number_of_files = 0
-
-        # for directory in commit.directories2():
-        #     if directory not in commits_by_directory:
-        #         commits_by_directory.setdefault(directory, {})
-        #     if commit.committer not in commits_by_directory[directory]:
-        #         commits_by_directory[directory].setdefault(commit.committer, [[], 0, 0])
-        #     commits_by_directory[directory][commit.committer][1] = commits_by_directory[directory][commit.committer][1] + commit.number_of_java_files
-        #     commits_by_directory[directory][commit.committer][0].append(commit)
 
         for modification in commit.modifications.all():
             # First hierarchy
@@ -273,10 +267,13 @@ def process_commits_by_directories(commits):
         # (c.id = m.commit_id) JOIN contributions_developer d ON (d.id = c.committer_id)
         # WHERE d.name LIKE "James %"
 
-        #
-
+    # Example: dict2
+    # {'/': [{'Lucas': ['z', 2, 1]}, 2.2, 15.5], '/org/apache/ant': [{'Arthur': ['a', 3, 0], 'Zeze': ['g', 0, 10]}, 5.6, 75.6]}
+    for directory, author_dictionary in commits_by_directory.items():
+        commits_by_directory[directory][0] = OrderedDict(sorted(commits_by_directory[directory][0].items(),
+                                                        key=lambda x: x[1][1], reverse=True))
 
     return commits_by_directory
 
-    # TODO: implementar as consultas usando jquery
+    # TODO: implementar as consultas usando django query
     # Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")

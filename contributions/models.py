@@ -120,4 +120,17 @@ class Modification(models.Model):
 		self.delta = abs(self.added-self.removed)
 		super().save(*args, **kwargs)  # Call the "real" save() method.
 
+class TransientModel(models.Model):
+    """Inherit from this class to use django constructors and serialization but no database management"""
+    def save(*args, **kwargs):
+        pass  # avoid exceptions if called
 
+    class Meta:
+        abstract = True  # no table for this class
+        managed = False  # no database management
+
+class ContributionByDirectoryReport(TransientModel):
+    """This is not persisted. No table app_brutto"""
+    #do more things here
+
+    pass
