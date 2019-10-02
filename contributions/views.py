@@ -3,6 +3,7 @@ from django.db import transaction
 from collections import OrderedDict
 from django.db.models import Sum
 from django.http import HttpResponse, Http404, StreamingHttpResponse
+import numpy as np
 
 # Create your views here.
 from django.shortcuts import render
@@ -10,7 +11,8 @@ from django.template import loader
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
-from contributions.models import Commit, Project, Developer, Modification
+from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor
+
 GR = GitRepository('https://github.com/apache/ant.git')
 
 
@@ -88,13 +90,14 @@ def index(request):
         latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
                                                                                   Modification.objects.filter(path__contains=".java")))
         url_path = 'contributions/detail_by_directories.html'
+    elif request.GET.get('author'):
+        latest_commit_list = process_commits_by_author(Commit.objects.order_by("author__name"))
+
+        url_path = 'contributions/detail_by_authors.html'
     else:
         latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
                                                                                                       "committer_date")
 
-
-    # latest_commit_list = Commit.objects.all()[:10]
-    # commits_by_author = Commit.objects.raw("SELECT * FROM contributions_Commit GROUP BY author_id")
     template = loader.get_template(url_path)
     context = {
         'latest_commit_list': latest_commit_list,
@@ -262,11 +265,6 @@ def process_commits_by_directories(commits):
                 commits_by_directory[modification.directory][0][commit.committer][0].append(commit)
                 commits_by_directory[modification.directory][1] = commits_by_directory[modification.directory][1] + 1
 
-        # Commit.objects.filter(committer__name="James Duncan Davidson", modificiantions_path"src/main/org/apache/tools/ant/taskdefs")
-        # Modification.objects.raw('SELECT * FROM contributions_modification m JOIN contributions_commit c ON
-        # (c.id = m.commit_id) JOIN contributions_developer d ON (d.id = c.committer_id)
-        # WHERE d.name LIKE "James %"
-
     # Example: dict2
     # {'/': [{'Lucas': ['z', 2, 1]}, 2.2, 15.5], '/org/apache/ant': [{'Arthur': ['a', 3, 0], 'Zeze': ['g', 0, 10]}, 5.6, 75.6]}
     for directory, author_dictionary in commits_by_directory.items():
@@ -277,3 +275,23 @@ def process_commits_by_directories(commits):
 
     # TODO: implementar as consultas usando django query
     # Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")
+def process_commits_by_author(commits):
+    report = ContributionByAuthorReport()
+    total_commits = 0
+    total_java_files = 0
+    list_java_files = []
+    for commit in commits:
+        if commit.author not in report.commits_by_author:
+            report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
+        report.commits_by_author[commit.author].commit_count = report.commits_by_author[commit.author].commit_count + 1
+        for modification in commit.modifications.all():
+            if modification.is_java_file:
+                report.commits_by_author[commit.author].file_count = report.commits_by_author[commit.author].file_count + 1
+                total_java_files = total_java_files +1
+        total_commits = total_commits +1
+    report.total_commits = total_commits
+    report.total_java_files = total_java_files
+    report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
+                                                        key=lambda x: x[1].file_count, reverse=True))
+
+    return report

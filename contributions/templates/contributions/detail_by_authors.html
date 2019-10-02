@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load contributions_extra %}
+
+{% block title %}Detalhes dos commits{% endblock %}
+
+{% block content %}
+<h3>Commits por autor</h3>
+<br>
+<div class="card" style="width: 25rem;">
+  <div class="card-body">
+    <h5 class="card-title">Parâmetros do Projeto</h5>
+      <p class="card-text"><strong>Threshold (file)
+          <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de arquivos"></i></strong>:
+    {{latest_commit_list.core_developers_threshold_file|floatformat:4}}</p>
+
+      <p class="card-text"><strong>Threshold (commit)
+          <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de commits"></i></strong>:
+    {{latest_commit_list.core_developers_threshold_commit|floatformat:4}}</p>
+
+</button>
+
+  </div>
+</div>
+
+<div class="float-right">
+    <a class="btn btn-primary" href="{{request.path}}to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
+</div>
+<br>
+<h5>Classificação dos desenvolvedores por commits</h5>
+<div class="table-responsive">
+    <table class="table table-striped table-sm col-md-8">
+        <caption>Core developers por commits ({{latest_commit_list.core_developers_commits|length}})</caption>
+        <thead class="thead-dark">
+            <tr>
+                <th></th>
+                <th>Nome</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if latest_commit_list.core_developers_commits %}
+                {% for author in latest_commit_list.core_developers_commits %}
+                    <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td>{{author.name}}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+
+        </tbody>
+    </table>
+</div>
+<div class="table-responsive">
+    <table class="table table-striped table-sm col-md-8">
+        <caption>Peripheral developers ({{latest_commit_list.peripheral_developers_commits|length}})</caption>
+        <thead class="thead-dark">
+            <tr>
+                <th></th>
+                <th>Nome</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            {% if latest_commit_list.peripheral_developers_commits %}
+                {% for author in latest_commit_list.peripheral_developers_commits %}
+                    <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td>{{author.name}}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+
+        </tbody>
+
+    </table>
+</div>
+<hr>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <caption>Commits</caption>
+        <thead class="thead-dark">
+            <tr>
+                <th></th>
+                <th>Author</th>
+                <th style="text-align:right">Commit count</th>
+                <th style="text-align:right">File count</th>
+                <th style="text-align:right">Ownership (commits)</th>
+                <th style="text-align:right">Ownership (files)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if latest_commit_list %}
+
+                {% for author, totals in latest_commit_list.commits_by_author.items %}
+                    <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td>{{author.name}}</td>
+                        <td style="text-align:right">{{totals.commit_count}}</td>
+                        <td style="text-align:right">{{totals.file_count}}</td>
+                        <td style="text-align:right">{{totals.commit_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.file_percentage|percentage}}</td>
+                    </tr>
+                {% endfor %}
+            <tfoot>
+                <tr>
+                    <th>Total:</th>
+                    <td></td>
+                    <td style="text-align:right">{{latest_commit_list.total_commits}}</td>
+                    <td style="text-align:right">{{latest_commit_list.total_java_files}}</td>
+                    <td>
+
+                    </td>
+                </tr>
+            </tfoot>
+            {% else %}
+                <tr>
+                    <td colspan="6" style="text-align:center;">No commits are available.</td>
+                </tr>
+            {% endif %}
+
+        </tbody>
+    </table>
+{% endblock %}

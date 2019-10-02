@@ -1,4 +1,5 @@
 from django.db import models
+import numpy as np
 
 # Create your models here.
 
@@ -125,6 +126,8 @@ class TransientModel(models.Model):
     def save(*args, **kwargs):
         pass  # avoid exceptions if called
 
+
+
     class Meta:
         abstract = True  # no table for this class
         managed = False  # no database management
@@ -134,3 +137,132 @@ class ContributionByDirectoryReport(TransientModel):
     #do more things here
 
     pass
+
+class Contributor(TransientModel):
+	def __init__(self,developer):
+		self.developer = developer
+		self.loc_count = 0
+		self.file_count = 0
+		self.commit_count = 0
+		self.total_loc = 0
+		self.total_file = 0
+		self.total_commit = 0
+
+	@property
+	def loc_percentage(self):
+		try:
+			return self.loc_count/self.total_loc
+		except ZeroDivisionError:
+			return 0.0
+	@property
+	def file_percentage(self):
+		try:
+			return self.file_count / self.total_file
+		except ZeroDivisionError:
+			return 0.0
+	@property
+	def commit_percentage(self):
+		try:
+			return self.commit_count / self.total_commit
+		except ZeroDivisionError:
+			return 0.0
+
+class ContributionByAuthorReport(TransientModel):
+
+    #do more things here
+	def __init__(self):
+		self._commits_by_author = {}
+		self._total_commits = 0
+		self._total_java_files = 0
+		self.peripheral_developers = []
+		self._core_developers_threshold_loc = 0.0
+		self._core_developers_threshold_file = 0.0
+		self._core_developers_threshold_commit = 0.0
+
+	@property
+	def core_developers_files(self):
+		core_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].file_percentage > self._core_developers_threshold_file:
+				core_developers.append(contributor[0])
+		return core_developers
+
+	@property
+	def core_developers_commits(self):
+		core_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].commit_percentage > self._core_developers_threshold_commit:
+				core_developers.append(contributor[0])
+		return core_developers
+
+	@property
+	def peripheral_developers_files(self):
+		peripheral_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].file_percentage <= self._core_developers_threshold_file:
+				peripheral_developers.append(contributor[0])
+		return peripheral_developers
+
+	@property
+	def peripheral_developers_commits(self):
+		peripheral_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].commit_percentage <= self._core_developers_threshold_commit:
+				peripheral_developers.append(contributor[0])
+		return peripheral_developers
+
+	@property
+	def core_developers_threshold_file(self):
+		file_count_array = []
+		for contributor in self._commits_by_author.items():
+			file_count_array.append(contributor[1].file_percentage)
+		interval = np.array(file_count_array)
+		self._core_developers_threshold_file = np.percentile(interval, 80)
+		return self._core_developers_threshold_file
+
+	@core_developers_threshold_file.setter
+	def core_developers_threshold(self, core_developers_threshold_file):
+		self._core_developers_threshold_file = core_developers_threshold_file
+
+	@property
+	def core_developers_threshold_commit(self):
+		array = []
+		for contributor in self._commits_by_author.items():
+			array.append(contributor[1].commit_percentage)
+		interval = np.array(array)
+		self._core_developers_threshold_commit = np.percentile(interval, 80)
+		return self._core_developers_threshold_commit
+
+
+	@core_developers_threshold_commit.setter
+	def core_developers_threshold(self, core_developers_threshold_commit):
+		self._core_developers_threshold_commit = core_developers_threshold_commit
+
+	@property
+	def commits_by_author(self):
+		return self._commits_by_author
+
+	@commits_by_author.setter
+	def commits_by_author(self, commits_by_author):
+		self._commits_by_author = commits_by_author
+
+	@property
+	def total_commits(self):
+		return self._total_commits
+
+	@total_commits.setter
+	def total_commits(self, total_commits):
+		for contributor in self._commits_by_author.items():
+			contributor[1].total_commit = total_commits
+		self._total_commits = total_commits
+
+	@property
+	def total_java_files(self):
+		return self._total_java_files
+
+	@total_java_files.setter
+	def total_java_files(self, total_java_files):
+		for contributor in self._commits_by_author.items():
+			contributor[1].total_file = total_java_files
+		self._total_java_files = total_java_files
+
