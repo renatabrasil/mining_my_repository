@@ -84,14 +84,12 @@ def index(request):
         latest_commit_list = process_commits(project.commits.all())
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
-        # latest_commit_list = process_commits_by_directories(project.commits.all())
-        # teste = Commit.objects.filter(modifications__in=Modification.objects.filter(path__contains=".java").annotate(nloc_add=Sum('nloc')))[0]
-
         latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
                                                                                   Modification.objects.filter(path__contains=".java")))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('author'):
         latest_commit_list = process_commits_by_author(Commit.objects.order_by("author__name"))
+        # request.session['commits'] = latest_commit_list
 
         url_path = 'contributions/detail_by_authors.html'
     else:
@@ -195,12 +193,56 @@ def export_to_csv(request):
 
     return response
 
-def strip_end(text, suffix):
-    if text:
-        index = text.rfind(suffix)
-        if index > -1:
-            return text[:index]
-    return text
+def export_to_csv_commit_by_author(request):
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="estatisticas_projeto.csv"'
+
+    project = Project.objects.get(project_name="Apache Ant")
+    commits_by_author = process_commits_by_author(Commit.objects.order_by("author__name"))
+    # commits_by_author = request.session['commits']
+
+    writer = csv.writer(response)
+
+    writer.writerow(["Parametros", "", "", "", "", ""])
+    writer.writerow(["Threshold (file): ", commits_by_author.core_developers_threshold_file, "Threshold (commit):",
+                     commits_by_author.core_developers_threshold_commit, "", ""])
+    writer.writerow(["Classificacao de desenvolvedores por commits"])
+    writer.writerow([""])
+    writer.writerow(["Core developers"])
+    i = 1
+    for author in commits_by_author.core_developers_commits:
+        row = [i]
+        row.append(author.name)
+        writer.writerow(row)
+        i = i + 1
+    writer.writerow([""])
+    writer.writerow(["Peripheral developers"])
+    i = 1
+    for author in commits_by_author.peripheral_developers_commits:
+        row = [i]
+        row.append(author.name)
+        writer.writerow(row)
+        i = i + 1
+
+    writer.writerow([""])
+
+    writer.writerow(['', 'Author', 'Commit count', 'File Count', 'Ownership (commit)', 'Ownership (file)'])
+    for commits in commits_by_author.commits_by_author.items():
+        i = 1
+        row = [i]
+        row.append(commits[0].name)
+        row.append(commits[1].commit_count)
+        row.append(commits[1].file_count)
+        row.append(commits[1].commit_percentage)
+        row.append(commits[1].file_percentage)
+        writer.writerow(row)
+        i = i +1
+    writer.writerow(
+            ["", "Total", commits_by_author.total_java_files, commits_by_author.total_commits,
+             1, 1])
+
+    return response
 
 # Other methods (most auxiliary)
 # dictionary = key: committer
@@ -292,6 +334,6 @@ def process_commits_by_author(commits):
     report.total_commits = total_commits
     report.total_java_files = total_java_files
     report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
-                                                        key=lambda x: x[1].file_count, reverse=True))
+                                                        key=lambda x: x[1].commit_count, reverse=True))
 
     return report

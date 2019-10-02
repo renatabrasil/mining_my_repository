@@ -6,4 +6,5 @@ urlpatterns = [
     path('<int:commit_id>/', views.detail, name='detail'),
     path('developers/<int:committer_id>/', views.detail_in_committer,),
     path('to_csv/', views.export_to_csv,),
+    path('authors_to_csv/', views.export_to_csv_commit_by_author,),
 ]
