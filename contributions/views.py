@@ -85,7 +85,7 @@ def index(request):
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
         latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
-                                                                                  Modification.objects.filter(path__contains=".java")))
+                                                                                  Modification.objects.filter(path__contains=".java")).distinct())
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('author'):
         latest_commit_list = process_commits_by_author(Commit.objects.order_by("author__name"))
@@ -159,37 +159,58 @@ def detail_in_committer(request, committer_id):
 def export_to_csv(request):
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="ownership_metrics.csv"'
+    response['Content-Disposition'] = 'attachment; filename="directory_ownership_metrics.csv"'
 
     project = Project.objects.get(project_name="Apache Ant")
-    commits_by_directories= process_commits_by_directories(project.commits.all())
+    # commits_by_directories= process_commits_by_directories(project.commits.all())
+    commits_by_directory = process_commits_by_directories(Commit.objects.order_by("author__name")[:50])
 
     writer = csv.writer(response)
-    writer.writerow(['#', 'Committer', '# de commits', '# de arquivos java', '% de contribuicao por commit', '% de contribuicao por arquivos'])
+    writer.writerow(['#', 'Author', 'Commit count', 'File count', 'Ownership (commits)', 'Ownership (files)'])
 
-    for directory, infos in commits_by_directories.items():
+    for directory, infos in commits_by_directory.items():
         i = 1
+
+        writer.writerow(["##################################################################################", "", "", "", "", ""])
         writer.writerow([directory, "", "", "", "", ""])
-        total_percentage_commits = 0.0
-        total_percentage_files = 0.0
-        for committer, info_contribution in infos[0].items():
+        writer.writerow(["    Parametros do diretorio", "", "", "", ""])
+        writer.writerow(["    Threshold (file):", infos.core_developers_threshold_file, "Threshold (file):",
+                         infos.core_developers_threshold_commit, ""])
+
+        writer.writerow(["---------------------------------------------------------------------------------"])
+        writer.writerow(["Classificacao de desenvolvedores por commits"])
+        writer.writerow([""])
+        writer.writerow(["Core developers"])
+        i = 1
+        for core_dev in infos.core_developers_commits:
+
             row = [i]
-            number_of_commits = len(info_contribution[0])
-            number_of_java_files = info_contribution[1]
-            row.append(committer.name)
-            row.append(number_of_commits)
-            row.append(info_contribution[1])
-            row.append(number_of_commits / infos[1])
-            total_percentage_commits = total_percentage_commits + number_of_commits / infos[1]
-            try:
-                row.append(number_of_java_files / infos[2])
-                total_percentage_files = total_percentage_files + (number_of_java_files / infos[2])
-            except ZeroDivisionError:
-                row.append(0.0)
+            row.append(core_dev.name)
             writer.writerow(row)
-            i = i +1
+            i = i + 1
+        writer.writerow([""])
+        writer.writerow(["Peripheral developers"])
+        i = 1
+        for author in infos.peripheral_developers_commits:
+            row = [i]
+            row.append(author.name)
+            writer.writerow(row)
+            i = i + 1
+
+        writer.writerow([""])
+        i=1
+        for author, info_contribution in infos.commits_by_author.items():
+            row = [i]
+            row.append(author.name)
+            row.append(info_contribution.commit_count)
+            row.append(info_contribution.file_count)
+            row.append(info_contribution.commit_percentage)
+            row.append(info_contribution.file_percentage)
+            writer.writerow(row)
+            i = i + 1
         writer.writerow(
-            ["", "Total", infos[1], infos[2], total_percentage_commits, total_percentage_files])
+            ["", "Total", infos.total_java_files, infos.total_commits,
+             1, 1])
 
     return response
 
@@ -228,8 +249,8 @@ def export_to_csv_commit_by_author(request):
     writer.writerow([""])
 
     writer.writerow(['', 'Author', 'Commit count', 'File Count', 'Ownership (commit)', 'Ownership (file)'])
+    i = 1
     for commits in commits_by_author.commits_by_author.items():
-        i = 1
         row = [i]
         row.append(commits[0].name)
         row.append(commits[1].commit_count)
@@ -289,34 +310,51 @@ def process_commits(commits):
 #
 # TODO: Create a model to embed this report (a transient object)
 def process_commits_by_directories(commits):
-    commits_by_directory = {}
+    report = {}
+    review_modification = []
+
     for commit in commits:
         number_of_files = 0
 
         for modification in commit.modifications.all():
-            # First hierarchy
-            if modification.directory not in commits_by_directory:
-                commits_by_directory.setdefault(modification.directory, [{}, 0, 0])
-            # Second hierarchy
-            if commit.committer not in commits_by_directory[modification.directory]:
-                commits_by_directory[modification.directory][0].setdefault(commit.committer, [[], 0, 0])
             if modification.is_java_file:
-                commits_by_directory[modification.directory][0][commit.committer][1] = commits_by_directory[modification.directory][0][commit.committer][1] + 1
-                commits_by_directory[modification.directory][2] = commits_by_directory[modification.directory][2] + 1
-            if commit not in commits_by_directory[modification.directory][0][commit.committer][0]:
-                commits_by_directory[modification.directory][0][commit.committer][0].append(commit)
-                commits_by_directory[modification.directory][1] = commits_by_directory[modification.directory][1] + 1
+                # First hierarchy
+                if modification.directory not in report:
+                    report.setdefault(modification.directory, ContributionByAuthorReport())
+                # Second hierarchy
+                if commit.author not in report[modification.directory].commits_by_author:
+                    report[modification.directory].commits_by_author.setdefault(commit.author, Contributor(commit.author))
+                if commit not in report[modification.directory].commits_by_author[commit.author].commits:
+                    report[modification.directory].commits_by_author[commit.author].commits.append(commit)
+                    report[modification.directory].commits_by_author[commit.author].commit_count = report[modification.directory].commits_by_author[commit.author].commit_count +1
+                    report[modification.directory].commits_by_author[commit.author].total_commit = \
+                    report[modification.directory].commits_by_author[commit.author].total_commit + 1
+                # to avoid duplicate (should be fixed soon)
+                if modification not in review_modification:
+                    report[modification.directory].commits_by_author[commit.author].file_count = report[modification.directory].commits_by_author[commit.author].file_count + 1
+                    report[modification.directory].commits_by_author[commit.author].total_file = report[modification.directory].commits_by_author[commit.author].total_file + 1
+                    report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                review_modification.append(modification)
 
-    # Example: dict2
-    # {'/': [{'Lucas': ['z', 2, 1]}, 2.2, 15.5], '/org/apache/ant': [{'Arthur': ['a', 3, 0], 'Zeze': ['g', 0, 10]}, 5.6, 75.6]}
-    for directory, author_dictionary in commits_by_directory.items():
-        commits_by_directory[directory][0] = OrderedDict(sorted(commits_by_directory[directory][0].items(),
-                                                        key=lambda x: x[1][1], reverse=True))
 
-    return commits_by_directory
+    for author_report in report.items():
+        total_commit = 0
+        total_file = 0
+        author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
+                                                      key=lambda x: x[1].commit_count, reverse=True))
+        for contributor in author_report[1].commits_by_author.items():
+            total_file = total_file + contributor[1].total_file
+            total_commit = total_commit + contributor[1].total_commit
+        author_report[1].total_java_files = author_report[1].total_java_files + total_file
+        author_report[1].total_commits = author_report[1].total_commits + total_commit
+        print(author_report[1].core_developers_threshold_commit)
 
-    # TODO: implementar as consultas usando django query
-    # Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")
+
+    return report
+
+
+# TODO: implementar as consultas usando django query
+# Exemplo: Commit.objects.filter(committer__name="James Duncan Davidson")
 def process_commits_by_author(commits):
     report = ContributionByAuthorReport()
     total_commits = 0

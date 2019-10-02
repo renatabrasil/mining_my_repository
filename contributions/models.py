@@ -23,6 +23,9 @@ class Commit(models.Model):
 	committer_date = models.DateField()
     # pub_date = models.DateTimeField('date published')
 
+	def __eq__(self, other):
+		return isinstance(other, self.__class__) and self.hash == other.hash
+
 	@property
 	def number_of_java_files(self):
 		total_java_files = 0
@@ -76,6 +79,9 @@ class Modification(models.Model):
 	nloc = models.IntegerField(null=True)
 	complexity = models.IntegerField(null=True)
 	token_count = models.CharField(max_length=200,null=True)
+
+	def __eq__(self, other):
+		return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
 
 	# @property
 	# def directory(self):
@@ -132,12 +138,6 @@ class TransientModel(models.Model):
         abstract = True  # no table for this class
         managed = False  # no database management
 
-class ContributionByDirectoryReport(TransientModel):
-    """This is not persisted. No table app_brutto"""
-    #do more things here
-
-    pass
-
 class Contributor(TransientModel):
 	def __init__(self,developer):
 		self.developer = developer
@@ -147,6 +147,8 @@ class Contributor(TransientModel):
 		self.total_loc = 0
 		self.total_file = 0
 		self.total_commit = 0
+		self.commits = []
+		self.files = []
 
 	@property
 	def loc_percentage(self):
@@ -168,8 +170,6 @@ class Contributor(TransientModel):
 			return 0.0
 
 class ContributionByAuthorReport(TransientModel):
-
-    #do more things here
 	def __init__(self):
 		self._commits_by_author = {}
 		self._total_commits = 0
@@ -191,6 +191,9 @@ class ContributionByAuthorReport(TransientModel):
 	def core_developers_commits(self):
 		core_developers = []
 		for contributor in self._commits_by_author.items():
+			# TODO: check if it makes sense
+			if len(self._commits_by_author) == 1:
+				return [contributor[0]]
 			if contributor[1].commit_percentage > self._core_developers_threshold_commit:
 				core_developers.append(contributor[0])
 		return core_developers
@@ -253,6 +256,7 @@ class ContributionByAuthorReport(TransientModel):
 	@total_commits.setter
 	def total_commits(self, total_commits):
 		for contributor in self._commits_by_author.items():
+			# set total_commits in every ocurrence of contributor inside commits_by_author dictionary
 			contributor[1].total_commit = total_commits
 		self._total_commits = total_commits
 

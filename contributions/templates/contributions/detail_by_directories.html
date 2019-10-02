@@ -9,12 +9,13 @@
 <div class="float-right">
     <a class="btn btn-primary" href="{{request.path}}to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
 </div>
+<hr>
 <div class="table-responsive">
     <table class="table table-striped table-sm">
-        <thead>
+        <thead class="thead-dark">
             <tr>
                 <th></th>
-                <th>Committer</th>
+                <th>Author</th>
                 <th style="text-align:right">Commit count</th>
                 <th style="text-align:right">File count</th>
                 <th style="text-align:right">Ownership (commits)</th>
@@ -23,32 +24,49 @@
         </thead>
         <tbody>
             {% if latest_commit_list %}
-                {% for directory,infos in latest_commit_list.items %}
+                {% for directory, infos in latest_commit_list.items %}
+                    <tr class="table-light">
+                        <td colspan="7">
+                            Parametros do diretorio:
+                            <p>Threshold (file): {{infos.core_developers_threshold_file|floatformat:4}}</p>
+                            <p><strong>Threshold (commit): {{infos.core_developers_threshold_commit|floatformat:4}}</strong></p>
+                            <p>Core developers do diretorio ({{infos.core_developers_commits|length}}):</p>
+                            {% for core_dev in infos.core_developers_commits %}
+                                ({{forloop.counter}}) {{core_dev.name}}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+
+                        </td>
+                    </tr>
+                    <tr class="table-light">
+                        <th colspan="7">
+
+                        </th>
+                    </tr>
                     <tr class="p-3 mb-2 bg-secondary text-white">
                         <td colspan="7"><strong>{{directory}}</strong></td>
                     </tr>
 
-                    {% for committer,info in infos.0.items %}
+                    {% for author,contribution in infos.commits_by_author.items %}
                     <tr >
                         <td>{{forloop.counter}}</td>
-                        <td><a href="{{request.path}}developers/{{committer.pk}}?path={{directory}}">{{committer.name}}</a> </td>
-                        <td style="text-align:right"> {{info|get:0|length}}</td>
-                        <td style="text-align:right"> {{info|get:1}}</td>
-                        <td style="text-align:right">{{info|get:0|length|div:infos.1|percentage}}</td>
-                        <td style="text-align:right">{{info|get:1|div:infos.2|percentage}}</td>
+                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory}}">{{author.name}}</a> </td>
+                        <td style="text-align:right"> {{contribution.commit_count}}</td>
+                        <td style="text-align:right"> {{contribution.file_count}}</td>
+                        <td style="text-align:right">{{contribution.commit_percentage|percentage}}</td>
+                        <td style="text-align:right">{{contribution.file_percentage|percentage}}</td>
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">
                         <th colspan="2">Total:</th>
-                        <th style="text-align:right">{{infos.1}}</th>
-                        <th style="text-align:right">{{infos.2}}</th>
+                        <th style="text-align:right">{{infos.total_commits}}</th>
+                        <th style="text-align:right">{{infos.total_java_files}}</th>
                         <td></td>
                         <td></td>
                     </tr>
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="3" style="text-align:center;">No commits are available.</td>
+                    <td colspan="5" style="text-align:center;">No commits are available.</td>
                 </tr>
             {% endif %}
 
