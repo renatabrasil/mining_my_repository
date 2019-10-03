@@ -1,0 +1,45 @@
+- model: contributions.project
+  pk: 1
+  fields:
+    project_name: Apache Ant
+    project_path: https://github.com/apache/ant.git
+- model: contributions.tag
+  pk: 1
+  fields:
+    project: 1
+    description: 'rel/1.1'
+- model: contributions.tag
+  pk: 2
+  fields:
+    project: 1
+    description: 'rel/1.2'
+- model: contributions.tag
+  pk: 3
+  fields:
+    project: 1
+    description: 'rel/1.3'
+- model: contributions.tag
+  pk: 4
+  fields:
+    project: 1
+    description: 'rel/1.4'
+- model: contributions.tag
+  pk: 5
+  fields:
+    project: 1
+    description: 'rel/1.5'
+- model: contributions.tag
+  pk: 6
+  fields:
+    project: 1
+    description: 'rel/1.6.0'
+- model: contributions.tag
+  pk: 7
+  fields:
+    project: 1
+    description: 'rel/1.7.0'
+- model: contributions.tag
+  pk: 8
+  fields:
+    project: 1
+    description: 'rel/1.8.0'

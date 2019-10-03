@@ -13,7 +13,12 @@ class Project(models.Model):
 	project_name = models.CharField(max_length=200)
 	project_path = models.CharField(max_length=200)
 
+class Tag(models.Model):
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
+	description = models.CharField(max_length=100)
+
 class Commit(models.Model):
+	tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
 	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='commits')
 	hash = models.CharField(max_length=300)
 	msg = models.CharField(max_length=300)
@@ -83,14 +88,6 @@ class Modification(models.Model):
 	def __eq__(self, other):
 		return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
 
-	# @property
-	# def directory(self):
-	# 	if self.path:
-	# 		index = self.path.rfind("/")
-	# 		if index > -1:
-	# 			return self.path[:index]
-	# 	return "/"
-
 	@property
 	def file(self):
 		index = self.path.rfind("/")
@@ -132,13 +129,14 @@ class TransientModel(models.Model):
     def save(*args, **kwargs):
         pass  # avoid exceptions if called
 
-
-
     class Meta:
         abstract = True  # no table for this class
         managed = False  # no database management
 
 class Contributor(TransientModel):
+	abstract = True  # no table for this class
+	managed = False  # no database management
+
 	def __init__(self,developer):
 		self.developer = developer
 		self.loc_count = 0
@@ -170,6 +168,8 @@ class Contributor(TransientModel):
 			return 0.0
 
 class ContributionByAuthorReport(TransientModel):
+	abstract = True  # no table for this class
+	managed = False  # no database management
 	def __init__(self):
 		self._commits_by_author = {}
 		self._total_commits = 0
@@ -178,6 +178,30 @@ class ContributionByAuthorReport(TransientModel):
 		self._core_developers_threshold_loc = 0.0
 		self._core_developers_threshold_file = 0.0
 		self._core_developers_threshold_commit = 0.0
+		self._minor = 0
+		self._major = 0
+
+	@property
+	def ownership(self):
+		higher_value = -1.0
+		for contributor in self._commits_by_author.items():
+			if contributor[1].commit_percentage >= higher_value:
+				higher_value = contributor[1].commit_percentage
+		return higher_value
+
+	@property
+	def minor(self):
+		for contributor in self._commits_by_author.items():
+			if contributor[1].commit_percentage <= 0.05:
+				self._minor = self._minor + 1
+		return self._minor
+
+	@property
+	def major(self):
+		for contributor in self._commits_by_author.items():
+			if contributor[1].commit_percentage > 0.05:
+				self._major = self._major + 1
+		return self._major
 
 	@property
 	def core_developers_files(self):

@@ -27,13 +27,32 @@
                 {% for directory, infos in latest_commit_list.items %}
                     <tr class="table-light">
                         <td colspan="7">
-                            Parametros do diretorio:
-                            <p>Threshold (file): {{infos.core_developers_threshold_file|floatformat:4}}</p>
-                            <p><strong>Threshold (commit): {{infos.core_developers_threshold_commit|floatformat:4}}</strong></p>
-                            <p>Core developers do diretorio ({{infos.core_developers_commits|length}}):</p>
-                            {% for core_dev in infos.core_developers_commits %}
-                                ({{forloop.counter}}) {{core_dev.name}}{% if not forloop.last %}, {% endif %}
-                            {% endfor %}
+                                <ul>
+                                    <strong>Bird metrics</strong>
+                                    <li>Minor contributors: {{infos.minor}}</li>
+                                    <li>Major contributors: {{infos.major}}</li>
+                                    <li>Ownership: {{infos.ownership|percentage}} </li>
+                                </ul>
+                                <ul>
+                                    <strong>Métricas usadas para classificar tipos de desenvolvedores (JOBLIN et al., 2017)</strong>
+                                    <li>Threshold (file): {{infos.core_developers_threshold_file|floatformat:4}}</li>
+                                    <li><span style="text-decoration-line: underline">Threshold (commit): {{infos.core_developers_threshold_commit|floatformat:4}}</span></li>
+                                </ul>
+
+                            <div class="row justify-content-around">
+                                <div class="col-4">
+                                  Core developers do diretorio ({{infos.core_developers_commits|length}}):
+                                    <br>
+                                                        {% for core_dev in infos.core_developers_commits %}
+                                                            ({{forloop.counter}}) {{core_dev.name}}{% if not forloop.last %}, {% endif %}
+                                                        {% endfor %}
+                                </div>
+                                <div class="col-7">
+
+                                </div>
+                              </div>
+
+
 
                         </td>
                     </tr>

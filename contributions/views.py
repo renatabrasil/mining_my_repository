@@ -9,11 +9,11 @@ from django.template import loader
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
-from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor
+from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag
 
 GR = GitRepository('https://github.com/apache/ant.git')
 
-
+# TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
     project = Project.objects.get(project_name="Apache Ant")
 
@@ -23,9 +23,16 @@ def index(request):
 
     if save_commits:
         if not project.commits.all():
+            query = Tag.objects.filter(description="rel/1.1")
+            tag = None
+            if query.count() > 0:
+                tag = query[0]
+            # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
+            #                                           to_tag="rel/1.1", only_modifications_with_file_types=['.java'],
+            #                                           only_no_merge=True).traverse_commits():
             for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.3", only_modifications_with_file_types=['.java'],
-                                                      only_no_merge=True).traverse_commits():
+                                                      to_tag="rel/1.5",
+                                                          only_no_merge=True).traverse_commits():
                 with transaction.atomic():
                     author = Developer.objects.filter(name=commit_repository.author.name)
                     if author.count() == 0:
@@ -43,7 +50,7 @@ def index(request):
                             committer.save()
                         else:
                             committer = committer[0]
-                    commit = Commit.objects.create(project=project, hash=commit_repository.hash,
+                    commit = Commit.objects.create(project=project, hash=commit_repository.hash, tag=tag,
                                                    msg=commit_repository.msg,
                                                    author=author, author_date=commit_repository.author_date,
                                                    committer=committer,
@@ -59,7 +66,6 @@ def index(request):
                             nloc = None
                         # diff = GitRepository.parse_diff(modification.diff)
                         try:
-                            print("nLoc: " + str(modification_repo.nloc))
                             modification = Modification(commit=commit, old_path=modification_repo.old_path,
                                                         new_path=modification_repo.new_path,
                                                         change_type=modification_repo.change_type,
@@ -157,7 +163,6 @@ def export_to_csv(request):
     # commits_by_directory = process_commits_by_directories(Commit.objects.order_by("author__name")[:50])
 
     writer = csv.writer(response)
-    writer.writerow(['#', 'Author', 'Commit count', 'File count', 'Ownership (commits)', 'Ownership (files)'])
 
     for directory, infos in commits_by_directory.items():
         i = 1
@@ -165,14 +170,19 @@ def export_to_csv(request):
         writer.writerow(
             ["##################################################################################", "", "", "", "", ""])
         writer.writerow([directory, "", "", "", "", ""])
-        writer.writerow(["    Parametros do diretorio", "", "", "", ""])
-        writer.writerow(["    Threshold (file):", infos.core_developers_threshold_file, "Threshold (file):",
+        writer.writerow(["","    Bird metrics", "", "", "", ""])
+        writer.writerow(["","    Minor contributors:", infos.minor, "", "", ""])
+        writer.writerow(["","    Major contributors:", infos.major, "", "", ""])
+        writer.writerow(["","    Ownership:", infos.ownership, "", "", ""])
+        writer.writerow(["--", "", "", "", ""])
+        writer.writerow(["","    Metricas usadas para classificar tipos de desenvolvedores (JOBLIN et al., 2017)", infos.ownership, "", "", ""])
+        writer.writerow(["","    Threshold (file):", infos.core_developers_threshold_file, "Threshold (file):",
                          infos.core_developers_threshold_commit, ""])
 
         writer.writerow(["---------------------------------------------------------------------------------"])
-        writer.writerow(["Classificacao de desenvolvedores por commits"])
+        writer.writerow(["","Classificacao de desenvolvedores por commits"])
         writer.writerow([""])
-        writer.writerow(["Core developers"])
+        writer.writerow(["","Core developers"])
         i = 1
         for core_dev in infos.core_developers_commits:
             row = [i]
@@ -180,7 +190,7 @@ def export_to_csv(request):
             writer.writerow(row)
             i = i + 1
         writer.writerow([""])
-        writer.writerow(["Peripheral developers"])
+        writer.writerow(["","Peripheral developers"])
         i = 1
         for author in infos.peripheral_developers_commits:
             row = [i]
@@ -189,6 +199,7 @@ def export_to_csv(request):
             i = i + 1
 
         writer.writerow([""])
+        writer.writerow(['#', 'Author', 'Commit count', 'File count', 'Ownership (commits)', 'Ownership (files)'])
         i = 1
         for author, info_contribution in infos.commits_by_author.items():
             row = [i]
