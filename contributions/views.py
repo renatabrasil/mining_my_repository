@@ -12,9 +12,11 @@ from pydriller.git_repository import GitRepository
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag
 
 GR = GitRepository('https://github.com/apache/ant.git')
+tag = 'rel/1.5'
 
 # TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
+    tag = 'rel/1.5'
     project = Project.objects.get(project_name="Apache Ant")
 
     save_commits = False
@@ -27,12 +29,12 @@ def index(request):
             tag = None
             if query.count() > 0:
                 tag = query[0]
-            # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-            #                                           to_tag="rel/1.1", only_modifications_with_file_types=['.java'],
-            #                                           only_no_merge=True).traverse_commits():
             for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.5",
-                                                          only_no_merge=True).traverse_commits():
+                                                      to_tag="rel/1.5", only_modifications_with_file_types=['.java'],
+                                                      only_no_merge=True).traverse_commits():
+            # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
+            #                                           to_tag=tag,
+            #                                               only_no_merge=True).traverse_commits():
                 with transaction.atomic():
                     author = Developer.objects.filter(name=commit_repository.author.name)
                     if author.count() == 0:
@@ -105,6 +107,7 @@ def index(request):
     context = {
         'latest_commit_list': latest_commit_list,
         'project': project,
+        'tag': tag,
 
     }
     return HttpResponse(template.render(context, request))
@@ -176,15 +179,15 @@ def export_to_csv(request):
         writer.writerow(["","    Ownership:", infos.ownership, "", "", ""])
         writer.writerow(["--", "", "", "", ""])
         writer.writerow(["","    Metricas usadas para classificar tipos de desenvolvedores (JOBLIN et al., 2017)", infos.ownership, "", "", ""])
-        writer.writerow(["","    Threshold (file):", infos.core_developers_threshold_file, "Threshold (file):",
-                         infos.core_developers_threshold_commit, ""])
+        writer.writerow(["","    Threshold (file):", infos.core_developers_threshold_file, " | Threshold (commmit):",
+                         infos.core_developers_threshold_commit, " | Threshold (experience): ", infos.core_developers_threshold_experience])
 
         writer.writerow(["---------------------------------------------------------------------------------"])
-        writer.writerow(["","Classificacao de desenvolvedores por commits"])
+        writer.writerow(["","Classificacao de desenvolvedores por experiencia"])
         writer.writerow([""])
         writer.writerow(["","Core developers"])
         i = 1
-        for core_dev in infos.core_developers_commits:
+        for core_dev in infos.core_developers_experience:
             row = [i]
             row.append(core_dev.name)
             writer.writerow(row)
@@ -192,27 +195,31 @@ def export_to_csv(request):
         writer.writerow([""])
         writer.writerow(["","Peripheral developers"])
         i = 1
-        for author in infos.peripheral_developers_commits:
+        for author in infos.peripheral_developers_experience:
             row = [i]
             row.append(author.name)
             writer.writerow(row)
             i = i + 1
 
         writer.writerow([""])
-        writer.writerow(['#', 'Author', 'Commit count', 'File count', 'Ownership (commits)', 'Ownership (files)'])
+        writer.writerow(['#', 'Author', 'Commit count', 'File count', 'LOC count',
+                         'Ownership (commits)', 'Ownership (files)', 'Ownership (loc)', 'Experience'])
         i = 1
         for author, info_contribution in infos.commits_by_author.items():
             row = [i]
             row.append(author.name)
             row.append(info_contribution.commit_count)
             row.append(info_contribution.file_count)
+            row.append(info_contribution.loc_count)
             row.append(info_contribution.commit_percentage)
             row.append(info_contribution.file_percentage)
+            row.append(info_contribution.loc_percentage)
+            row.append(info_contribution.experience)
             writer.writerow(row)
             i = i + 1
         writer.writerow(
-            ["", "Total", infos.total_java_files, infos.total_commits,
-             1, 1])
+            ["", "Total", infos.total_java_files, infos.total_commits, infos.total_loc,
+             1, 1, 1, 1])
 
     return response
 
@@ -229,13 +236,14 @@ def export_to_csv_commit_by_author(request):
     writer = csv.writer(response)
 
     writer.writerow(["Parametros", "", "", "", "", ""])
-    writer.writerow(["Threshold (file): ", commits_by_author.core_developers_threshold_file, "Threshold (commit):",
-                     commits_by_author.core_developers_threshold_commit, "", ""])
-    writer.writerow(["Classificacao de desenvolvedores por commits"])
+    writer.writerow([" | Threshold (file): ", commits_by_author.core_developers_threshold_file, " | Threshold (commit):",
+                     commits_by_author.core_developers_threshold_commit, " | Threshold (experience): ",
+                     commits_by_author.core_developers_threshold_experience , ""])
+    writer.writerow(["Classificacao de desenvolvedores por experiencia"])
     writer.writerow([""])
     writer.writerow(["Core developers"])
     i = 1
-    for author in commits_by_author.core_developers_commits:
+    for author in commits_by_author.core_developers_experience:
         row = [i]
         row.append(author.name)
         writer.writerow(row)
@@ -243,7 +251,7 @@ def export_to_csv_commit_by_author(request):
     writer.writerow([""])
     writer.writerow(["Peripheral developers"])
     i = 1
-    for author in commits_by_author.peripheral_developers_commits:
+    for author in commits_by_author.peripheral_developers_experience:
         row = [i]
         row.append(author.name)
         writer.writerow(row)
@@ -251,20 +259,24 @@ def export_to_csv_commit_by_author(request):
 
     writer.writerow([""])
 
-    writer.writerow(['', 'Author', 'Commit count', 'File Count', 'Ownership (commit)', 'Ownership (file)'])
+    writer.writerow(['#', 'Author', 'Commit count', 'File count', 'LOC count',
+                     'Ownership (commits)', 'Ownership (files)', 'Ownership (loc)', 'Experience'])
     i = 1
     for commits in commits_by_author.commits_by_author.items():
         row = [i]
         row.append(commits[0].name)
         row.append(commits[1].commit_count)
         row.append(commits[1].file_count)
+        row.append(commits[1].loc_count)
         row.append(commits[1].commit_percentage)
         row.append(commits[1].file_percentage)
+        row.append(commits[1].loc_percentage)
+        row.append(commits[1].experience)
         writer.writerow(row)
         i = i + 1
     writer.writerow(
-        ["", "Total", commits_by_author.total_java_files, commits_by_author.total_commits,
-         1, 1])
+        ["", "Total", commits_by_author.total_java_files, commits_by_author.total_commits, commits_by_author.total_loc,
+         1, 1, 1, 1])
 
     return response
 
@@ -278,25 +290,25 @@ def export_to_csv_commit_by_author(request):
 #       [2] % contribution
 def process_commits(commits):
     commit_by_committer = {}
-    total_delta = 0
+    total_cloc = 0
     total_commits = 0
     for commit in commits:
-        delta_by_commit = 0
+        cloc_by_commit = 0
         if commit.committer not in commit_by_committer:
             commit_by_committer.setdefault(commit.committer, [[], 0, 0.0])
         for modification in commit.modifications.all():
-            delta_by_commit = delta_by_commit + modification.delta
+            cloc_by_commit = cloc_by_commit + modification.cloc
         commit_by_committer[commit.committer][0].append(commit)
-        commit_by_committer[commit.committer][1] = commit_by_committer[commit.committer][1] + delta_by_commit
-        total_delta = total_delta + delta_by_commit
+        commit_by_committer[commit.committer][1] = commit_by_committer[commit.committer][1] + cloc_by_commit
+        total_cloc = total_cloc + cloc_by_commit
         total_commits = total_commits + 1
 
-    # percorrer o mapa e calcular a contribuicao em % ja com o 'total_delta'
+    # percorrer o mapa e calcular a contribuicao em % ja com o 'total_cloc'
     for key, value in commit_by_committer.items():
         weight = commit_by_committer[key][1]
         number_of_commits = len(commit_by_committer[key][0])
         try:
-            commit_by_committer[key][2] = (weight * number_of_commits) / (total_delta * total_commits)
+            commit_by_committer[key][2] = (weight * number_of_commits) / (total_cloc * total_commits)
         except ZeroDivisionError:
             commit_by_committer[key][2] = 0.0
     return commit_by_committer
@@ -342,19 +354,27 @@ def process_commits_by_directories(commits):
                     report[modification.directory].commits_by_author[commit.author].total_file = \
                     report[modification.directory].commits_by_author[commit.author].total_file + 1
                     report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                    report[modification.directory].commits_by_author[commit.author].loc_count = \
+                        report[modification.directory].commits_by_author[commit.author].loc_count + modification.cloc
+                    report[modification.directory].commits_by_author[commit.author].total_loc = \
+                        report[modification.directory].commits_by_author[commit.author].total_loc  + modification.cloc
+
                 review_modification.append(modification)
 
     for author_report in report.items():
         total_commit = 0
         total_file = 0
-        author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
-                                                                key=lambda x: x[1].commit_count, reverse=True))
+        total_loc = 0
         for contributor in author_report[1].commits_by_author.items():
             total_file = total_file + contributor[1].total_file
             total_commit = total_commit + contributor[1].total_commit
+            total_loc = total_loc + contributor[1].total_loc
         author_report[1].total_java_files = author_report[1].total_java_files + total_file
         author_report[1].total_commits = author_report[1].total_commits + total_commit
+        author_report[1].total_loc = author_report[1].total_loc + total_loc
         print(author_report[1].core_developers_threshold_commit)
+        author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
+                                                                key=lambda x: x[1].experience, reverse=True))
 
     return report
 
@@ -373,6 +393,7 @@ def process_commits_by_author(commits):
     report = ContributionByAuthorReport()
     total_commits = 0
     total_java_files = 0
+    total_loc = 0
     for commit in commits:
         if commit.author not in report.commits_by_author:
             report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
@@ -382,10 +403,14 @@ def process_commits_by_author(commits):
                 report.commits_by_author[commit.author].file_count = report.commits_by_author[
                                                                          commit.author].file_count + 1
                 total_java_files = total_java_files + 1
+                report.commits_by_author[commit.author].loc_count = report.commits_by_author[
+                                                                         commit.author].loc_count + modification.cloc
+                total_loc = total_loc + modification.cloc
         total_commits = total_commits + 1
     report.total_commits = total_commits
     report.total_java_files = total_java_files
+    report.total_loc = total_loc
     report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
-                                                  key=lambda x: x[1].commit_count, reverse=True))
+                                                  key=lambda x: x[1].experience, reverse=True))
 
     return report

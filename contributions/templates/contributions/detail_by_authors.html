@@ -11,11 +11,13 @@
     <h5 class="card-title">Parâmetros do Projeto</h5>
       <p class="card-text"><strong>Threshold (file)
           <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de arquivos"></i></strong>:
-    {{latest_commit_list.core_developers_threshold_file|floatformat:4}}</p>
+    {{latest_commit_list.core_developers_threshold_file|floatformat:3}}</p>
 
       <p class="card-text"><strong>Threshold (commit)
           <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de commits"></i></strong>:
-    {{latest_commit_list.core_developers_threshold_commit|floatformat:4}}</p>
+    {{latest_commit_list.core_developers_threshold_commit|floatformat:3}}</p>
+
+      <li>Threshold (experience): {{latest_commit_list.core_developers_threshold_experience|floatformat:3}}</li>
   </div>
 </div>
 
@@ -35,7 +37,7 @@
         </thead>
         <tbody>
             {% if latest_commit_list.core_developers_commits %}
-                {% for author in latest_commit_list.core_developers_commits %}
+                {% for author in latest_commit_list.core_developers_experience %}
                     <tr>
                         <td>{{forloop.counter}}</td>
                         <td>{{author.name}}</td>
@@ -80,8 +82,11 @@
                 <th>Author</th>
                 <th style="text-align:right">Commit count</th>
                 <th style="text-align:right">File count</th>
+                <th style="text-align:right">Loc count</th>
                 <th style="text-align:right">Ownership (commits)</th>
                 <th style="text-align:right">Ownership (files)</th>
+                <th style="text-align:right">Ownership (loc)</th>
+                <th style="text-align:right">Experience</th>
             </tr>
         </thead>
         <tbody>
@@ -90,11 +95,14 @@
                 {% for author, totals in latest_commit_list.commits_by_author.items %}
                     <tr>
                         <td>{{forloop.counter}}</td>
-                        <td>{{author.name}}</td>
+                        <td nowrap="">{{author.name}}</td>
                         <td style="text-align:right">{{totals.commit_count}}</td>
                         <td style="text-align:right">{{totals.file_count}}</td>
+                        <td style="text-align:right">{{totals.loc_count}}</td>
                         <td style="text-align:right">{{totals.commit_percentage|percentage}}</td>
                         <td style="text-align:right">{{totals.file_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.loc_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.experience|floatformat:3}}</td>
                     </tr>
                 {% endfor %}
             <tfoot>
@@ -103,9 +111,12 @@
                     <td></td>
                     <td style="text-align:right">{{latest_commit_list.total_commits}}</td>
                     <td style="text-align:right">{{latest_commit_list.total_java_files}}</td>
+                    <td style="text-align:right">{{latest_commit_list.total_loc}}</td>
                     <td>
 
                     </td>
+                    <td></td>
+                    <td></td>
                 </tr>
             </tfoot>
             {% else %}

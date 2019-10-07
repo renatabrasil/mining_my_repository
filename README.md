@@ -6,6 +6,7 @@ Pre-requisites:
 - Django 2.2.5 (or above)
 - Django-mathfilters: https://pypi.org/project/django-mathfilters/0.4.0/
 - PyYAML (5.1.2 or above) = https://pypi.org/project/PyYAML/#history
+- numPY
 
 
 Run:

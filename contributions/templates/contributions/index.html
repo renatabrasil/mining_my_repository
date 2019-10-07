@@ -8,7 +8,7 @@
     <h5 class="text-info">Informações:</h5>
     <strong>Projeto:</strong> {{ project.project_name}}
     <br/>
-    <strong>Tag:</strong> rel/1.3
+    <strong>Tag:</strong> {{tag}}
 </div>
 
 <h3>Commits</h3>
@@ -42,7 +42,7 @@
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
                         <td style="text-align: center;">{{commit.number_of_java_files}}</td>
                         <td style="text-align: center;">{{commit.modifications.all.count}}</td>
-                        <td nowrap>{{ commit.committer.name}}</td>
+                        <td nowrap>{{ commit.committer.name}} {{commit.nloc}}</td>
                         <td nowrap>{{ commit.author.name}}</td>
                     </tr>
                     {% endfor %}

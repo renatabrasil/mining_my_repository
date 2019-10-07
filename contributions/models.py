@@ -80,7 +80,7 @@ class Modification(models.Model):
 	source_code_before = models.TextField(null=True)
 	added = models.IntegerField(null=True)
 	removed = models.IntegerField(null=True)
-	delta = models.IntegerField(default=0)
+	cloc = models.IntegerField(default=0)
 	nloc = models.IntegerField(null=True)
 	complexity = models.IntegerField(null=True)
 	token_count = models.CharField(max_length=200,null=True)
@@ -121,7 +121,8 @@ class Modification(models.Model):
 		else:
 			self.directory = "/"
 
-		self.delta = abs(self.added-self.removed)
+		# self.delta = abs(self.added-self.removed)
+		self.cloc = self.added + self.removed
 		super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class TransientModel(models.Model):
@@ -167,6 +168,13 @@ class Contributor(TransientModel):
 		except ZeroDivisionError:
 			return 0.0
 
+	@property
+	def experience(self):
+		try:
+			return 0.4*self.commit_percentage + 0.4 * self.file_percentage + 0.2*self.loc_percentage
+		except ZeroDivisionError:
+			return 0.0
+
 class ContributionByAuthorReport(TransientModel):
 	abstract = True  # no table for this class
 	managed = False  # no database management
@@ -174,10 +182,12 @@ class ContributionByAuthorReport(TransientModel):
 		self._commits_by_author = {}
 		self._total_commits = 0
 		self._total_java_files = 0
+		self._total_loc = 0
 		self.peripheral_developers = []
 		self._core_developers_threshold_loc = 0.0
 		self._core_developers_threshold_file = 0.0
 		self._core_developers_threshold_commit = 0.0
+		self._core_developers_threshold_experience = 0.0
 		self._minor = 0
 		self._major = 0
 
@@ -239,6 +249,33 @@ class ContributionByAuthorReport(TransientModel):
 		return peripheral_developers
 
 	@property
+	def core_developers_experience(self):
+		core_developers = []
+		for contributor in self._commits_by_author.items():
+			# TODO: check if it makes sense
+			if len(self._commits_by_author) == 1:
+				return [contributor[0]]
+			if contributor[1].experience > self._core_developers_threshold_experience:
+				core_developers.append(contributor[0])
+		return core_developers
+
+	@property
+	def peripheral_developers_files(self):
+		peripheral_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].file_percentage <= self._core_developers_threshold_file:
+				peripheral_developers.append(contributor[0])
+		return peripheral_developers
+
+	@property
+	def peripheral_developers_experience(self):
+		peripheral_developers = []
+		for contributor in self._commits_by_author.items():
+			if contributor[1].experience <= self._core_developers_threshold_experience:
+				peripheral_developers.append(contributor[0])
+		return peripheral_developers
+
+	@property
 	def core_developers_threshold_file(self):
 		file_count_array = []
 		for contributor in self._commits_by_author.items():
@@ -264,6 +301,19 @@ class ContributionByAuthorReport(TransientModel):
 	@core_developers_threshold_commit.setter
 	def core_developers_threshold(self, core_developers_threshold_commit):
 		self._core_developers_threshold_commit = core_developers_threshold_commit
+
+	@property
+	def core_developers_threshold_experience(self):
+		experience_count_array = []
+		for contributor in self._commits_by_author.items():
+			experience_count_array.append(contributor[1].experience)
+		interval = np.array(experience_count_array)
+		self._core_developers_threshold_experience = np.percentile(interval, 80)
+		return self._core_developers_threshold_experience
+
+	@core_developers_threshold_experience.setter
+	def core_developers_threshold(self, core_developers_threshold_experience):
+		self._core_developers_threshold_experience = core_developers_threshold_experience
 
 	@property
 	def commits_by_author(self):
@@ -294,3 +344,13 @@ class ContributionByAuthorReport(TransientModel):
 			contributor[1].total_file = total_java_files
 		self._total_java_files = total_java_files
 
+	@property
+	def total_loc(self):
+		return self._total_loc
+
+	@total_loc.setter
+	def total_loc(self, total_loc):
+		for contributor in self._commits_by_author.items():
+			# set total_commits in every ocurrence of contributor inside commits_by_author dictionary
+			contributor[1].total_loc = total_loc
+		self._total_loc = total_loc
