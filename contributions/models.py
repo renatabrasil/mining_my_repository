@@ -16,6 +16,8 @@ class Project(models.Model):
 class Tag(models.Model):
 	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
 	description = models.CharField(max_length=100)
+	# previous_tag = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, default=None)
+	previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
 
 class Commit(models.Model):
 	tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
@@ -28,8 +30,8 @@ class Commit(models.Model):
 	committer_date = models.DateField()
     # pub_date = models.DateTimeField('date published')
 
-	def __eq__(self, other):
-		return isinstance(other, self.__class__) and self.hash == other.hash
+	# def __eq__(self, other):
+	# 	return isinstance(other, self.__class__) and self.hash == other.hash
 
 	@property
 	def number_of_java_files(self):
@@ -85,8 +87,8 @@ class Modification(models.Model):
 	complexity = models.IntegerField(null=True)
 	token_count = models.CharField(max_length=200,null=True)
 
-	def __eq__(self, other):
-		return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
+	# def __eq__(self, other):
+	# 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
 
 	@property
 	def file(self):
@@ -285,7 +287,7 @@ class ContributionByAuthorReport(TransientModel):
 		return self._core_developers_threshold_file
 
 	@core_developers_threshold_file.setter
-	def core_developers_threshold(self, core_developers_threshold_file):
+	def core_developers_threshold_file(self, core_developers_threshold_file):
 		self._core_developers_threshold_file = core_developers_threshold_file
 
 	@property
@@ -299,7 +301,7 @@ class ContributionByAuthorReport(TransientModel):
 
 
 	@core_developers_threshold_commit.setter
-	def core_developers_threshold(self, core_developers_threshold_commit):
+	def core_developers_threshold_commit(self, core_developers_threshold_commit):
 		self._core_developers_threshold_commit = core_developers_threshold_commit
 
 	@property
@@ -312,7 +314,7 @@ class ContributionByAuthorReport(TransientModel):
 		return self._core_developers_threshold_experience
 
 	@core_developers_threshold_experience.setter
-	def core_developers_threshold(self, core_developers_threshold_experience):
+	def core_developers_threshold_experience(self, core_developers_threshold_experience):
 		self._core_developers_threshold_experience = core_developers_threshold_experience
 
 	@property

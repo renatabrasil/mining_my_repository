@@ -4,12 +4,7 @@
 
 {% block content %}
 
-<div class="shadow p-3 mb-5 bg-white rounded">
-    <h5 class="text-info">Informações:</h5>
-    <strong>Projeto:</strong> {{ project.project_name}}
-    <br/>
-    <strong>Tag:</strong> {{tag}}
-</div>
+
 
 <h3>Commits</h3>
 
@@ -48,7 +43,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="7" style="text-align:center;">No commits are available.</td>
+                        <td colspan="7" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
                     </tr>
                 {% endif %}
             </tbody>

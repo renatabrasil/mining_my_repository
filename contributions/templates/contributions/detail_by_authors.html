@@ -22,13 +22,13 @@
 </div>
 
 <div class="float-right">
-    <a class="btn btn-primary" href="{{request.path}}authors_to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
+    <a class="btn btn-primary" href="/contributions/authors_to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
 </div>
 <br>
 <h5>Classificação dos desenvolvedores por commits</h5>
 <div class="table-responsive">
     <table class="table table-striped table-sm col-md-8">
-        <caption>Core developers por commits ({{latest_commit_list.core_developers_commits|length}})</caption>
+        <caption>Core developers por commits ({{latest_commit_list.core_developers_experience|length}})</caption>
         <thead class="thead-dark">
             <tr>
                 <th></th>
@@ -50,7 +50,7 @@
 </div>
 <div class="table-responsive">
     <table class="table table-striped table-sm col-md-8">
-        <caption>Peripheral developers ({{latest_commit_list.peripheral_developers_commits|length}})</caption>
+        <caption>Peripheral developers ({{latest_commit_list.peripheral_developers_experience|length}})</caption>
         <thead class="thead-dark">
             <tr>
                 <th></th>
@@ -60,7 +60,7 @@
         </thead>
         <tbody>
             {% if latest_commit_list.peripheral_developers_commits %}
-                {% for author in latest_commit_list.peripheral_developers_commits %}
+                {% for author in latest_commit_list.peripheral_developers_experience %}
                     <tr>
                         <td>{{forloop.counter}}</td>
                         <td>{{author.name}}</td>

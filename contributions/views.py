@@ -1,4 +1,5 @@
 import csv
+import json
 from django.db import transaction
 from collections import OrderedDict
 from django.http import HttpResponse, Http404, StreamingHttpResponse
@@ -6,35 +7,48 @@ from django.http import HttpResponse, Http404, StreamingHttpResponse
 # Create your views here.
 from django.shortcuts import render
 from django.template import loader
+from django.template.loader import render_to_string
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag
 
 GR = GitRepository('https://github.com/apache/ant.git')
-tag = 'rel/1.5'
 
 # TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
-    tag = 'rel/1.5'
+    # tag_text = 'rel/1.2'
     project = Project.objects.get(project_name="Apache Ant")
 
-    save_commits = False
-    if request.GET.get('load') and request.GET.get('load') == 'true':
-        save_commits = True
+    tag_id = request.POST.get('tag')
+    if not tag_id:
+        tag_id = request.session['tag']
+    query = Tag.objects.filter(pk=tag_id)
+    if not tag_id:
+        tag_description = request.GET.get('tag')
+        query = Tag.objects.filter(description=tag_description)
+    else:
+        request.session['tag'] = tag_id
 
-    if save_commits:
-        if not project.commits.all():
-            query = Tag.objects.filter(description="rel/1.1")
-            tag = None
-            if query.count() > 0:
-                tag = query[0]
-            for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-                                                      to_tag="rel/1.5", only_modifications_with_file_types=['.java'],
-                                                      only_no_merge=True).traverse_commits():
-            # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-            #                                           to_tag=tag,
-            #                                               only_no_merge=True).traverse_commits():
+    tag = None
+    if query.count() > 0:
+        tag = query[0]
+        tag_description = tag.description
+
+    load_commits = request.POST.get('load_commits')
+    if not load_commits:
+        if request.GET.get('load') and request.GET.get('load') == 'true':
+            load_commits = True
+
+    if load_commits:
+        for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
+                                                  to_tag=tag_description, only_modifications_with_file_types=['.java'],
+                                                  only_no_merge=True).traverse_commits():
+        # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
+        #                                           to_tag=tag,
+        #                                               only_no_merge=True).traverse_commits():
+            commit = Commit.objects.filter(hash=commit_repository.hash)
+            if not commit.exists():
                 with transaction.atomic():
                     author = Developer.objects.filter(name=commit_repository.author.name)
                     if author.count() == 0:
@@ -87,29 +101,45 @@ def index(request):
     url_path = 'contributions/index.html'
     if request.GET.get('commits'):
 
-        latest_commit_list = process_commits(project.commits.all())
+        # latest_commit_list = process_commits(project.commits.all())
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
+        # latest_commit_list = process_commits_by_directories(Commit.objects.filter(tag__description=tag_description,
+        #                                                                           modifications__in=
+        #                                                                           Modification.objects.filter(
+        #                                                                               path__contains=".java")).distinct())
         latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
                                                                                   Modification.objects.filter(
                                                                                       path__contains=".java")).distinct())
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('author'):
-        latest_commit_list = process_commits_by_author(Commit.objects.order_by("author__name"))
+        latest_commit_list = process_commits_by_author(Commit.objects.all().order_by("author__name"))
         # request.session['commits'] = latest_commit_list
 
         url_path = 'contributions/detail_by_authors.html'
     else:
-        latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
+        if tag:
+            latest_commit_list = load_commits_from_tags(tag)
+        else:
+            latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
                                                                                                       "committer_date")
+
 
     template = loader.get_template(url_path)
     context = {
         'latest_commit_list': latest_commit_list,
         'project': project,
-        'tag': tag,
+        'tag': tag_description,
 
     }
+    json_response = []
+    if request.is_ajax():
+        result = {'html': render_to_string(url_path, {'latest_commit_list': latest_commit_list})}
+        return HttpResponse(json.dumps(result, ensure_ascii=False),
+                            content_type='application/json')
+        # return HttpResponse(json.dumps(json_response),
+        #                     content_type='application/json')
+
     return HttpResponse(template.render(context, request))
 
 
@@ -281,38 +311,18 @@ def export_to_csv_commit_by_author(request):
     return response
 
 
-# Other methods (most auxiliary)
-# dictionary = key: committer
-#              value: info
-# info:
-#       [0] number of commits
-#       [1] contribution
-#       [2] % contribution
-def process_commits(commits):
-    commit_by_committer = {}
-    total_cloc = 0
-    total_commits = 0
-    for commit in commits:
-        cloc_by_commit = 0
-        if commit.committer not in commit_by_committer:
-            commit_by_committer.setdefault(commit.committer, [[], 0, 0.0])
-        for modification in commit.modifications.all():
-            cloc_by_commit = cloc_by_commit + modification.cloc
-        commit_by_committer[commit.committer][0].append(commit)
-        commit_by_committer[commit.committer][1] = commit_by_committer[commit.committer][1] + cloc_by_commit
-        total_cloc = total_cloc + cloc_by_commit
-        total_commits = total_commits + 1
-
-    # percorrer o mapa e calcular a contribuicao em % ja com o 'total_cloc'
-    for key, value in commit_by_committer.items():
-        weight = commit_by_committer[key][1]
-        number_of_commits = len(commit_by_committer[key][0])
-        try:
-            commit_by_committer[key][2] = (weight * number_of_commits) / (total_cloc * total_commits)
-        except ZeroDivisionError:
-            commit_by_committer[key][2] = 0.0
-    return commit_by_committer
-
+""" Load all commits including all previous tag of current tag
+param: current tag
+return all commits up to current tag """
+def load_commits_from_tags(tag):
+   commits = Commit.objects.none()
+   while tag:
+       commits = commits | (Commit.objects.filter(tag__description=tag.description, modifications__in=
+                                                                                 Modification.objects.filter(
+                                                                                     path__contains=".java")).distinct())
+       return commits
+       tag = tag.previous_tag
+   return commits
 
 # Other methods (most auxiliary)
 # returns: dictionary = key: directory
@@ -326,57 +336,57 @@ def process_commits(commits):
 #                     - float: core_developers_threshold_file
 #                     - float: core_developers_threshold_commit
 def process_commits_by_directories(commits):
-    report = {}
-    review_modification = []
+   report = {}
+   review_modification = []
 
-    for commit in commits:
-        number_of_files = 0
+   for commit in commits:
+       number_of_files = 0
 
-        for modification in commit.modifications.all():
-            if modification.is_java_file:
-                # First hierarchy
-                if modification.directory not in report:
-                    report.setdefault(modification.directory, ContributionByAuthorReport())
-                # Second hierarchy
-                if commit.author not in report[modification.directory].commits_by_author:
-                    report[modification.directory].commits_by_author.setdefault(commit.author,
-                                                                                Contributor(commit.author))
-                if commit not in report[modification.directory].commits_by_author[commit.author].commits:
-                    report[modification.directory].commits_by_author[commit.author].commits.append(commit)
-                    report[modification.directory].commits_by_author[commit.author].commit_count = \
-                    report[modification.directory].commits_by_author[commit.author].commit_count + 1
-                    report[modification.directory].commits_by_author[commit.author].total_commit = \
-                        report[modification.directory].commits_by_author[commit.author].total_commit + 1
-                # to avoid duplicate (should be fixed soon)
-                if modification not in review_modification:
-                    report[modification.directory].commits_by_author[commit.author].file_count = \
-                    report[modification.directory].commits_by_author[commit.author].file_count + 1
-                    report[modification.directory].commits_by_author[commit.author].total_file = \
-                    report[modification.directory].commits_by_author[commit.author].total_file + 1
-                    report[modification.directory].commits_by_author[commit.author].files.append(modification)
-                    report[modification.directory].commits_by_author[commit.author].loc_count = \
-                        report[modification.directory].commits_by_author[commit.author].loc_count + modification.cloc
-                    report[modification.directory].commits_by_author[commit.author].total_loc = \
-                        report[modification.directory].commits_by_author[commit.author].total_loc  + modification.cloc
+       for modification in commit.modifications.all():
+           if modification.is_java_file:
+               # First hierarchy
+               if modification.directory not in report:
+                   report.setdefault(modification.directory, ContributionByAuthorReport())
+               # Second hierarchy
+               if commit.author not in report[modification.directory].commits_by_author:
+                   report[modification.directory].commits_by_author.setdefault(commit.author,
+                                                                               Contributor(commit.author))
+               if commit not in report[modification.directory].commits_by_author[commit.author].commits:
+                   report[modification.directory].commits_by_author[commit.author].commits.append(commit)
+                   report[modification.directory].commits_by_author[commit.author].commit_count = \
+                   report[modification.directory].commits_by_author[commit.author].commit_count + 1
+                   report[modification.directory].commits_by_author[commit.author].total_commit = \
+                       report[modification.directory].commits_by_author[commit.author].total_commit + 1
+               # to avoid duplicate (should be fixed soon)
+               if modification not in review_modification:
+                   report[modification.directory].commits_by_author[commit.author].file_count = \
+                   report[modification.directory].commits_by_author[commit.author].file_count + 1
+                   report[modification.directory].commits_by_author[commit.author].total_file = \
+                   report[modification.directory].commits_by_author[commit.author].total_file + 1
+                   report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                   report[modification.directory].commits_by_author[commit.author].loc_count = \
+                       report[modification.directory].commits_by_author[commit.author].loc_count + modification.cloc
+                   report[modification.directory].commits_by_author[commit.author].total_loc = \
+                       report[modification.directory].commits_by_author[commit.author].total_loc  + modification.cloc
 
-                review_modification.append(modification)
+               review_modification.append(modification)
 
-    for author_report in report.items():
-        total_commit = 0
-        total_file = 0
-        total_loc = 0
-        for contributor in author_report[1].commits_by_author.items():
-            total_file = total_file + contributor[1].total_file
-            total_commit = total_commit + contributor[1].total_commit
-            total_loc = total_loc + contributor[1].total_loc
-        author_report[1].total_java_files = author_report[1].total_java_files + total_file
-        author_report[1].total_commits = author_report[1].total_commits + total_commit
-        author_report[1].total_loc = author_report[1].total_loc + total_loc
-        print(author_report[1].core_developers_threshold_commit)
-        author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
-                                                                key=lambda x: x[1].experience, reverse=True))
+   for author_report in report.items():
+       total_commit = 0
+       total_file = 0
+       total_loc = 0
+       for contributor in author_report[1].commits_by_author.items():
+           total_file = total_file + contributor[1].total_file
+           total_commit = total_commit + contributor[1].total_commit
+           total_loc = total_loc + contributor[1].total_loc
+       author_report[1].total_java_files = author_report[1].total_java_files + total_file
+       author_report[1].total_commits = author_report[1].total_commits + total_commit
+       author_report[1].total_loc = author_report[1].total_loc + total_loc
+       print(author_report[1].core_developers_threshold_commit)
+       author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
+                                                               key=lambda x: x[1].experience, reverse=True))
 
-    return report
+   return report
 
 
 # TODO: implementar as consultas usando django query
@@ -390,27 +400,27 @@ def process_commits_by_directories(commits):
 #                     - float: core_developers_threshold_file
 #                     - float: core_developers_threshold_commit
 def process_commits_by_author(commits):
-    report = ContributionByAuthorReport()
-    total_commits = 0
-    total_java_files = 0
-    total_loc = 0
-    for commit in commits:
-        if commit.author not in report.commits_by_author:
-            report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
-        report.commits_by_author[commit.author].commit_count = report.commits_by_author[commit.author].commit_count + 1
-        for modification in commit.modifications.all():
-            if modification.is_java_file:
-                report.commits_by_author[commit.author].file_count = report.commits_by_author[
-                                                                         commit.author].file_count + 1
-                total_java_files = total_java_files + 1
-                report.commits_by_author[commit.author].loc_count = report.commits_by_author[
-                                                                         commit.author].loc_count + modification.cloc
-                total_loc = total_loc + modification.cloc
-        total_commits = total_commits + 1
-    report.total_commits = total_commits
-    report.total_java_files = total_java_files
-    report.total_loc = total_loc
-    report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
-                                                  key=lambda x: x[1].experience, reverse=True))
+   report = ContributionByAuthorReport()
+   total_commits = 0
+   total_java_files = 0
+   total_loc = 0
+   for commit in commits:
+       if commit.author not in report.commits_by_author:
+           report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
+       report.commits_by_author[commit.author].commit_count = report.commits_by_author[commit.author].commit_count + 1
+       for modification in commit.modifications.all():
+           if modification.is_java_file:
+               report.commits_by_author[commit.author].file_count = report.commits_by_author[
+                                                                        commit.author].file_count + 1
+               total_java_files = total_java_files + 1
+               report.commits_by_author[commit.author].loc_count = report.commits_by_author[
+                                                                        commit.author].loc_count + modification.cloc
+               total_loc = total_loc + modification.cloc
+       total_commits = total_commits + 1
+   report.total_commits = total_commits
+   report.total_java_files = total_java_files
+   report.total_loc = total_loc
+   report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
+                                                 key=lambda x: x[1].experience, reverse=True))
 
-    return report
+   return report
