@@ -15,11 +15,7 @@ from contributions.models import Commit, Project, Developer, Modification, Contr
 
 GR = GitRepository('https://github.com/apache/ant.git')
 
-# TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
-def index(request):
-    # tag_text = 'rel/1.2'
-    project = Project.objects.get(project_name="Apache Ant")
-
+def load_tag(request):
     tag_id = request.POST.get('tag')
     if not tag_id:
         tag_id = request.session['tag']
@@ -29,11 +25,18 @@ def index(request):
         query = Tag.objects.filter(description=tag_description)
     else:
         request.session['tag'] = tag_id
-
     tag = None
     if query.count() > 0:
         tag = query[0]
-        tag_description = tag.description
+    return tag
+
+# TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
+def index(request):
+    # tag_text = 'rel/1.2'
+    project = Project.objects.get(project_name="Apache Ant")
+
+    tag = load_tag(request)
+    tag_description = tag.description
 
     load_commits = request.POST.get('load_commits')
     if not load_commits:
@@ -108,12 +111,10 @@ def index(request):
         #                                                                           modifications__in=
         #                                                                           Modification.objects.filter(
         #                                                                               path__contains=".java")).distinct())
-        latest_commit_list = process_commits_by_directories(Commit.objects.filter(modifications__in=
-                                                                                  Modification.objects.filter(
-                                                                                      path__contains=".java")).distinct())
+        latest_commit_list = process_commits_by_directories(load_commits_from_tags(tag))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('author'):
-        latest_commit_list = process_commits_by_author(Commit.objects.all().order_by("author__name"))
+        latest_commit_list = process_commits_by_author(load_commits_from_tags(tag))
         # request.session['commits'] = latest_commit_list
 
         url_path = 'contributions/detail_by_authors.html'
@@ -192,10 +193,18 @@ def export_to_csv(request):
     response['Content-Disposition'] = 'attachment; filename="directory_ownership_metrics.csv"'
 
     project = Project.objects.get(project_name="Apache Ant")
-    commits_by_directory = process_commits_by_directories(project.commits.all())
-    # commits_by_directory = process_commits_by_directories(Commit.objects.order_by("author__name")[:50])
+    tag = load_tag(request)
 
     writer = csv.writer(response)
+
+    commits_by_directory = {}
+    if tag:
+        commits_by_directory = process_commits_by_directories(load_commits_from_tags(tag))
+        writer.writerow(["Tag:", tag.description])
+    # commits_by_directory = process_commits_by_directories(Commit.objects.order_by("author__name")[:50])
+
+
+
 
     for directory, infos in commits_by_directory.items():
         i = 1
@@ -258,12 +267,19 @@ def export_to_csv_commit_by_author(request):
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="estatisticas_projeto.csv"'
+    writer = csv.writer(response)
 
     project = Project.objects.get(project_name="Apache Ant")
-    commits_by_author = process_commits_by_author(Commit.objects.order_by("author__name"))
+    tag = load_tag(request)
+
+    commits_by_author = {}
+    if tag:
+        commits_by_author = process_commits_by_author(load_commits_from_tags(tag))
+        writer.writerow(["Tag:", tag.description])
     # commits_by_author = request.session['commits']
 
-    writer = csv.writer(response)
+
+
 
     writer.writerow(["Parametros", "", "", "", "", ""])
     writer.writerow([" | Threshold (file): ", commits_by_author.core_developers_threshold_file, " | Threshold (commit):",
@@ -320,7 +336,6 @@ def load_commits_from_tags(tag):
        commits = commits | (Commit.objects.filter(tag__description=tag.description, modifications__in=
                                                                                  Modification.objects.filter(
                                                                                      path__contains=".java")).distinct())
-       return commits
        tag = tag.previous_tag
    return commits
 

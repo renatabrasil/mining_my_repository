@@ -149,9 +149,13 @@
                 <div class="col">
                   <select class="form-control" id="tag_selector" placeholder="Selecione a tag" name="tag">
 
-                      <option selected>Selecione a tag</option>
+                      <option selected value="{{tag.id}}">Selecione a tag</option>
                       {% for tag in tags %}
-                        <option value="{{tag.pk}}">{{tag.description}}</option>
+                        <option value="{{tag.pk}}"
+                           {% if tag.pk == current_tag.pk %}selected="selected"{% endif %}>
+                           {{tag.description}}
+                       </option>
+
                       {% endfor %}
                   </select>
                 </div>
