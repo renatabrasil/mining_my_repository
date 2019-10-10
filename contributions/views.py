@@ -44,12 +44,9 @@ def index(request):
             load_commits = True
 
     if load_commits:
-        for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
+        for commit_repository in RepositoryMining(project.project_path, only_in_branch='master',
                                                   to_tag=tag_description, only_modifications_with_file_types=['.java'],
                                                   only_no_merge=True).traverse_commits():
-        # for commit_repository in RepositoryMining("https://github.com/apache/ant.git", only_in_branch='master',
-        #                                           to_tag=tag,
-        #                                               only_no_merge=True).traverse_commits():
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 with transaction.atomic():
@@ -331,7 +328,12 @@ def export_to_csv_commit_by_author(request):
 param: current tag
 return all commits up to current tag """
 def load_commits_from_tags(tag):
-   commits = Commit.objects.none()
+   commits = Commit.objects.filter(tag__description=tag.description, modifications__in=
+                                                                                 Modification.objects.filter(
+                                                                                     path__contains=".java")).distinct()
+   if commits.count() == 0:
+       return commits
+   tag = tag.previous_tag
    while tag:
        commits = commits | (Commit.objects.filter(tag__description=tag.description, modifications__in=
                                                                                  Modification.objects.filter(

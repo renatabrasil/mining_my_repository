@@ -144,45 +144,58 @@
             </div>
           </div>
 
-          <form action="{{request_path}}" method="post">{% csrf_token %}
-              <div class="form-row">
-                <div class="col">
-                  <select class="form-control" id="tag_selector" placeholder="Selecione a tag" name="tag">
-
-                      <option selected value="{{tag.id}}">Selecione a tag</option>
-                      {% for tag in tags %}
-                        <option value="{{tag.pk}}"
-                           {% if tag.pk == current_tag.pk %}selected="selected"{% endif %}>
-                           {{tag.description}}
-                       </option>
-
-                      {% endfor %}
-                  </select>
-                </div>
-                  <div class="col">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="load_commits" id="load_commits">
-                        <label class="form-check-label" for="load_commits">
-                            Carregar commits
-                        </label>
+            <div class="card" style="width: 35rem;">
+  <div class="card-body">
+    <h5 class="card-title">Informações</h5>
+      <p class="card-text">
+          <strong>Projeto:</strong> {{ project.project_name}}
+      </p>
+      <p class="card-text">
+          <strong>Tag:</strong> {{tag}}
+      </p>
+        <p class="card-text">
+            <form action="{{request_path}}" method="post">{% csrf_token %}
+                  <div class="form-row align-items-center">
+                    <div class="col-auto">
+                        <label for="tag_selector" class="sr-only">Tag</label>
+                      <select class="form-control mb-2" id="tag_selector" placeholder="Selecione a tag" name="tag">
+                          <option selected value="{{tag.id}}">Selecione a tag</option>
+                          {% for tag in tags %}
+                            <option value="{{tag.pk}}"
+                               {% if tag.pk == current_tag.pk %}selected="selected"{% endif %}>
+                               {{tag.description}}
+                           </option>
+                          {% endfor %}
+                      </select>
                     </div>
-                </div>
-            </div>
-              <button class="btn btn-primary" type="submit">Atualizar</button>
-        </form>
-          <div id="content">
-              <div class="shadow p-3 mb-5 bg-white rounded">
-                <h5 class="text-info">Informações:</h5>
-                <strong>Projeto:</strong> {{ project.project_name}}
-                <br/>
-                <strong>Tag:</strong> {{tag}}
-              </div>
-            {% block content %}{% endblock %}
-          </div>
-
-        </main>
+                    <div class="col-auto">
+                        <div class="custom-control custom-checkbox form-check mb-2">
+                            <input class="custom-control-input" type="checkbox" name="load_commits" id="load_commits">
+                            <label class="custom-control-label" for="load_commits">
+                                Carregar commits
+                            </label>
+                        </div>
+                        <small id="passwordHelpInline" class="text-muted">
+      may take several minutes
+</small>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary mb-2">Atualizar</button>
+                    </div>
+                  </div>
+            </form>
+          </p>
       </div>
     </div>
+
+      <div id="content">
+          <br>
+        {% block content %}{% endblock %}
+      </div>
+
+    </main>
+  </div>
+</div>
 
 
 <script src="https://cdn.jsdelivr.net/npm/js-cookie@beta/dist/js.cookie.min.js"></script>

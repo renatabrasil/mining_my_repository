@@ -6,18 +6,25 @@ import numpy as np
 class Developer(models.Model):
 	name = models.CharField(max_length=200)
 	email = models.CharField(max_length=200)
-    # def __str__(self):
-    #     return self.name
+
+	def __str__(self):
+		return self.name + '('+self.email+')'
 
 class Project(models.Model):
 	project_name = models.CharField(max_length=200)
 	project_path = models.CharField(max_length=200)
+
+	def __str__(self):
+		return self.project_name
 
 class Tag(models.Model):
 	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
 	description = models.CharField(max_length=100)
 	# previous_tag = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, default=None)
 	previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
+
+	def __str__(self):
+		return self.description
 
 class Commit(models.Model):
 	tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
