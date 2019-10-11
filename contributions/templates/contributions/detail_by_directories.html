@@ -62,7 +62,7 @@
                     {% for author,contribution in infos.commits_by_author.items %}
                     <tr >
                         <td>{{forloop.counter}}</td>
-                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory}}">{{author.name}}</a> </td>
+                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory.name}}">{{author.name}}</a> </td>
                         <td style="text-align:right"> {{contribution.commit_count}}</td>
                         <td style="text-align:right"> {{contribution.file_count}}</td>
                         <td style="text-align:right"> {{contribution.loc_count}}</td>

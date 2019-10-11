@@ -26,6 +26,16 @@ class Tag(models.Model):
 	def __str__(self):
 		return self.description
 
+class Directory(models.Model):
+	name = models.CharField(max_length=200)
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
+	# parent_tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='directories')
+	visible = models.BooleanField(default=True)
+
+
+	def __str__(self):
+		return self.name + " - Visible: " + str(self.visible)
+
 class Commit(models.Model):
 	tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
 	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='commits')
@@ -68,7 +78,8 @@ class Modification(models.Model):
 	old_path = models.CharField(max_length=200, null=True)
 	new_path = models.CharField(max_length=200, null=True)
 	path = models.CharField(max_length=200, null=True, default="-")
-	directory = models.CharField(max_length=200, null=True, default="-")
+	directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
+	# directory = models.CharField(max_length=200, null=True, default="-")
 	ADDED = 'ADD'
 	DELETED = 'DEL'
 	MODIFIED = 'MOD'
@@ -92,7 +103,7 @@ class Modification(models.Model):
 	cloc = models.IntegerField(default=0)
 	nloc = models.IntegerField(null=True)
 	complexity = models.IntegerField(null=True)
-	token_count = models.CharField(max_length=200,null=True)
+	# token_count = models.CharField(max_length=200,null=True)
 
 	# def __eq__(self, other):
 	# 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
@@ -125,10 +136,18 @@ class Modification(models.Model):
 
 
 		index = self.path.rfind("/")
+		directory_str = ""
 		if index > -1:
-			self.directory = self.path[:index]
+			directory_str = self.path[:index]
 		else:
-			self.directory = "/"
+			directory_str = "/"
+
+		# directory = Directory.objects.filter(name=directory_str)
+		# if directory.count() == 0:
+		# 	author = Directory(name=directory_str, email=commit_repository.author.email)
+		# 	author.save()
+		# else:
+		# 	author = directory[0]
 
 		# self.delta = abs(self.added-self.removed)
 		self.cloc = self.added + self.removed
@@ -199,6 +218,10 @@ class ContributionByAuthorReport(TransientModel):
 		self._core_developers_threshold_experience = 0.0
 		self._minor = 0
 		self._major = 0
+
+	@property
+	def is_Empty(self):
+		return not bool(self._commits_by_author)
 
 	@property
 	def ownership(self):
@@ -290,7 +313,8 @@ class ContributionByAuthorReport(TransientModel):
 		for contributor in self._commits_by_author.items():
 			file_count_array.append(contributor[1].file_percentage)
 		interval = np.array(file_count_array)
-		self._core_developers_threshold_file = np.percentile(interval, 80)
+		if interval.any():
+			self._core_developers_threshold_file = np.percentile(interval, 80)
 		return self._core_developers_threshold_file
 
 	@core_developers_threshold_file.setter
@@ -303,7 +327,8 @@ class ContributionByAuthorReport(TransientModel):
 		for contributor in self._commits_by_author.items():
 			array.append(contributor[1].commit_percentage)
 		interval = np.array(array)
-		self._core_developers_threshold_commit = np.percentile(interval, 80)
+		if interval.any():
+			self._core_developers_threshold_commit = np.percentile(interval, 80)
 		return self._core_developers_threshold_commit
 
 
@@ -317,7 +342,8 @@ class ContributionByAuthorReport(TransientModel):
 		for contributor in self._commits_by_author.items():
 			experience_count_array.append(contributor[1].experience)
 		interval = np.array(experience_count_array)
-		self._core_developers_threshold_experience = np.percentile(interval, 80)
+		if interval.any():
+			self._core_developers_threshold_experience = np.percentile(interval, 80)
 		return self._core_developers_threshold_experience
 
 	@core_developers_threshold_experience.setter
