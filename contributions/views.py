@@ -1,5 +1,8 @@
 import csv
 import json
+import time
+
+from django.core.paginator import Paginator
 from django.db import transaction
 from collections import OrderedDict
 from django.http import HttpResponse, Http404, StreamingHttpResponse
@@ -11,14 +14,21 @@ from django.template.loader import render_to_string
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
-from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag
+from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
+    Directory
 
 GR = GitRepository('https://github.com/apache/ant.git')
+report_directories = None
 
 def load_tag(request):
     tag_id = request.POST.get('tag')
     if not tag_id:
-        tag_id = request.session['tag']
+        try:
+            tag_id = request.session['tag']
+        except Exception as e:
+            # raise  # reraises the exceptio
+            print(str(e))
+            tag_id = Tag.objects.all()[0].id
     query = Tag.objects.filter(pk=tag_id)
     if not tag_id:
         tag_description = request.GET.get('tag')
@@ -35,6 +45,9 @@ def index(request):
     # tag_text = 'rel/1.2'
     project = Project.objects.get(project_name="Apache Ant")
 
+
+    start = time.time()
+
     tag = load_tag(request)
     tag_description = tag.description
 
@@ -44,9 +57,22 @@ def index(request):
             load_commits = True
 
     if load_commits:
+        # for commit_repository in RepositoryMining(project.project_path, only_in_branch='master', to_tag=tag_description,
+        #                                           from_tag=tag.previous_tag.description if tag.previous_tag else None,
+        #                                           only_modifications_with_file_types=['.java'],
+        #                                           only_no_merge=True).traverse_commits():
+        total_commits = Commit.objects.all().count() - 1
+        if total_commits > 0:
+            hash = Commit.objects.all()[total_commits].hash
+        else:
+            hash= None
         for commit_repository in RepositoryMining(project.project_path, only_in_branch='master',
-                                                  to_tag=tag_description, only_modifications_with_file_types=['.java'],
+                                                  to_tag=tag_description,
+                                                  from_commit=hash,
+                                                  only_modifications_with_file_types=['.java'],
                                                   only_no_merge=True).traverse_commits():
+            # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
+            # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 with transaction.atomic():
@@ -66,37 +92,50 @@ def index(request):
                             committer.save()
                         else:
                             committer = committer[0]
-                    commit = Commit.objects.create(project=project, hash=commit_repository.hash, tag=tag,
+                    commit = Commit(project=project, hash=commit_repository.hash, tag=tag,
                                                    msg=commit_repository.msg,
                                                    author=author, author_date=commit_repository.author_date,
                                                    committer=committer,
                                                    committer_date=commit_repository.committer_date)
+                    total_modification = 0
                     for modification_repo in commit_repository.modifications:
-                        if hasattr(modification_repo, 'token_count'):
-                            token_count = modification_repo.token_count
-                        else:
-                            token_count = None
-                        if hasattr(modification_repo, 'nloc'):
-                            nloc = modification_repo.nloc
-                        else:
-                            nloc = None
-                        # diff = GitRepository.parse_diff(modification.diff)
-                        try:
-                            modification = Modification(commit=commit, old_path=modification_repo.old_path,
-                                                        new_path=modification_repo.new_path,
-                                                        change_type=modification_repo.change_type,
-                                                        diff=modification_repo.diff,
-                                                        source_code=modification_repo.source_code,
-                                                        source_code_before=modification_repo.source_code_before,
-                                                        added=modification_repo.added,
-                                                        removed=modification_repo.removed,
-                                                        nloc=nloc,
-                                                        complexity=modification_repo.complexity,
-                                                        token_count=token_count)
-                            modification.save()
-                        except Exception as e:
-                            # raise  # reraises the exceptio
-                            print(str(e))
+                        path = __true_path__(modification_repo)
+                        if __modification_is_java_file__(path):
+                            total_modification = total_modification + 1
+                            directory_str = __directory_str__(path)
+                            directory = Directory.objects.filter(name=directory_str)
+                            if directory.count() == 0:
+                                # directory = Directory(name=directory_str, visible=True, project=project, parent_tag=tag)
+                                directory = Directory(name=directory_str, visible=True, project=project)
+                                directory.save()
+                            else:
+                                directory = directory[0]
+
+                            if hasattr(modification_repo, 'nloc'):
+                                nloc = modification_repo.nloc
+                            else:
+                                nloc = None
+                            # diff = GitRepository.parse_diff(modification.diff)
+                            try:
+                                if total_modification == 1:
+                                    commit.save()
+                                modification = Modification(commit=commit, old_path=modification_repo.old_path,
+                                                            new_path=modification_repo.new_path,
+                                                            change_type=modification_repo.change_type,
+                                                            diff=modification_repo.diff,
+                                                            directory=directory,
+                                                            source_code=modification_repo.source_code,
+                                                            source_code_before=modification_repo.source_code_before,
+                                                            added=modification_repo.added,
+                                                            removed=modification_repo.removed,
+                                                            nloc=nloc,
+                                                            complexity=modification_repo.complexity)
+
+                                modification.save()
+                            except Exception as e:
+                                # raise  # reraises the exceptio
+                                print(str(e))
+
 
     url_path = 'contributions/index.html'
     if request.GET.get('commits'):
@@ -108,7 +147,7 @@ def index(request):
         #                                                                           modifications__in=
         #                                                                           Modification.objects.filter(
         #                                                                               path__contains=".java")).distinct())
-        latest_commit_list = process_commits_by_directories(load_commits_from_tags(tag))
+        latest_commit_list = process_commits_by_directories(request,load_commits_from_tags(tag))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('author'):
         latest_commit_list = process_commits_by_author(load_commits_from_tags(tag))
@@ -121,6 +160,11 @@ def index(request):
         else:
             latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
                                                                                                       "committer_date")
+        paginator = Paginator(latest_commit_list, 100)
+
+        page = request.GET.get('page')
+        latest_commit_list = paginator.get_page(page)
+
 
 
     template = loader.get_template(url_path)
@@ -137,6 +181,9 @@ def index(request):
                             content_type='application/json')
         # return HttpResponse(json.dumps(json_response),
         #                     content_type='application/json')
+    end = time.time()
+
+    print("Tempo total: " + str(end - start))
 
     return HttpResponse(template.render(context, request))
 
@@ -172,7 +219,7 @@ def detail_in_committer(request, committer_id):
             path = request.GET.get('path')
 
         latest_commit_list = list(Commit.objects.filter(committer__id=committer_id,
-                                                        modifications__in=Modification.objects.filter(directory=path,
+                                                        modifications__in=Modification.objects.filter(directory__name=path,
                                                                                                       path__contains=".java"))
                                   .distinct())
         context = {
@@ -196,7 +243,7 @@ def export_to_csv(request):
 
     commits_by_directory = {}
     if tag:
-        commits_by_directory = process_commits_by_directories(load_commits_from_tags(tag))
+        commits_by_directory = process_commits_by_directories(request,load_commits_from_tags(tag))
         writer.writerow(["Tag:", tag.description])
     # commits_by_directory = process_commits_by_directories(Commit.objects.order_by("author__name")[:50])
 
@@ -328,18 +375,82 @@ def export_to_csv_commit_by_author(request):
 param: current tag
 return all commits up to current tag """
 def load_commits_from_tags(tag):
-   commits = Commit.objects.filter(tag__description=tag.description, modifications__in=
-                                                                                 Modification.objects.filter(
-                                                                                     path__contains=".java")).distinct()
-   if commits.count() == 0:
+   commits = Commit.objects.filter(tag__description=tag.description).distinct()
+   if len(commits) == 0:
        return commits
    tag = tag.previous_tag
    while tag:
-       commits = commits | (Commit.objects.filter(tag__description=tag.description, modifications__in=
-                                                                                 Modification.objects.filter(
-                                                                                     path__contains=".java")).distinct())
+       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
+       # (Commit.objects.filter(tag__description=tag.description, modifications__in=
+       # Modification.objects.filter(
+       #     path__contains=".java")).distinct())
        tag = tag.previous_tag
    return commits
+
+
+def process_commits_by_directories(request,commits):
+   report = {}
+   review_modification = []
+
+   tag=load_tag(request)
+
+   directories = list(Directory.objects.filter(visible=True))
+   # directories = list(Directory.objects.filter(visible=True, parent_tag__pk=tag.pk))
+   for directory in directories:
+       report.setdefault(directory, ContributionByAuthorReport())
+   # report = dict.fromkeys(directories, ContributionByAuthorReport())
+   # report = dict.fromkeys([d.name for d in directories], ContributionByAuthorReport())
+
+   for commit in commits:
+       number_of_files = 0
+
+       for modification in commit.modifications.all():
+           if modification.is_java_file:
+               if modification.directory in report:
+                   # Second hierarchy
+                   if commit.author not in report[modification.directory].commits_by_author:
+                       report[modification.directory].commits_by_author.setdefault(commit.author,
+                                                                                   Contributor(commit.author))
+                   if commit not in report[modification.directory].commits_by_author[commit.author].commits:
+                       report[modification.directory].commits_by_author[commit.author].commits.append(commit)
+                       report[modification.directory].commits_by_author[commit.author].commit_count = \
+                       report[modification.directory].commits_by_author[commit.author].commit_count + 1
+                       report[modification.directory].commits_by_author[commit.author].total_commit = \
+                           report[modification.directory].commits_by_author[commit.author].total_commit + 1
+                   # to avoid duplicate (should be fixed soon)
+                   if modification not in review_modification:
+                       report[modification.directory].commits_by_author[commit.author].file_count = \
+                       report[modification.directory].commits_by_author[commit.author].file_count + 1
+                       report[modification.directory].commits_by_author[commit.author].total_file = \
+                       report[modification.directory].commits_by_author[commit.author].total_file + 1
+                       report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                       report[modification.directory].commits_by_author[commit.author].loc_count = \
+                           report[modification.directory].commits_by_author[commit.author].loc_count + modification.cloc
+                       report[modification.directory].commits_by_author[commit.author].total_loc = \
+                           report[modification.directory].commits_by_author[commit.author].total_loc  + modification.cloc
+
+                   review_modification.append(modification)
+
+   for author_report in report.items():
+       total_commit = 0
+       total_file = 0
+       total_loc = 0
+       for contributor in author_report[1].commits_by_author.items():
+           total_file = total_file + contributor[1].total_file
+           total_commit = total_commit + contributor[1].total_commit
+           total_loc = total_loc + contributor[1].total_loc
+       author_report[1].total_java_files = author_report[1].total_java_files + total_file
+       author_report[1].total_commits = author_report[1].total_commits + total_commit
+       author_report[1].total_loc = author_report[1].total_loc + total_loc
+       print(author_report[1].core_developers_threshold_commit)
+       author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
+                                                               key=lambda x: x[1].experience, reverse=True))
+
+    # if not report_directories:
+    #     report_directories = report
+
+   return report
+
 
 # Other methods (most auxiliary)
 # returns: dictionary = key: directory
@@ -352,7 +463,7 @@ def load_commits_from_tags(tag):
 #                     - float: core_developers_threshold_loc
 #                     - float: core_developers_threshold_file
 #                     - float: core_developers_threshold_commit
-def process_commits_by_directories(commits):
+def process_commits_by_directories2(commits):
    report = {}
    review_modification = []
 
@@ -403,6 +514,7 @@ def process_commits_by_directories(commits):
        author_report[1].commits_by_author = OrderedDict(sorted(author_report[1].commits_by_author.items(),
                                                                key=lambda x: x[1].experience, reverse=True))
 
+
    return report
 
 
@@ -441,3 +553,35 @@ def process_commits_by_author(commits):
                                                  key=lambda x: x[1].experience, reverse=True))
 
    return report
+
+
+def __true_path__(modification):
+    if modification.old_path:
+        old_path = modification.old_path.replace("\\", "/")
+    if modification.new_path:
+        new_path = modification.new_path.replace("\\", "/")
+    if modification.change_type.name == 'DELETE':
+        path = old_path
+    else:
+        path = new_path
+
+    return path
+
+
+def __directory_str__(path):
+    index = path.rfind("/")
+    directory_str = ""
+    if index > -1:
+        directory_str = path[:index]
+    else:
+        directory_str = "/"
+
+    return directory_str
+
+
+def __modification_is_java_file__(path):
+    if path:
+        index = path.rfind(".")
+        if index > -1:
+            return path[index:] == ".java"
+    return False
