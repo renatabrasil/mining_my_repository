@@ -1,0 +1,158 @@
+may take several minutes
+
+<small id="passwordHelpInline" class="text-muted">
+      may take several minutes
+</small>
+
+leo, se eu tenho um conjunto de valores cujo a soma deles vai dar sempre 1, que medida eu posso tirar daí para representar um valor global pra esse conjunto? ja que a media não dá. Qual conceito seria interessante nesse caso?
+
+
+Commit.objects.filter(committer__id=9, modifications__in=Modification.objects.filter(directory="src/main/com/oreilly/servlet",path__contains=".java")).distinct()
+
+Directory.objects.filter(name__contains="testcase").update(visible=False)
+Directory.objects.filter(name__contains="proposal").update(visible=False)
+Directory.objects.filter(name__exact="src/main/org/apache/tools/ant/loader").update(visible=False)
+
+
+apagar directory_report e individual_contribution
+
+DirectoryReport.objectts.filter(tag_id=2).delete()
+IndividualContribution.objects.filter(directory_report__in=DirectoryReport.objects.filter(tag_id=2)).delete()
+
+
+pacotes com teste estao fora
+
+-- Não variam muito (definir criterio, baseado no numero de commits e variacao na entrada de novos committers. Não to olhando o numero de arquivos e loc):
+src/main/org/apache/tools/ant/types/selectors/modifiedselector
+src/main/org/apache/tools/ant/taskdefs/optional/script
+src/main/org/apache/tools/ant/types/optional
+src/main/org/apache/tools/ant/loader
+src/main/org/apache/tools/ant/taskdefs/optional/windows
+src/main/org/apache/tools/ant/types/resolver
+src/main/org/apache/tools/ant/types/optional/image
+src/main/org/apache/tools/ant/taskdefs/optional/image
+src/main/org/apache/tools/bzip
+src/main/org/apache/tools/ant/util/depend
+src/main/org/apache/tools/ant/types/optional/depend
+src/main/org/apache/tools/ant/taskdefs/rmic
+src/main/org/apache/tools/ant/taskdefs/optional/extension/resolvers
+src/main/org/apache/tools/ant/taskdefs/optional/sitraka/bytecode/attributes
+src/main/org/apache/tools/ant/taskdefs/optional/jsp
+src/main/com/oreilly/servlet
+src/main/org/apache/tools/ant/taskdefs/optional/clearcase
+src/main/org/apache/tools/ant/taskdefs/optional/sound
+src/main/org/apache/tools/ant/taskdefs/optional/pvcs
+src/main/org/apache/tools/ant/taskdefs/optional/condition
+src/main/org/apache/tools/ant/dispatch
+
+src/main/org/apache/tools/ant/property
+src/main/org/apache/tools/ant/util/java16
+src/main/org/apache/tools/ant/types/spi
+src/main/org/apache/tools/ant/taskdefs/optional/repository
+src/main/org/apache/tools/ant/util/java15
+src/main/org/apache/tools/ant/types/resources/selectors
+src/main/org/apache/tools/ant/types/resources/comparators
+src/main/org/apache/tools/ant/taskdefs/optional/javah
+src/main/org/apache/tools/ant/taskdefs/optional/native2ascii
+src/main/org/apache/tools/ant/types/mappers
+src/main/org/apache/tools/ant/taskdefs/optional/metamata
+src/main/org/apache/tools/mail
+
+
+
+
+Commit.objects.filter(tag__description="rel/1.5").distinct().count()
+Commit.objects.filter(tag__description="rel/1.4", modifications__in=Modification.objects.filter(path__contains=".java")).distinct().count()
+
+from contributions.models import Project, Tag, Commit, Modification, Directory
+
+
+start = time.time()
+
+end = time.time()
+
+str(end - start)
+
+|mul:100|addforloop.counter
+
+
+class Directory(models.Model):
+	name = models.CharField(max_length=200)
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
+	visible = models.BooleanField(default=True)
+
+	def __str__(self):
+		return self.name
+
+
+class Modification(models.Model):
+	commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
+	directory = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
+	old_path = models.CharField(max_length=200, null=True)
+	new_path = models.CharField(max_length=200, null=True)
+	path = models.CharField(max_length=200, null=True, default="-")
+	directory = models.CharField(max_length=200, null=True, default="-")
+	ADDED = 'ADD'
+	DELETED = 'DEL'
+	MODIFIED = 'MOD'
+	RENAMED = 'REN'
+	CHANGE_TYPES_CHOICES = [
+		(ADDED, 'Added'),
+		(DELETED, 'Deleted'),
+		(MODIFIED, 'Modified'),
+		(RENAMED, 'Renamed'),
+	]
+	change_type = models.CharField(
+		max_length=10,
+		choices=CHANGE_TYPES_CHOICES,
+		default=MODIFIED,
+	)
+	diff = models.TextField()
+	source_code = models.TextField(null=True)
+	source_code_before = models.TextField(null=True)
+	added = models.IntegerField(null=True)
+	removed = models.IntegerField(null=True)
+	cloc = models.IntegerField(default=0)
+	nloc = models.IntegerField(null=True)
+	complexity = models.IntegerField(null=True)
+	token_count = models.CharField(max_length=200,null=True)
+
+	# def __eq__(self, other):
+	# 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
+
+	@property
+	def file(self):
+		index = self.path.rfind("/")
+		if index > -1:
+			return self.path[index+1:]
+		return self.path
+
+	@property
+	def is_java_file(self):
+		if self.path:
+			index = self.path.rfind(".")
+			if index > -1:
+				return self.path[index:] == ".java"
+		return False
+
+
+	def save(self, *args, **kwargs):
+		if self.old_path:
+			self.old_path = self.old_path.replace("\\","/")
+		if self.new_path:
+			self.new_path = self.new_path.replace("\\", "/")
+		if self.change_type.name == 'DELETE':
+			self.path = self.old_path
+		else:
+			self.path = self.new_path
+
+
+		index = self.path.rfind("/")
+		if index > -1:
+			self.directory = self.path[:index]
+		else:
+			self.directory = "/"
+
+		# self.delta = abs(self.added-self.removed)
+		self.cloc = self.added + self.removed
+		super().save(*args, **kwargs)  # Call the "real" save() method.

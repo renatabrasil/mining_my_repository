@@ -3,6 +3,10 @@ function csrfSafeMethod(method) {
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
 
+if ( window.history.replaceState ) {
+  window.history.replaceState( null, null, window.location.href );
+}
+
 $("#tag_selector2").change(function(){
     var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
     var tag_id = $(this).val();

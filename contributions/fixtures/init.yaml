@@ -50,3 +50,15 @@
     project: 1
     description: 'rel/1.8.0'
     previous_tag: 7
+- model: contributions.tag
+  pk: 9
+  fields:
+    project: 1
+    description: 'rel/1.9.0'
+    previous_tag: 8
+- model: contributions.tag
+  pk: 10
+  fields:
+    project: 1
+    description: 'rel/1.10.0'
+    previous_tag: 9

@@ -5,41 +5,33 @@
 
 {% block content %}
 <h3>Commits por diretórios</h3>
-<input type="hidden" name="refresh" value="False">
+
 <div class="float-right">
-    <form action="{{request_path}}?directories=true" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> CSV</a>
-        <input type="hidden" name="refresh" value="True">
-        <button type="submit" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Métricas</button>
-    </form>
-
+    <a class="btn btn-primary" href="{{request.path}}to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
 </div>
-
+<hr>
 <div class="table-responsive">
     <table class="table table-striped table-sm">
-
          {% if latest_commit_list %}
-
             {% for directory, infos in latest_commit_list.items %}
                 <tr class="table-light">
                     <td colspan="7">
                         <ul>
                             <strong>Bird metrics</strong>
-                            <li>Ownership: {{directory.ownership|percentage}}</li>
-                            <li>Major: {{directory.major}}</li>
-                            <li>Minor: {{directory.minor}}</li>
-
+                            <li>Minor contributors: {{infos.minor}}</li>
+                            <li>Major contributors: {{infos.major}}</li>
+                            <li>Ownership: {{infos.ownership|percentage}} </li>
                         </ul>
                         <ul>
                             <strong>Métricas usadas para classificar tipos de desenvolvedores (JOBLIN et al., 2017)</strong>
-                            <li>Threshold (experience): {{directory.experience_threshold|floatformat:5}}</li>
+                            <li>Threshold (experience): {{infos.core_developers_threshold_experience|floatformat:3}}</li>
                         </ul>
 
                         <div class="row justify-content-around">
                             <div class="col-4">
-                              Core developers do diretorio ({{directory.core_developers_experience|length}}):
+                              Core developers do diretorio ({{infos.core_developers_experience|length}}):
                                 <br>
-                                {% for core_dev in directory.core_developers_experience %}
+                                {% for core_dev in infos.core_developers_experience %}
                                     ({{forloop.counter}}) {{core_dev.name}}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </div>
@@ -64,27 +56,27 @@
             </thead>
             <tbody>
                     <tr class="p-3 mb-2 bg-secondary text-white">
-                        <td colspan="9"><strong>{{directory.directory.name}}</strong></td>
+                        <td colspan="9"><strong>{{directory}}</strong></td>
                     </tr>
 
-                    {% for contribution in infos %}
+                    {% for author,contribution in infos.commits_by_author.items %}
                     <tr >
                         <td>{{forloop.counter}}</td>
-                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory.name}}"></a> {{contribution.author.name}}</td>
-                        <td style="text-align:right"> {{contribution.commits}}</td>
-                        <td style="text-align:right"> {{contribution.files}}</td>
-                        <td style="text-align:right"> {{contribution.cloc}}</td>
-                        <td style="text-align:right">{{contribution.ownership_commits|percentage}}</td>
-                        <td style="text-align:right">{{contribution.ownership_files|percentage}}</td>
-                        <td style="text-align:right">{{contribution.ownership_cloc|percentage}}</td>
-                        <td style="text-align:right">{{contribution.experience|floatformat:5}}</td>
+                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory.name}}">{{author.name}}</a> </td>
+                        <td style="text-align:right"> {{contribution.commit_count}}</td>
+                        <td style="text-align:right"> {{contribution.file_count}}</td>
+                        <td style="text-align:right"> {{contribution.loc_count}}</td>
+                        <td style="text-align:right">{{contribution.commit_percentage|percentage}}</td>
+                        <td style="text-align:right">{{contribution.file_percentage|percentage}}</td>
+                        <td style="text-align:right">{{contribution.loc_percentage|percentage}}</td>
+                        <td style="text-align:right">{{contribution.experience|floatformat:3}}</td>
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">
                         <th colspan="2">Total:</th>
-                        <th style="text-align:right">{{directory.total_commits}}</th>
-                        <th style="text-align:right">{{directory.total_files}}</th>
-                        <th style="text-align:right">{{directory.total_cloc}}</th>
+                        <th style="text-align:right">{{infos.total_commits}}</th>
+                        <th style="text-align:right">{{infos.total_java_files}}</th>
+                        <th style="text-align:right">{{infos.total_loc}}</th>
                         <td></td>
                         <td></td>
                         <td></td>
