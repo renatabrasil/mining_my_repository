@@ -2,6 +2,8 @@ from django.db import models
 import numpy as np
 
 # Create your models here.
+from pydriller import GitRepository
+
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -108,6 +110,42 @@ class Modification(models.Model):
     # def __eq__(self, other):
     # 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
 
+    def __diff_text__(self):
+        GR = GitRepository(self.commit.project.project_path)
+
+        parsed_lines = GR.parse_diff(self.diff)
+
+        return parsed_lines
+
+    def __print_text_in_lines__(self, text, result, type_symbol):
+        for line in text:
+            result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
+        return result
+
+    @property
+    def diff_added(self):
+
+        parsed_lines = self.__diff_text__()
+
+        added_text = parsed_lines['added']
+
+        diff_text = None
+
+        diff_text = '\n' + str(self.added) + ' lines added: \n'  # result: Added: [(4, 'log.debug("b")')]
+        # diff_text = str(self.added) + ' + | {}'.format(added_text)  # result: Added: [(4, 'log.debug("b")')]
+        diff_text = self.__print_text_in_lines__(added_text,diff_text, '+')
+
+        return diff_text
+
+    @property
+    def diff_removed(self):
+
+        deleted_text = self.__diff_text__()['deleted']
+        diff_text = '\n' + str(self.removed) + ' lines removed:  \n'
+        diff_text = self.__print_text_in_lines__(deleted_text,diff_text, '-')
+
+        return diff_text
+
     @property
     def file(self):
         index = self.path.rfind("/")
@@ -163,7 +201,71 @@ class IndividualContribution(models.Model):
     ownership_files = models.FloatField(null=True, default=0.0)
     ownership_commits = models.FloatField(null=True, default=0.0)
     experience = models.FloatField(null=True, default=0.0)
+    abs_experience = models.FloatField(null=True, default=0.0)
+    bf_commit = models.FloatField(null=True, default=0.0)
+    bf_file = models.FloatField(null=True, default=0.0)
+    bf_cloc = models.FloatField(null=True, default=0.0)
 
+    def calculate_boosting_factor(self,activity_array):
+        if not activity_array or len(activity_array) == 1:
+            return 0.0
+        mean_value = np.median(activity_array)
+        min_value = np.min(activity_array)
+        max_value = np.max(activity_array)
+
+        numerator = (mean_value - min_value)
+
+        if numerator == 0.0:
+            return 0.0
+        try:
+            return numerator / (max_value - min_value)
+        except ZeroDivisionError:
+            return 0.0
+
+
+
+    def save(self, *args, **kwargs):
+        first_tag_id = Tag.objects.filter(project_id=self.directory_report.directory.project.id).first().id
+        current_tag_id = self.directory_report.tag.id
+        if current_tag_id != first_tag_id:
+            tag_ids = list(range(first_tag_id,current_tag_id))
+
+            contributions = IndividualContribution.objects.filter(directory_report__directory_id=self.directory_report.directory.id, directory_report__tag_id__in=tag_ids, author_id=self.author.id)
+
+            # extra_values = 0
+            # i=len(contributions)
+            # if current_tag_id-i>1:
+            #     for i in range(1,current_tag_id-len(contributions)):
+            #         extra_values = extra_values + 1
+            first_tag__in_contributions_id = contributions.first().directory_report.tag.id if contributions else current_tag_id
+
+            commit_activity = [i.ownership_commits for i in contributions]
+            commit_activity.append(self.ownership_commits)
+            # commit_activity= commit_activity + extra_values
+            file_activity = [i.ownership_files for i in contributions]
+            file_activity.append(self.ownership_files)
+            # file_activity=file_activity + extra_values
+            cloc_activity = [i.ownership_cloc for i in contributions]
+            cloc_activity.append(self.ownership_cloc)
+            # cloc_activity=cloc_activity + extra_values
+
+            # commit activity
+            self.bf_commit = self.calculate_boosting_factor(commit_activity)
+            # file activity
+            self.bf_file = self.calculate_boosting_factor(file_activity)
+            # cloc_activity
+            self.bf_cloc = self.calculate_boosting_factor(cloc_activity)
+            # denominator = len(contributions)+1 if len(contributions) != 0 else 1
+
+            denominator = current_tag_id-first_tag__in_contributions_id
+            denominator = denominator + 1
+            self.experience = 0.4*((self.bf_commit + 1)*(self.ownership_commits/denominator)) \
+                              + 0.4*((self.bf_file + 1)*(self.ownership_files/denominator)) + 0.2*((self.bf_cloc + 1)*(self.ownership_cloc/denominator) )
+
+            # self.directory_report.experience_threshold
+
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class DirectoryReport(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='directory_reports')
@@ -180,8 +282,12 @@ class DirectoryReport(models.Model):
     mean = models.FloatField(null=True, default=0)
     median = models.FloatField(null=True, default=0)
 
+
     def calculate_statistical_metrics(self):
         experiences = [c.experience for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]
+        interval = np.array(experiences)
+        if interval.any():
+            self.experience_threshold = np.percentile(interval, 80)
         self.standard_deviation = np.std(experiences, ddof=1)
         self.mean = np.mean(experiences)
         self.median = np.median(experiences)
@@ -207,6 +313,24 @@ class DirectoryReport(models.Model):
             if contributor.experience <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
         return peripheral_developers
+
+    @property
+    def experience(self):
+        higher_value = -1.0
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        for contributor in contributions:
+            if contributor.experience >= higher_value:
+                higher_value = contributor.experience
+        return higher_value
+
+    @property
+    def abs_experience(self):
+        higher_value = -1.0
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        for contributor in contributions:
+            if contributor.abs_experience >= higher_value:
+                higher_value = contributor.abs_experience
+        return higher_value
 
     @property
     def ownership(self):
@@ -262,6 +386,9 @@ class Contributor(TransientModel):
         self.total_commit = 0
         self.commits = []
         self.files = []
+        self.bf_commit = 0.0
+        self.bf_file = 0.0
+        self.bf_cloc = 0.0
 
     @property
     def loc_percentage(self):
@@ -286,6 +413,13 @@ class Contributor(TransientModel):
     def experience(self):
         try:
             return 0.4*self.commit_percentage + 0.4 * self.file_percentage + 0.2*self.loc_percentage
+        except ZeroDivisionError:
+            return 0.0
+
+    @property
+    def abs_experience(self):
+        try:
+            return 0.4 * self.commit_count + 0.4 * self.total_loc + 0.2 * self.loc_count
         except ZeroDivisionError:
             return 0.0
 

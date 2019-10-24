@@ -7,7 +7,7 @@ if ( window.history.replaceState ) {
   window.history.replaceState( null, null, window.location.href );
 }
 
-$("#tag_selector2").change(function(){
+$("#update-direc2tory").submit(function(){
     var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
     var tag_id = $(this).val();
     $.ajax({
@@ -16,9 +16,9 @@ $("#tag_selector2").change(function(){
             xhr.setRequestHeader("X-CSRFToken", csrftoken);
         }
     },
-        url: window.location.origin + "/contributions/",
-        type: "POST",
-        data: {tag:tag_id},
+        url: $(this).attr("action"),
+        type: "PUT",
+        data: {directory_id:directory_id},
         success: function(data){
             $("#content").html(data)
         }

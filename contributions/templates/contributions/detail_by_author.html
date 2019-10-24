@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load contributions_extra %}
+{% load mathfilters %}
+
+{% block title %}Experiência por autor{% endblock %}
+
+{% block content %}
+
+<form action="{{request_path}}" method="post">{% csrf_token %}
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <label for="developer_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-2" id="developer_selector" placeholder="Selecione a tag" name="developer_id">
+              <option selected value="{{developer.id}}">Selecione a tag</option>
+              {% for developer in developers %} {{current_developer}}
+                <option value="{{developer.id}}"
+                   {% if developer.id == current_developer.id %}selected="selected"{% endif %}>
+                   {{developer.name}}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
+        </div>
+    </div>
+</form>
+<div>
+    Legenda:
+    <ul>
+        <li>CA: Commit activity</li>
+        <li>CFA: Commit Files Activity</li>
+        <li>CLOCA: Changed LOC Activity</li>
+        <li>CommitExp (CExp): CA ∗ (1 +BFCA)</li>
+        <li>CommitFileExp (FExp): CFA * (1 +BFCFA)</li>
+        <li>ChangedLOCExp (CLOCExp): CLOCA ∗ (1 +BFCLOCA)</li>
+        <li>Exp: 0.4 ∗ CExp + 0.4 ∗ FExp + 0.2 ∗ CLOCExp</li>
+    </ul>
+</div>
+<h5>Autor: {{current_developer.name}}</h5>
+<div class="table-responsive">
+    <table class="table table-striped table-sm" style="font-size: small;">
+        <thead class="thead-dark">
+        <tr>
+
+        </tr>
+        </thead>
+        <tbody>
+        {% if latest_commit_list %}
+            {% for directory, infos in latest_commit_list.items %}
+                <tr class="p-3 mb-2 bg-transparent">
+                    <td colspan="{{tags|length|mul:3|add:1}}">{{directory.name}}</td>
+                </tr>
+                <tr class="bg-light">
+                    <td></td>
+                    {% for tag in tags %}
+                        <th colspan="3" style="text-align:center">{{tag.description}}</th>
+
+                    {% endfor %}
+                </tr>
+                <tr class="bg-transparent">
+                    <th></th>
+                {% for tag in tags %}
+                    <td style="border-bottom:1px solid #333; text-align:center"></td>
+                    <td style="border-bottom:1px solid #333;text-align:center">BF</td>
+                    <td style="border-right: 1px dashed #333;border-bottom:1px solid #333;text-align:center">Exp</td>
+                {% endfor %}
+                </tr>
+                <tr class="bg-transparent ">
+                    <th>CA</th>
+                    {% for tag in tags %}
+                        <td style="text-align:center">
+                            {% if infos|get:tag %} {{infos|get:tag|get_list:0|percentage}} {% else %} - {% endif %}
+                        </td>
+                        <td style="text-align:center"></td>
+                        <td class="text-sm-left" style="text-align:center;border-right: 1px dashed #333;">
+                        {% if infos|get:tag %}
+                            {{infos|get:tag|get:0|floatformat:4}}
+                        {% else %}
+                        -
+                        {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                <tr class="bg-transparent">
+                    <th>CFA</th>
+                    {% for tag in tags %}
+                        <td style="text-align:center">
+                            {% if infos|get:tag %} {{infos|get:tag|get_list:1|percentage}} {% else %} - {% endif %}
+                        </td>
+                        <td style="text-align:center"></td>
+                        <td style="text-align:center;border-right: 1px dashed #333;">
+                            {% if infos|get:tag %} {{infos|get:tag|get:1|floatformat:2}} {% else %} - {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                <tr class="bg-transparent">
+                    <th>CLOCA</th>
+                    {% for tag in tags %}
+                        <td style="text-align:center">
+                            {% if infos|get:tag %} {{infos|get:tag|get_list:2|percentage}} {% else %} - {% endif %}
+                        </td>
+                        <td></td>
+                        <td style="text-align:center;border-right: 1px dashed #333;">
+
+                            {% if infos|get:tag %} {{infos|get:tag|floatformat:4}} {% else %} - {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                
+                <tr class="bg-transparent">
+                    <th>Exp</th>
+                    {% for tag in tags %}
+                        <td></td>
+                        <td></td>
+                        <td style="text-align:center;border-right: 1px dashed #333;">
+
+                            {% if infos|get:tag %} {{infos|get:tag|floatformat:4}} {% else %} - {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        {% else %}
+            -
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+
+{% endblock %}

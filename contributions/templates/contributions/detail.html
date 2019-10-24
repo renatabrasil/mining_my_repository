@@ -23,7 +23,11 @@
         </tr>
         <tr>
             <th style="text-align: right">Mensagem do commit:</th>
-            <td colspan="2">{{commit.msg}}</td>
+            <td colspan="2">
+                <pre>
+                    {{commit.msg}}
+                </pre>
+            </td>
         </tr>
         <tr>
             <th style="text-align: right">Quantidade de arquivos:</th>
@@ -58,7 +62,7 @@
                     <tr>
                         <td style="text-decoration: underline">Linhas modificadas (CLOC):</td>
                         <td>
-                            <a data-toggle="collapse" href="#collapseExample{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample">
+                            <a data-toggle="collapse" href="#collapseExample{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample{{forloop.counter}}">
                                {{ modification.cloc}}
                             </a>
                         </td>
@@ -68,9 +72,16 @@
                             <div class="collapse" id="collapseExample{{forloop.counter}}">
                               <div class="card card-body">
                                   <h5>Diff:</h5>
+                                  <pre style="text-align: left" class="alert alert-success">
                                 {% autoescape on %}
-                                    {{modification.diff}}
+                                    {{modification.diff_added}}
                                 {% endautoescape %}
+                                  </pre>
+                                  <pre style="text-align: left" class="alert alert-danger">
+                                {% autoescape on %}
+                                    {{modification.diff_removed}}
+                                {% endautoescape %}
+                                  </pre>
                               </div>
                             </div>
                         </td>
