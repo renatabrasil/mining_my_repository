@@ -7,7 +7,6 @@ import pandas as pd
 from django.core.paginator import Paginator
 from django.db import transaction
 from collections import OrderedDict
-from django.urls import reverse
 from django.http import HttpResponse, Http404, StreamingHttpResponse, HttpResponseRedirect
 
 # Create your views here.
@@ -18,7 +17,7 @@ from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
-    Directory, DirectoryReport, IndividualContribution
+    Directory, DirectoryReport, IndividualContribution, MetricsReport
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -610,15 +609,31 @@ def process_commits_by_project(commits):
 
 def process_commits_by_author(developer_id):
     contributions = list(IndividualContribution.objects.filter(author_id=developer_id).order_by("directory_report__tag_id"))
-    answer = {}
+    answer = OrderedDict()
     for contribution in contributions:
         if contribution not in answer:
             directory_report = contribution.directory_report
-            answer.setdefault(directory_report.directory, {})
-        answer[directory_report.directory].setdefault(directory_report.tag, [contribution.ownership_commits,
-                                                                             contribution.ownership_files,
-                                                                            contribution.ownership_cloc,
-                                                                            contribution.experience])
+            first_report = None
+            if contribution.directory_report.tag.previous_tag:
+                first_report = DirectoryReport.objects.filter(tag_id__lte=contribution.directory_report.tag.previous_tag.id, directory_id=contribution.directory_report.directory.id).order_by(
+                "tag_id").first()
+            answer.setdefault(directory_report.directory, OrderedDict())
+            if first_report:
+                i = 1
+                while i <= first_report.tag.id:
+                    metrics = MetricsReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                    metrics.empty = True
+                    answer[directory_report.directory].setdefault(Tag.objects.get(pk=i), metrics)
+                    i = i + 1
+
+        metrics = MetricsReport(contribution.ownership_commits, contribution.ownership_files,
+                                                                    contribution.ownership_cloc,
+                                                                    contribution.bf_commit, contribution.bf_file,
+                                                                    contribution.bf_cloc,
+                                                                    contribution.commit_exp, contribution.file_exp,
+                                                                    contribution.cloc_exp, contribution.experience,
+                                                                    contribution.experience_bf)
+        answer[directory_report.directory].setdefault(directory_report.tag, metrics)
 
     return answer
 

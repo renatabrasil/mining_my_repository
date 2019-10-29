@@ -45,6 +45,8 @@ def get_field(value, args):
     if args is None:
         return False
     arg_list = [arg.strip() for arg in args.split(',')]
+    if isinstance(arg_list[0], str):
+        return getattr(value, arg_list[0])
     index = int(arg_list[0])
     object = value[int(arg_list[0])]
     return getattr(object[index],arg_list[1])

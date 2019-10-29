@@ -198,9 +198,13 @@ class IndividualContribution(models.Model):
     files = models.IntegerField(null=True, default=0)
     commits = models.IntegerField(null=True, default=0)
     ownership_cloc = models.FloatField(null=True, default=0.0)
+    cloc_exp = models.FloatField(null=True, default=0.0)
     ownership_files = models.FloatField(null=True, default=0.0)
+    file_exp = models.FloatField(null=True, default=0.0)
     ownership_commits = models.FloatField(null=True, default=0.0)
+    commit_exp = models.FloatField(null=True, default=0.0)
     experience = models.FloatField(null=True, default=0.0)
+    experience_bf = models.FloatField(null=True, default=0.0)
     abs_experience = models.FloatField(null=True, default=0.0)
     bf_commit = models.FloatField(null=True, default=0.0)
     bf_file = models.FloatField(null=True, default=0.0)
@@ -209,7 +213,7 @@ class IndividualContribution(models.Model):
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:
             return 0.0
-        mean_value = np.median(activity_array)
+        mean_value = np.mean(activity_array)
         min_value = np.min(activity_array)
         max_value = np.max(activity_array)
 
@@ -222,32 +226,71 @@ class IndividualContribution(models.Model):
         except ZeroDivisionError:
             return 0.0
 
-
-
     def save(self, *args, **kwargs):
         first_tag_id = Tag.objects.filter(project_id=self.directory_report.directory.project.id).first().id
         current_tag_id = self.directory_report.tag.id
-        if current_tag_id != first_tag_id:
+        if current_tag_id == first_tag_id:
+            self.commit_exp = self.ownership_commits
+            self.file_exp = self.ownership_files
+            self.cloc_exp = self.ownership_cloc
+            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
+            self.experience = self.experience_bf
+        else:
             tag_ids = list(range(first_tag_id,current_tag_id))
 
             contributions = IndividualContribution.objects.filter(directory_report__directory_id=self.directory_report.directory.id, directory_report__tag_id__in=tag_ids, author_id=self.author.id)
 
-            # extra_values = 0
-            # i=len(contributions)
-            # if current_tag_id-i>1:
-            #     for i in range(1,current_tag_id-len(contributions)):
-            #         extra_values = extra_values + 1
             first_tag__in_contributions_id = contributions.first().directory_report.tag.id if contributions else current_tag_id
 
-            commit_activity = [i.ownership_commits for i in contributions]
-            commit_activity.append(self.ownership_commits)
-            # commit_activity= commit_activity + extra_values
-            file_activity = [i.ownership_files for i in contributions]
-            file_activity.append(self.ownership_files)
-            # file_activity=file_activity + extra_values
-            cloc_activity = [i.ownership_cloc for i in contributions]
-            cloc_activity.append(self.ownership_cloc)
-            # cloc_activity=cloc_activity + extra_values
+
+            extra_values = []
+            # whether there is any contribution in this directory from other authors
+            # It means that is not a new directory, so we have to count all period
+            first_report = DirectoryReport.objects.filter(tag_id__lt=current_tag_id, directory_id=self.directory_report.directory.id).order_by("tag_id").first()
+            if first_report:
+                i=len(contributions)
+                if current_tag_id-i>1:
+                    for i in range(1,first_report.tag.id-len(contributions)):
+                        extra_values.append(0.0)
+
+            contributions = list(contributions)
+            contributions.append(self)
+
+            version = 0
+            commit_activity = [] + extra_values
+            file_activity = [] + extra_values
+            cloc_activity = [] + extra_values
+            for i in contributions:
+                ownership_commits_in_this_tag = i.ownership_commits
+                ownership_files_in_this_tag = i.ownership_files
+                ownership_clocs_in_this_tag = i.ownership_cloc
+                if version > 0:
+                    commits_in_this_tag = i.commits
+                    file_in_this_tag = i.files
+                    cloc_in_this_tag = i.cloc
+                    total_commits_in_this_tag = i.directory_report.total_commits
+                    total_files_in_this_tag = i.directory_report.total_files
+                    total_clocs_in_this_tag = i.directory_report.total_cloc
+                    commits_in_this_tag = commits_in_this_tag - contributions[version].commits
+                    file_in_this_tag = file_in_this_tag - contributions[version].files
+                    cloc_in_this_tag = cloc_in_this_tag - contributions[version].cloc
+                    total_commits_in_this_tag = total_commits_in_this_tag - contributions[version].directory_report.total_commits
+                    total_files_in_this_tag = total_files_in_this_tag - contributions[version].directory_report.total_files
+                    total_clocs_in_this_tag = total_clocs_in_this_tag - contributions[version].directory_report.total_cloc
+                    ownership_commits_in_this_tag = commits_in_this_tag/total_commits_in_this_tag if total_commits_in_this_tag > 0 else 0.0
+                    ownership_files_in_this_tag = file_in_this_tag/total_files_in_this_tag if total_files_in_this_tag > 0 else 0.0
+                    ownership_clocs_in_this_tag = cloc_in_this_tag/total_clocs_in_this_tag if total_clocs_in_this_tag > 0 else 0.0
+                version = version + 1
+                commit_activity.append(ownership_commits_in_this_tag)
+                file_activity.append(ownership_files_in_this_tag)
+                cloc_activity.append(ownership_clocs_in_this_tag)
+
+            # file_activity = [i.ownership_files for i in contributions]
+            # file_activity.append(self.ownership_files)
+            #
+            # cloc_activity = [i.ownership_cloc for i in contributions]
+            # cloc_activity.append(self.ownership_cloc)
+
 
             # commit activity
             self.bf_commit = self.calculate_boosting_factor(commit_activity)
@@ -257,14 +300,16 @@ class IndividualContribution(models.Model):
             self.bf_cloc = self.calculate_boosting_factor(cloc_activity)
             # denominator = len(contributions)+1 if len(contributions) != 0 else 1
 
-            denominator = current_tag_id-first_tag__in_contributions_id
-            denominator = denominator + 1
-            self.experience = 0.4*((self.bf_commit + 1)*(self.ownership_commits/denominator)) \
-                              + 0.4*((self.bf_file + 1)*(self.ownership_files/denominator)) + 0.2*((self.bf_cloc + 1)*(self.ownership_cloc/denominator) )
+            # denominator = current_tag_id-first_tag__in_contributions_id
+            # denominator = denominator + 1
+            denominator = len(contributions) + len(extra_values)
+            self.commit_exp = (self.bf_commit + 1)*(sum(commit_activity)/denominator)
+            self.file_exp = (self.bf_file + 1)*(sum(file_activity)/denominator)
+            self.cloc_exp = (self.bf_cloc + 1)*(sum(cloc_activity)/denominator)
+            self.experience_bf = 0.4*self.commit_exp + 0.4*self.file_exp + 0.2*self.cloc_exp
+            self.experience = 0.4*self.ownership_commits + 0.4*self.ownership_files + 0.2*self.ownership_cloc
 
             # self.directory_report.experience_threshold
-
-
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class DirectoryReport(models.Model):
@@ -609,3 +654,37 @@ class ContributionByAuthorReport(TransientModel):
             # set total_commits in every ocurrence of contributor inside commits_by_author dictionary
             contributor[1].total_loc = total_loc
         self._total_loc = total_loc
+
+class MetricsReport(TransientModel):
+    abstract = True  # no table for this class
+    managed = False  # no database management
+
+    def __init__(self, commit, file, cloc, bf_commit, bf_file, bf_cloc, commit_exp, file_exp, cloc_exp, metric_exp, metric_exp_bf):
+        self._commit = commit
+        self.file = file
+        self.cloc = cloc
+        self.bf_commit = bf_commit
+        self.bf_file = bf_file
+        self.bf_cloc = bf_cloc
+        self.commit_exp = commit_exp
+        self.file_exp = file_exp
+        self.cloc_exp = cloc_exp
+        self.metric_exp = metric_exp
+        self.metric_exp_bf = metric_exp_bf
+        self._empty = False
+
+    def __str__(self):
+        return "oi"
+
+    @property
+    def commit(self):
+        return self._commit
+
+
+    @property
+    def empty(self):
+        return self._empty
+
+    @empty.setter
+    def empty(self, empty):
+        self._empty = empty

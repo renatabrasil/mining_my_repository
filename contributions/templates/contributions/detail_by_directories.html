@@ -59,12 +59,13 @@
                     <th style="text-align:right" width="12%">% commits (BF)</th>
                     <th style="text-align:right">% files (BF)</th>
                     <th style="text-align:right">% cloc (BF)</th>
-                    <th style="text-align:right">RelExperience</th>
+                    <th style="text-align:right">Experience</th>
+                    <th style="text-align:right">Experience com BF</th>
                 </tr>
             </thead>
             <tbody>
                     <tr class="p-3 mb-2 bg-secondary text-white">
-                        <td colspan="5"><strong>{{directory.directory.name}}</strong></td>
+                        <td colspan="6"><strong>{{directory.directory.name}}</strong></td>
                         <td></td>
                         <td style="text-align:right" nowrap><small>Media: {{directory.mean|floatformat:5}}</small></td>
                         <td style="text-align:right" nowrap><small>Mediana: {{directory.median|floatformat:5}}</small></td>
@@ -82,6 +83,7 @@
                         <td style="text-align:right">{{contribution.ownership_files|percentage}} <strong>({{contribution.bf_file|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.ownership_cloc|percentage}} <strong>({{contribution.bf_cloc|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.experience|floatformat:5}}</td>
+                        <td style="text-align:right">{{contribution.experience_bf|floatformat:5}}</td>
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">

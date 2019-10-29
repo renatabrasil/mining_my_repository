@@ -40,6 +40,7 @@
                 <tr>
                     <th width="5%" style="text-align:center">#</th>
                     <th>hash</th>
+                    <th style="text-align: center;">Tag</th>
                     <th style="text-align: center;" width="12%">files count</th>
                     <th width="15%">Committer</th>
                     <th>Autor</th>
@@ -51,6 +52,7 @@
                     <tr>
                         <th style="text-align: center;">{{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}</th>
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
+                        <td style="text-align: center;">{{commit.tag.description}}</td>
                         <td style="text-align: center;">{{commit.number_of_java_files}}</td>
                         <td nowrap>{{ commit.committer.name}} {{commit.nloc}}</td>
                         <td nowrap>{{ commit.author.name}}</td>
