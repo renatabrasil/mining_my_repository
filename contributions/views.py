@@ -139,8 +139,10 @@ def index(request):
 
 
     url_path = 'contributions/index.html'
-    developers = []
     current_developer = None
+    current_tag_filter = None
+    developer_id = request.POST.get("developer_filter_id")
+    tag_id = request.POST.get("tag_filter_id")
     if request.GET.get('commits'):
 
         # latest_commit_list = process_commits(project.commits.all())
@@ -158,7 +160,6 @@ def index(request):
 
         url_path = 'contributions/detail_by_project.html'
     elif request.GET.get('author'):
-        developers = Developer.objects.all().order_by("name")
         developer_id = request.POST.get("developer_id")
         if not developer_id:
             developer_id = developers.first().id
@@ -171,7 +172,19 @@ def index(request):
         latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
         url_path = 'contributions/directories.html'
     else:
-        if tag:
+        if developer_id or tag_id:
+            latest_commit_list = Commit.objects.none()
+            if developer_id:
+                current_developer = Developer.objects.get(pk=int(developer_id))
+                latest_commit_list = latest_commit_list | Commit.objects.filter(author_id=current_developer.id)
+            if tag_id:
+                current_tag_filter = Tag.objects.get(pk=int(tag_id))
+                if latest_commit_list:
+                    latest_commit_list = latest_commit_list & Commit.objects.filter(tag_id=current_tag_filter.id)
+                else:
+                    latest_commit_list= Commit.objects.filter(tag_id=current_tag_filter.id)
+            latest_commit_list=latest_commit_list.order_by("tag_id", "author__name")
+        elif tag:
             latest_commit_list = load_commits_from_tags(tag)
         else:
             latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
@@ -182,14 +195,13 @@ def index(request):
         latest_commit_list = paginator.get_page(page)
 
 
-
     template = loader.get_template(url_path)
     context = {
         'latest_commit_list': latest_commit_list,
         'project': project,
         'tag': tag_description,
-        'developers': developers,
         'current_developer': current_developer,
+        'current_tag_filter': current_tag_filter,
     }
     json_response = []
     if request.is_ajax():
@@ -249,18 +261,14 @@ def detail(request, commit_id):
 def detail_in_committer(request, committer_id):
     try:
         project = Project.objects.get(project_name="Apache Ant")
-        # latest_commit_list = list(Commit.objects.raw('SELECT * FROM contributions_modification m JOIN contributions_commit c '
-        #                                         'ON (c.id = m.commit_id) JOIN contributions_developer d ON (d.id = c.committer_id)'
-        #                                              'WHERE d.id = '+str(committer_id)).prefetch_related('modifications'))
-
         path = ""
         if request.GET.get('path'):
             path = request.GET.get('path')
 
-        latest_commit_list = list(Commit.objects.filter(committer__id=committer_id,
-                                                        modifications__in=Modification.objects.filter(directory__name=path,
-                                                                                                      path__contains=".java"))
-                                  .distinct())
+        tag = load_tag(request)
+
+        latest_commit_list = list(Commit.objects.filter(committer_id=committer_id, tag_id__lte=tag.id,
+                                                        modifications__in=Modification.objects.filter(directory_id=int(path))).distinct())
         context = {
             'latest_commit_list': latest_commit_list,
             'project': project,

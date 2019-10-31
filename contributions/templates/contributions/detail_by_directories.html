@@ -75,11 +75,11 @@
                     {% for contribution in infos %}
                     <tr >
                         <td>{{forloop.counter}}</td>
-                        <td><a href="{{request.path}}developers/{{contribution.developer.pk}}?path={{directory.name}}"></a> {{contribution.author.name}}</td>
+                        <td><a href="{{request.path}}developers/{{contribution.author.id}}?path={{directory.directory.id}}">{{contribution.author.name}}</a> </td>
                         <td style="text-align:right"> {{contribution.commits}}</td>
                         <td style="text-align:right"> {{contribution.files}}</td>
                         <td style="text-align:right"> {{contribution.cloc}}</td>
-                        <td style="text-align:right">{{contribution.ownership_commits|percentage}} <strong>({{contribution.bf_commit|floatformat:2}})</strong></td>
+                        <td style="text-align:right">{{contribution.ownership_commits|percentage}} ({{contribution.ownership_commits_in_this_tag|percentage}}) <strong>({{contribution.bf_commit|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.ownership_files|percentage}} <strong>({{contribution.bf_file|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.ownership_cloc|percentage}} <strong>({{contribution.bf_cloc|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.experience|floatformat:5}}</td>
