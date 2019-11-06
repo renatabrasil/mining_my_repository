@@ -1,43 +1,9 @@
 $(document).ready(function() {
-//    $('#horizontal-scroll').dataTable( {
-//        "scrollX": true
-//    } );
-
-    // Setup - add a text input to each footer cell
-    $('#example tfoot th').each( function () {
-        var title = $(this).text();
-        $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+    $('table .responsive').DataTable( {
+        "scrollX": true
     } );
 
-    // DataTable
-//    var table = $('#example').DataTable();
-    $('#example').dataTable( {
-      "pageLength": 50
-    } );
-    // Apply the search
-    table.columns().every( function () {
-        var that = this;
-
-        $( 'input', this.footer() ).on( 'keyup change clear', function () {
-            if ( that.search() !== this.value ) {
-                that
-                    .search( this.value )
-                    .draw();
-            }
-        } );
-    } );
-} );
-
-function csrfSafeMethod(method) {
-    // these HTTP methods do not require CSRF protection
-    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-}
-
-if ( window.history.replaceState ) {
-  window.history.replaceState( null, null, window.location.href );
-}
-
-$("#update-direc2tory").submit(function(){
+$("form #update").submit(function(){
     var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
     var tag_id = $(this).val();
     $.ajax({
@@ -54,3 +20,15 @@ $("#update-direc2tory").submit(function(){
         }
     });
 });
+
+} );
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+
+if ( window.history.replaceState ) {
+  window.history.replaceState( null, null, window.location.href );
+}
+
