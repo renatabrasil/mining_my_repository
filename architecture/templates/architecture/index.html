@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Buscar commits{% endblock %}
+
+{% block content %}
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% if messages %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+{% for message in messages %}
+<p><strong>{{ message }}</strong></p>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+
+<form action="{% url 'architecture:index' %}" method="post">{% csrf_token %}
+  <div class="form-row">
+    <div class="col-md-4 mb-3">
+      <label>Diretório para salvar os commits e os compilados</label>
+      {{ form.directory }}
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="col-md-6 mb-3">
+      <label>Local do repositório local</label>
+      {{ form.git_local_repository }}
+    </div>
+    <div class="col-md-4 mb-3">
+      <label>Diretorio de arquivos compilados no repositório local</label>
+      {{ form.build_path }}
+    </div>
+  </div>
+  <input type="hidden" value="1" name="project_id">
+  <button class="btn btn-primary" type="submit">Gerar compilados</button>
+</form>
+
+
+<hr>
+
+<p>Arquivos no diretório acima:</p>
+
+<div class="table-responsive">
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col" style="text-align:center">#</th>
+      <th scope="col">Arquivo</th>
+      <th scope="col">Compilados?</th>
+      <th scope="col" style="text-align:center">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% if files %}
+  {% for file in files %}
+  <tr>
+    <td scope="row" style="text-align:center">{{forloop.counter}}</td>
+    <td>{{file}}</td>
+    <td>{{file.has_compileds}}</td>
+    <td style="text-align:center"><a href="{% url 'architecture:build_compileds' file.id %}"><i class="icon ion-md-bug"></i></a></td>
+  </tr>
+  {% endfor %}
+  {% else %}
+    <tr>
+      <th scope="row" colspan="3"style="text-align:center">Nenhum arquivo criado neste diretório.</th>
+    </tr>
+
+  {% endif %}
+
+  </tbody>
+</table>
+</div>
+
+
+
+{% endblock %}

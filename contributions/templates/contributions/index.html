@@ -5,6 +5,8 @@
 
 {% block content %}
 
+{{ block.super }}
+
 <h3>Commits</h3>
 
 <div class="alert alert-warning" role="alert">
@@ -48,13 +50,21 @@
                 {% if latest_commit_list %}
                     {% for commit in latest_commit_list %}
                     <tr>
-                        <th style="text-align: center;">{{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}</th>
+                        <th style="text-align: center; r" rowspan="{{commit.parents|length|add:2}}">
+                            {{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}
+                        </th>
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
                         <td style="text-align: center;">{{commit.tag.description}}</td>
                         <td style="text-align: center;">{{commit.number_of_java_files}}</td>
                         <td nowrap>{{ commit.committer.name}} {{commit.nloc}}</td>
                         <td nowrap>{{ commit.author.name}}</td>
                     </tr>
+                    <tr>
+                        <td colspan="6">Filho: {{commit.children_commit.hash}}</td>
+                    </tr>
+                        {% for parent_commit in commit.parents %}
+                        <tr><td colspan="6">1: {{parent_commit.hash}}</td></tr>
+                        {% endfor %}
                     {% endfor %}
                 {% else %}
                     <tr>

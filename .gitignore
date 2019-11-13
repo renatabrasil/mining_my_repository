@@ -1,4 +1,5 @@
 /.idea
+/compiled
 /mining_my_repository/__pycache__
 /contributions/__pycache__
 /contributions/migrations/__pycache__

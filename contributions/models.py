@@ -2,7 +2,11 @@ from django.db import models
 import numpy as np
 
 # Create your models here.
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from pydriller import GitRepository
+
+from common.utils import CommitUtils
 
 
 class Developer(models.Model):
@@ -22,7 +26,6 @@ class Project(models.Model):
 class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
-    # previous_tag = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, default=None)
     previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
 
     def __str__(self):
@@ -31,9 +34,7 @@ class Tag(models.Model):
 class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
-    # parent_tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='directories')
     visible = models.BooleanField(default=True)
-
 
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
@@ -41,13 +42,39 @@ class Directory(models.Model):
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='commits')
+    # commit_set.all()
+    children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
     hash = models.CharField(max_length=300)
     msg = models.CharField(max_length=300)
     author = models.ForeignKey(Developer, related_name='author_id', on_delete=models.CASCADE)
     author_date = models.DateField()
     committer = models.ForeignKey(Developer, related_name='committer_id', on_delete=models.CASCADE)
     committer_date = models.DateField()
-    # pub_date = models.DateTimeField('date published')
+    parents_str = models.CharField(max_length=300)
+    _parents = []
+
+    # @property
+    # def parents(self):
+    #     return self._parents
+    #
+    # @parents.setter
+    # def parents(self,list):
+    #     self._parents=list
+
+    @property
+    def parents(self):
+        self._parents = []
+        lista = self.parents_str.split(",")
+        for parent_hash in lista:
+            parent = Commit.objects.filter(hash=parent_hash)
+            if parent.count() > 0:
+                parent = parent[0]
+                self._parents.append(parent)
+        return self._parents
+
+    @parents.setter
+    def parents(self,list):
+        self._parents=list
 
     # def __eq__(self, other):
     # 	return isinstance(other, self.__class__) and self.hash == other.hash
@@ -61,17 +88,6 @@ class Commit(models.Model):
         return total_java_files
 
 
-    def directories2(self):
-
-        directoriesD =list()
-
-        for modification in self.modifications.all():
-            if modification.is_java_file:
-                if modification.directory not in directoriesD:
-                    directoriesD.append(modification.directory)
-        return directoriesD
-
-
 class Method(models.Model):
     name = models.CharField(max_length=150)
 
@@ -81,7 +97,6 @@ class Modification(models.Model):
     new_path = models.CharField(max_length=200, null=True)
     path = models.CharField(max_length=200, null=True, default="-")
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
-    # directory = models.CharField(max_length=200, null=True, default="-")
     ADDED = 'ADD'
     DELETED = 'DEL'
     MODIFIED = 'MOD'
@@ -130,9 +145,7 @@ class Modification(models.Model):
         added_text = parsed_lines['added']
 
         diff_text = None
-
         diff_text = '\n' + str(self.added) + ' lines added: \n'  # result: Added: [(4, 'log.debug("b")')]
-        # diff_text = str(self.added) + ' + | {}'.format(added_text)  # result: Added: [(4, 'log.debug("b")')]
         diff_text = self.__print_text_in_lines__(added_text,diff_text, '+')
 
         return diff_text
@@ -155,41 +168,29 @@ class Modification(models.Model):
 
     @property
     def is_java_file(self):
-        if self.path:
-            index = self.path.rfind(".")
-            if index > -1:
-                return self.path[index:] == ".java"
-        return False
-
+        return CommitUtils.modification_is_java_file(self.path)
 
     def save(self, *args, **kwargs):
-        if self.old_path:
-            self.old_path = self.old_path.replace("\\","/")
-        if self.new_path:
-            self.new_path = self.new_path.replace("\\", "/")
-        if self.change_type.name == 'DELETE':
-            self.path = self.old_path
-        else:
-            self.path = self.new_path
+        self.path = CommitUtils.true_path(self)
+
+        if self.is_java_file:
+            index = self.path.rfind("/")
+            directory_str = ""
+            if index > -1:
+                directory_str = self.path[:index]
+            else:
+                directory_str = "/"
+
+            directory = Directory.objects.filter(name=directory_str)
+            if directory.count() == 0:
+                directory = Directory(name=directory_str, visible=True, project=self.commit.project)
+                directory.save()
+            else:
+                self.directory = directory[0]
 
 
-        index = self.path.rfind("/")
-        directory_str = ""
-        if index > -1:
-            directory_str = self.path[:index]
-        else:
-            directory_str = "/"
-
-        # directory = Directory.objects.filter(name=directory_str)
-        # if directory.count() == 0:
-        # 	author = Directory(name=directory_str, email=commit_repository.author.email)
-        # 	author.save()
-        # else:
-        # 	author = directory[0]
-
-        # self.delta = abs(self.added-self.removed)
-        self.cloc = self.added + self.removed
-        super().save(*args, **kwargs)  # Call the "real" save() method.
+            self.cloc = self.added + self.removed
+            super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class IndividualContribution(models.Model):
     author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
@@ -197,7 +198,6 @@ class IndividualContribution(models.Model):
     cloc = models.IntegerField(null=True, default=0)
     files = models.IntegerField(null=True, default=0)
     commits = models.IntegerField(null=True, default=0)
-    # previous_total_commits = models.IntegerField(null=True, default=0)
     ownership_cloc = models.FloatField(null=True, default=0.0)
     ownership_cloc_in_this_tag = models.FloatField(null=True, default=0.0)
     cloc_exp = models.FloatField(null=True, default=0.0)
@@ -346,7 +346,6 @@ class DirectoryReport(models.Model):
     standard_deviation = models.FloatField(null=True, default=0)
     mean = models.FloatField(null=True, default=0)
     median = models.FloatField(null=True, default=0)
-
 
     def calculate_statistical_metrics(self):
         experiences = [c.experience for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]
@@ -722,3 +721,14 @@ class MetricsReport(TransientModel):
     @empty.setter
     def empty(self, empty):
         self._empty = empty
+
+# method for updating
+@receiver(post_save, sender=Commit, dispatch_uid="update_commit")
+def update_commit(sender, instance, **kwargs):
+    lista = instance.parents_str.split(",")
+    for parent_hash in lista:
+        parent = Commit.objects.filter(hash=parent_hash)
+        if parent.count() > 0:
+            parent = parent[0]
+            parent.children_commit = instance
+            parent.save()

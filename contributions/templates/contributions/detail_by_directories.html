@@ -4,6 +4,8 @@
 {% block title %}Detalhes dos commits{% endblock %}
 
 {% block content %}
+{{ block.super }}
+
 <h3>Commits por diretórios</h3>
 <input type="hidden" name="refresh" value="False">
 <div class="float-right">
@@ -53,9 +55,9 @@
                 <tr>
                     <th></th>
                     <th>Author</th>
-                    <th style="text-align:right">Commit count</th>
-                    <th style="text-align:right">File count</th>
-                    <th style="text-align:right">LOC count</th>
+                    <th style="text-align:right">Commits</th>
+                    <th style="text-align:right">Files</th>
+                    <th style="text-align:right">LOC</th>
                     <th style="text-align:right" width="12%">% commits (BF)</th>
                     <th style="text-align:right">% files (BF)</th>
                     <th style="text-align:right">% cloc (BF)</th>

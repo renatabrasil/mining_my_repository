@@ -1,9 +1,13 @@
 import csv
 import json
 import time
+from io import StringIO
+from zipfile import ZipFile
+
 import matplotlib.pyplot as plt
 
 import pandas as pd
+from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
 from collections import OrderedDict
@@ -16,31 +20,14 @@ from django.template.loader import render_to_string
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
+from architecture.models import Compiled
+from common.utils import CommitUtils, ViewUtils
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
     Directory, DirectoryReport, IndividualContribution, MetricsReport
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
 
-def load_tag(request):
-    tag_id = request.POST.get('tag')
-    if not tag_id:
-        try:
-            tag_id = request.session['tag']
-        except Exception as e:
-            # raise  # reraises the exceptio
-            print(str(e))
-            tag_id = Tag.objects.all()[0].id
-    query = Tag.objects.filter(pk=tag_id)
-    if not tag_id:
-        tag_description = request.GET.get('tag')
-        query = Tag.objects.filter(description=tag_description)
-    else:
-        request.session['tag'] = tag_id
-    tag = None
-    if query.count() > 0:
-        tag = query[0]
-    return tag
 
 # TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
@@ -49,7 +36,7 @@ def index(request):
 
     start = time.time()
 
-    tag = load_tag(request)
+    tag = ViewUtils.load_tag(request)
     tag_description = tag.description
 
     load_commits = request.POST.get('load_commits')
@@ -94,16 +81,17 @@ def index(request):
                         else:
                             committer = committer[0]
                     commit = Commit(project=project, hash=commit_repository.hash, tag=tag,
+                                                    parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
                                                    msg=commit_repository.msg,
                                                    author=author, author_date=commit_repository.author_date,
                                                    committer=committer,
                                                    committer_date=commit_repository.committer_date)
                     total_modification = 0
                     for modification_repo in commit_repository.modifications:
-                        path = __true_path__(modification_repo)
-                        if __modification_is_java_file__(path):
+                        path = CommitUtils.true_path(modification_repo)
+                        if CommitUtils.modification_is_java_file(path):
                             total_modification = total_modification + 1
-                            directory_str = __directory_str__(path)
+                            directory_str = CommitUtils.directory_to_str(path)
                             directory = Directory.objects.filter(name=directory_str)
                             if directory.count() == 0:
                                 # directory = Directory(name=directory_str, visible=True, project=project, parent_tag=tag)
@@ -144,28 +132,20 @@ def index(request):
     developer_id = request.POST.get("developer_filter_id")
     tag_id = request.POST.get("tag_filter_id")
     if request.GET.get('commits'):
-
-        # latest_commit_list = process_commits(project.commits.all())
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
-        # latest_commit_list = process_commits_by_directories(Commit.objects.filter(tag__description=tag_description,
-        #                                                                           modifications__in=
-        #                                                                           Modification.objects.filter(
-        #                                                                               path__contains=".java")).distinct())
         latest_commit_list = process_commits_by_directories(request,load_commits_from_tags(tag))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('project'):
         latest_commit_list = process_commits_by_project(load_commits_from_tags(tag))
-        # request.session['commits'] = latest_commit_list
 
         url_path = 'contributions/detail_by_project.html'
     elif request.GET.get('author'):
         developer_id = request.POST.get("developer_id")
         if not developer_id:
-            developer_id = developers.first().id
+            developer_id = Developer.objects.all().order_by("name").first().id
         current_developer = Developer.objects.get(pk=developer_id)
         latest_commit_list = process_commits_by_author(developer_id)
-        # request.session['commits'] = latest_commit_list
 
         url_path = 'contributions/detail_by_author.html'
     elif request.GET.get('directory_data'):
@@ -194,6 +174,7 @@ def index(request):
         page = request.GET.get('page')
         latest_commit_list = paginator.get_page(page)
 
+    # list_commits(request)
 
     template = loader.get_template(url_path)
     context = {
@@ -265,7 +246,7 @@ def detail_in_committer(request, committer_id):
         if request.GET.get('path'):
             path = request.GET.get('path')
 
-        tag = load_tag(request)
+        tag = ViewUtils.load_tag(request)
 
         latest_commit_list = list(Commit.objects.filter(committer_id=committer_id, tag_id__lte=tag.id,
                                                         modifications__in=Modification.objects.filter(directory_id=int(path))).distinct())
@@ -282,7 +263,7 @@ def export_to_csv(request):
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(content_type='text/csv')
     project = Project.objects.get(project_name="Apache Ant")
-    tag = load_tag(request)
+    tag = ViewUtils.load_tag(request)
 
     # Making data frame from the csv file
     df = pd.read_csv("directory_ownership_metrics - rel_1.1.csv")
@@ -371,7 +352,7 @@ def export_to_csv_commit_by_author(request):
     writer = csv.writer(response)
 
     project = Project.objects.get(project_name="Apache Ant")
-    tag = load_tag(request)
+    tag = ViewUtils.load_tag(request)
 
     commits_by_author = {}
     if tag:
@@ -465,7 +446,7 @@ def process_commits_by_directories(request,commits):
 
    forced_refresh = request.POST.get("refresh") if request.POST.get("refresh") else False
 
-   tag=load_tag(request)
+   tag=ViewUtils.load_tag(request)
 
    # directories = list(Directory.objects.filter(visible=True)[:3])
    directories = Directory.objects.filter(visible=True).order_by("id")
@@ -645,33 +626,8 @@ def process_commits_by_author(developer_id):
 
     return answer
 
-def __true_path__(modification):
-    if modification.old_path:
-        old_path = modification.old_path.replace("\\", "/")
-    if modification.new_path:
-        new_path = modification.new_path.replace("\\", "/")
-    if modification.change_type.name == 'DELETE':
-        path = old_path
-    else:
-        path = new_path
-
-    return path
 
 
-def __directory_str__(path):
-    index = path.rfind("/")
-    directory_str = ""
-    if index > -1:
-        directory_str = path[:index]
-    else:
-        directory_str = "/"
-
-    return directory_str
 
 
-def __modification_is_java_file__(path):
-    if path:
-        index = path.rfind(".")
-        if index > -1:
-            return path[index:] == ".java"
-    return False
+
