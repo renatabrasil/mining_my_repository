@@ -3,6 +3,18 @@
 
 {% block content %}
 
+<div>
+  <p>O objetivo desta seção é calcular as métricas para a degradação da arquitetura. Essa é uma das etapas
+  da análise de impacto de commits.</p>
+  <p>É necessário:</p>
+  <ol>
+    <li>Gerar lista de commits</li>
+    <li>Gerar compiláveis</li>
+    <li>Calcular métricas</li>
+  </ol>
+  <p>Todas essas ações podem demorar vários minutos.</p>
+</div>
+
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 {% if messages %}
 <div class="alert alert-info alert-dismissible fade show" role="alert">
@@ -17,7 +29,6 @@
 
 {% endif %}
 
-
 <form action="{% url 'architecture:index' %}" method="post">{% csrf_token %}
   <div class="form-row">
     <div class="col-md-4 mb-3">
@@ -26,17 +37,17 @@
     </div>
   </div>
   <div class="form-row">
-    <div class="col-md-6 mb-3">
+    <div class="col-md-5 mb-3">
       <label>Local do repositório local</label>
       {{ form.git_local_repository }}
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-5 mb-3">
       <label>Diretorio de arquivos compilados no repositório local</label>
       {{ form.build_path }}
     </div>
   </div>
   <input type="hidden" value="1" name="project_id">
-  <button class="btn btn-primary" type="submit">Gerar compilados</button>
+  <button class="btn btn-primary" type="submit">Gerar lista de commits</button>
 </form>
 
 
@@ -80,7 +91,11 @@
     <td scope="row" style="text-align:center">{{forloop.counter}}</td>
     <td>{{file}}</td>
     <td>{{file.has_compileds}}</td>
-    <td style="text-align:center"><a href="{% url 'architecture:build_compileds' file.id %}"><i class="icon ion-md-bug"></i></a></td>
+    <td style="text-align:center">
+      <a href="{% url 'architecture:build_compileds' file.id %}"><i class="icon ion-md-bug" data-toggle="tooltip" data-placement="right" title="Gerar compiláveis"></i></a> |
+      <a href="#"><i class="fas fa-calculator" data-toggle="tooltip" data-placement="right" title="Calcular métricas"></i></a>
+
+    </td>
   </tr>
   {% endfor %}
   {% else %}

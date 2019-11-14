@@ -110,8 +110,9 @@ def build_compileds(request, file_id):
                     process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
                     process.wait()
 
-                    if os.path.exists(file.local_repository+"/"+build_path):
-                        shutil.rmtree(file.local_repository+"/"+build_path)
+                    build_path_repository = file.local_repository+"/"+build_path
+                    if os.path.exists(build_path_repository):
+                        shutil.rmtree(build_path_repository)
 
                 except Exception as er:
                     print(er)
@@ -161,6 +162,7 @@ def list_commits(project,form):
         myfile = File(f)
         myfile.write(form['git_local_repository'].value() + "\n")
         myfile.write(form['build_path'].value() + "\n")
+        # myfile.write(ViewUtils.load_tag(request) + "\n")
         for commit in commits:
             myfile.write(commit.hash+"\n")
             commit_tag = commit.tag.description.replace("/","-")
@@ -175,6 +177,8 @@ def list_commits(project,form):
                 f = open(file.__str__(), 'w')
                 myfile = File(f)
                 files.append(file)
+                myfile.write(form['git_local_repository'].value() + "\n")
+                myfile.write(form['build_path'].value() + "\n")
         myfile.closed
         f.closed
         file.save()
