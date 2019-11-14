@@ -43,7 +43,26 @@
 <hr>
 
 <p>Arquivos no diretório acima:</p>
-
+<div class="alert alert-info" role="alert">
+  <p>É importante ter um arquivo de configuração que especifiquem:</p>
+  <ul>
+    <li>O diretorio com os arquivos .java</li>
+    <li>O diretório com as bibliotecas</li>
+    <li>O diretório onde ficarão os .class</li>
+  </ul>
+  <p>Lembrando que é preciso ter configurado <a href="https://ant.apache.org/manual/install.html">Apache Ant</a>
+    e ter colocado a variavel de ambiente ANT_HOME e JAVA_HOME nas variáveis de ambiente.</p>
+  <p>Configurar a variavel de ambiente <strong>JAVA_HOME</strong> e selecionar a versão correta do JDK (que é de 1.2 para 1.8)</p>
+  <p>Todos os projetos serão compilados com: <strong>ant compile</strong></p>
+  <p>É preciso criar um arquivo configurando estes detalhes.</p>
+  <p>Configure a jre adequada. Foi testado usando <strong>Java 8</strong>. Para verificar sua versão aperte <strong>CTRL+R</strong>
+  digite <strong>cmd</strong> e aperte ENTER. No terminal que abrirá, digite e veja se aparece a versão do java:
+    <pre>$ java -version</pre>
+  </p>
+  <p>Algumas vezes será necessário abrir o programa no eclipse e corrigir possíveis problemas. Por exemplo:
+  no projeto Apache Ant, versões antigas usavam versões muito antigas do java. Alteramos todas as ocorrências de 'enum'
+  por 'enum_'.</p>
+</div>
 <div class="table-responsive">
 <table class="table">
   <thead>

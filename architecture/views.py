@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 
 from django.contrib import messages
@@ -66,25 +67,21 @@ def results(request, project_id):
 
 def build_compileds(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
+    current_project_path = os.getcwd()
     try:
         f = open(file.__str__(), 'r')
         myfile = File(f)
         previous_commit = None
-        if not os.path.exists(file.directory+"/jars"):
-            os.mkdir(file.directory+"/jars")
-
-        subprocess.run('cd compiled', shell=True)
-        subprocess.run(["dir"])
-        # p = subprocess.Popen(['dir'], cwd=os.getcwd()+"/"+file.directory+"/jars")
-        # p.wait()
-        # p = subprocess.Popen(['cd', file.directory+"/jars"], cwd=os.getcwd())
-        # subprocess.run(["cd compiled"])
-        # subprocess.run(["cd "+file.directory+"/jars"])
-        current_project_path = os.getcwd()
+        compiled_directory = file.directory+"/"+file.name.replace(".txt","")+"/jars"
+        if not os.path.exists(compiled_directory):
+            os.makedirs(compiled_directory, exist_ok=True)
         os.chdir(file.local_repository)
-        if not os.path.exists("jars"):
-            os.mkdir("jars")
+        # FIX: if we are using local repository as entry point
+        # if not os.path.exists("jars"):
+        #     os.mkdir("jars")
         i = 0
+        # bootstrap = subprocess.Popen('bootstrap.bat', shell=False, cwd=file.local_repository)
+        # bootstrap.wait()
         for commit in myfile:
             commit = commit.replace('\n','')
             if i==0:
@@ -93,24 +90,32 @@ def build_compileds(request, file_id):
                 build_path = commit
             else:
                 try:
+                    # Ir para a versao
+                    # checkout = subprocess.Popen('git reset --hard '+commit, cwd=file.local_repository)
+                    checkout = subprocess.Popen('git reset --hard ' + commit + '', cwd=file.local_repository)
+                    checkout.wait()
+                    print(os.environ.get('JAVA_HOME'))
 
-                    # repository = file.local_repository
-                    # git_command = [repository, 'checkout']
-                    #
-                    # git_query = subprocess.Popen(git_command, cwd=repository, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    # (git_status, error) = git_query.communicate()
-                    # if git_query.poll() == 0:
-                    # # Do stuff
-                    #     print("oi")
-                    # subprocess.run(['git', 'checkout', commit, '-f'])
-                    jar_file = 'jars/temp-'+commit+'.jar'
+                    # compilar
+                    build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
+                    build.wait()
+                    # stdout, stderr = build.communicate()
+
+                    # criar o jar
+                    jar_file = '"'+current_project_path+'/'+compiled_directory+'/version-' + commit.replace("/","").replace(".","-") + '.jar"'
                     input_files = "'"+file.local_repository+"/"+build_path+"'"
                     print("comando: jar -cf "+jar_file+" "+input_files )
                     # FIX: create on local repository folder
                     # subprocess.Popen("jar -cf "+jar_file+" "+build_path, cwd=file.local_repository)
-                    subprocess.Popen('jar -cf "' + current_project_path+ '/compiled/jars/teste.jar"' + ' ' + build_path, cwd=file.local_repository)
+                    process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
+                    process.wait()
+
+                    if os.path.exists(file.local_repository+"/"+build_path):
+                        shutil.rmtree(file.local_repository+"/"+build_path)
+
                 except Exception as er:
                     print(er)
+                    messages.error(request, 'Erro: '+er)
 
             i+=1
             # subprocess.run(["jar", "-cf", commit+".jar", ""])
@@ -119,7 +124,12 @@ def build_compileds(request, file_id):
             previous_commit = commit
     except Exception as e:
         print(e)
+        shutil.rmtree(compiled_directory, ignore_errors=True)
         messages.error(request, 'Could not create compiled.')
+    finally:
+        os.chdir(current_project_path)
+    file.has_compileds=True
+    file.save()
 
     return HttpResponseRedirect(reverse('architecture:index',))
 
