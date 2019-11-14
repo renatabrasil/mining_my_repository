@@ -1,6 +1,9 @@
 /.idea
 /compiled
 /mining_my_repository/__pycache__
+/architecture/__pycache__
+/architecture/migrations/__pycache__
+/common/__pycache__
 /contributions/__pycache__
 /contributions/migrations/__pycache__
 /contributions/templatetags/__pycache__
