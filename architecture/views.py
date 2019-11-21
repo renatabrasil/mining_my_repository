@@ -120,7 +120,9 @@ def build_compileds(request, file_id):
                     process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
                     process.wait()
 
-                    build_path_repository = file.local_repository+"/"+build_path
+                    build_path_repository = build_path
+                    if build_path.count('\\')==0 and build_path.count('/')==0:
+                        build_path_repository = file.local_repository+"/"+build_path
                     if os.path.exists(build_path_repository):
                         shutil.rmtree(build_path_repository)
 
@@ -147,14 +149,20 @@ def build_compileds(request, file_id):
 
 def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
-    directory_name = file.__str__().replace(".txt","")
-    directory_name = directory_name+"/jars"
+    directory_name = file.__str__().replace(".txt", "")
+    directory_name = directory_name + "/jars"
     metrics = read_PM_file(directory_name)
     metrics['org.apache.tools.ant']
     contributions = pre_correlation(metrics, 'org.apache.tools.ant')
-    # if os.path.exists(directory_name):
-    #     for filename in os.listdir(directory_name):
-    #         generate_csv(directory_name+"/"+filename)
+    return HttpResponseRedirect(reverse('architecture:index', ))
+
+def calculate_architecture_metrics(request, file_id):
+    file = FileCommits.objects.get(pk=file_id)
+    directory_name = file.__str__().replace(".txt","")
+    directory_name = directory_name+"/jars"
+    if os.path.exists(directory_name):
+        for filename in os.listdir(directory_name):
+            generate_csv(directory_name+"/"+filename)
     return HttpResponseRedirect(reverse('architecture:index',))
 
 def generate_csv(folder):

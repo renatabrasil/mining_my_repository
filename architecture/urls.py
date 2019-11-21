@@ -10,4 +10,5 @@ urlpatterns = [
     path('<int:project_id>/results/', views.results, name='results'),
     path('compileds/<int:file_id>/', views.build_compileds, name='build_compileds'),
     path('metrics/<int:file_id>/', views.calculate_metrics, name='calculate_metrics'),
+    path('architecture_metrics/<int:file_id>/', views.calculate_architecture_metrics, name='calculate_architecture_metrics'),
 ]
