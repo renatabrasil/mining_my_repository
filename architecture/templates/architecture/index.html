@@ -93,7 +93,7 @@
     <td>{{file.has_compileds}}</td>
     <td style="text-align:center">
       <a href="{% url 'architecture:build_compileds' file.id %}"><i class="icon ion-md-bug" data-toggle="tooltip" data-placement="right" title="Gerar compiláveis"></i></a> |
-      <a href="#"><i class="fas fa-calculator" data-toggle="tooltip" data-placement="right" title="Calcular métricas"></i></a>
+      <a href="{% url 'architecture:calculate_metrics' file.id %}"><i class="fas fa-calculator" data-toggle="tooltip" data-placement="right" title="Calcular métricas"></i></a>
 
     </td>
   </tr>

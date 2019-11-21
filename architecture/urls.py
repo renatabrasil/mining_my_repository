@@ -8,5 +8,6 @@ urlpatterns = [
     path('', views.index, name='index'),
     # path('<int:project_id>/compileds/', views.build_compileds, name='build_compileds'),
     path('<int:project_id>/results/', views.results, name='results'),
-    path('<int:file_id>/', views.build_compileds, name='build_compileds'),
+    path('compileds/<int:file_id>/', views.build_compileds, name='build_compileds'),
+    path('metrics/<int:file_id>/', views.calculate_metrics, name='calculate_metrics'),
 ]

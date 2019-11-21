@@ -53,6 +53,9 @@ class Commit(models.Model):
     parents_str = models.CharField(max_length=300)
     _parents = []
 
+    def __str__(self):
+        return self.hash
+
     # @property
     # def parents(self):
     #     return self._parents

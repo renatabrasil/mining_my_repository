@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import re
 
 from django.contrib import messages
 from django.core.files import File
@@ -15,7 +16,7 @@ import architecture
 from architecture.forms import FilesCompiledForm
 from architecture.models import Compiled, FileCommits
 from common.utils import ViewUtils
-from contributions.models import Project, Commit
+from contributions.models import Project, Commit, Developer, IndividualContribution
 
 
 def index(request):
@@ -92,17 +93,26 @@ def build_compileds(request, file_id):
                 try:
                     # Ir para a versao
                     # checkout = subprocess.Popen('git reset --hard '+commit, cwd=file.local_repository)
-                    checkout = subprocess.Popen('git reset --hard ' + commit + '', cwd=file.local_repository)
+                    hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
+                    checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
                     checkout.wait()
                     print(os.environ.get('JAVA_HOME'))
 
                     # compilar
+                    # TODO: Check whether it is a successfull action.
                     build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
                     build.wait()
                     # stdout, stderr = build.communicate()
 
                     # criar o jar
-                    jar_file = '"'+current_project_path+'/'+compiled_directory+'/version-' + commit.replace("/","").replace(".","-") + '.jar"'
+                    # index = re.search(r'[^-*/+-]+', commit).group(0)
+                    jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
+                                                                                                                "").replace(
+                        ".", "-")
+                    jar_file = '"'+current_project_path+'/'+compiled_directory+'/'+ 'version-' + commit.replace("/","").replace(".","-") +'/version-' + commit.replace("/","").replace(".","-") + '.jar"'
+
+                    os.makedirs(jar_folder, exist_ok=True)
+                    # m = re.search(r'[^-*/+-]+', commit).group(0)
                     input_files = "'"+file.local_repository+"/"+build_path+"'"
                     print("comando: jar -cf "+jar_file+" "+input_files )
                     # FIX: create on local repository folder
@@ -113,6 +123,7 @@ def build_compileds(request, file_id):
                     build_path_repository = file.local_repository+"/"+build_path
                     if os.path.exists(build_path_repository):
                         shutil.rmtree(build_path_repository)
+
 
                 except Exception as er:
                     print(er)
@@ -134,12 +145,112 @@ def build_compileds(request, file_id):
 
     return HttpResponseRedirect(reverse('architecture:index',))
 
+def calculate_metrics(request, file_id):
+    file = FileCommits.objects.get(pk=file_id)
+    directory_name = file.__str__().replace(".txt","")
+    directory_name = directory_name+"/jars"
+    metrics = read_PM_file(directory_name)
+    metrics['org.apache.tools.ant']
+    contributions = pre_correlation(metrics, 'org.apache.tools.ant')
+    # if os.path.exists(directory_name):
+    #     for filename in os.listdir(directory_name):
+    #         generate_csv(directory_name+"/"+filename)
+    return HttpResponseRedirect(reverse('architecture:index',))
+
+def generate_csv(folder):
+    current_project_path = os.getcwd()
+    if os.path.exists(folder):
+        for filename in os.listdir(folder):
+            if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
+                # print(os.path.join(directory, filename))
+                try:
+                    arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
+                                                     ' -p ' + folder + ' -out ' + folder + ' -pm -folderOfJars', cwd=current_project_path)
+                    arcan_metrics.wait()
+                except Exception as er:
+                    print(er)
+                continue
+            else:
+                continue
+
+
+# return a dictionary
+# key: module (component)
+# value: dictionary
+#   key: commit
+#   value: metrics (RMD)
+# {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
+def read_PM_file(folder):
+    metrics = {}
+    collected_data = []
+    previous_commit = None
+    for dirpath, dirnames, filenames in os.walk(folder):
+        for filename in [f for f in filenames if f.endswith(".csv")]:
+            print(os.path.join(dirpath, filename))
+            try:
+                f = open(os.path.join(dirpath, filename), "r")
+                content = f.readlines()
+                hash = f.name.split('\\')[1].split('-')[2]
+                if Commit.objects.filter(hash=hash).count() > 0:
+                    commit = Commit.objects.filter(hash=hash)[0]
+                else:
+                    continue
+
+                for line in content[2:]:
+                    print(line)
+                    row = line.split(',')
+                    row[5]=row[5].replace('\n', '')
+                    if row[0] not in metrics:
+                        metrics.setdefault(row[0],{})
+                    if previous_commit and previous_commit in metrics[row[0]]:
+                        delta = float(metrics[row[0]][previous_commit][0]) - float(row[5])
+                    elif not previous_commit:
+                        delta = 0.0
+                    else:
+                        delta = float(row[5])
+                    metrics[row[0]].setdefault(commit, [row[5], delta])
+
+                    collected_data.append([commit.committer.id, delta])
+
+                previous_commit = commit
+            finally:
+                f.close()
+    return metrics
 
 def create_files(form, project_id):
     project = get_object_or_404(Project, pk=project_id)
     files=list_commits(project, form)
     return files
 
+def pre_correlation(metrics, component):
+    correlation = []
+    # developers = list(metrics[component].keys()).values_list("committer__name", flat=True).distinct()
+    developers = set([d.committer for d in list(metrics[component].keys())])
+    tag = list(metrics[component].keys())[0].tag
+    for developer in developers:
+        correlation.append(get_quality_contribution_by_developer(metrics, component, developer, tag))
+    print(correlation)
+    return correlation
+
+def get_quality_contribution_by_developer(metrics, component, developer, tag):
+    # Developer experience in this component
+    full_component = 'src/main/'+component.replace(".","/")
+    contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory__name__exact=full_component,
+                                                       directory_report__tag_id=tag.id)
+    contributions = []
+    if contributor.count() > 0:
+        contributor = contributor[0]
+    else:
+        return [0,0,0]
+
+    contributions_pairs = {}
+    delta = 0.0
+    for commit, metric in metrics[component].items():
+        if commit.committer == developer:
+            delta += float(metric[1])
+        # if commit not in contributions_pairs:
+        #     contributions_pairs.setdefault()
+    return [contributor.author.name, contributor.experience, delta]
 
 def list_commits(project,form):
     first_commit = Commit.objects.filter(children_commit__gt=0).first()
@@ -163,13 +274,16 @@ def list_commits(project,form):
         myfile.write(form['git_local_repository'].value() + "\n")
         myfile.write(form['build_path'].value() + "\n")
         # myfile.write(ViewUtils.load_tag(request) + "\n")
+        i = 1
         for commit in commits:
-            myfile.write(commit.hash+"\n")
+            myfile.write(str(i)+"-"+commit.hash+"\n")
             commit_tag = commit.tag.description.replace("/","-")
+            i += 1
             if j != commit_tag:
                 myfile.closed
                 f.closed
                 file.save()
+                i = 1
                 j = commit_tag
                 filename="commits-" + j + ".txt"
                 file = __update_file_commits__(form,filename)

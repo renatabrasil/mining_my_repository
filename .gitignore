@@ -9,6 +9,8 @@
 /contributions/templatetags/__pycache__
 /backup-banco
 /venv
+/lib
 /staticfiles
 db.sqlite3
 db.sqlite3-journal
+Arcan-1.2.1-SNAPSHOT
