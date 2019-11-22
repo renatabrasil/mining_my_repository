@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import re
+import csv
 
 from django.contrib import messages
 from django.core.files import File
@@ -50,7 +51,8 @@ def index(request):
         form = FilesCompiledForm(initial={'directory': 'compiled',
                                           'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
                                           'build_path': 'build'})
-        files = FileCommits.objects.filter(directory='compiled', build_path='build')
+        # files = FileCommits.objects.filter(directory='compiled', build_path='build')
+        files = FileCommits.objects.all().order_by("name")
 
     context = {
         'tag': tag,
@@ -152,8 +154,13 @@ def calculate_metrics(request, file_id):
     directory_name = file.__str__().replace(".txt", "")
     directory_name = directory_name + "/jars"
     metrics = read_PM_file(directory_name)
-    metrics['org.apache.tools.ant']
-    contributions = pre_correlation(metrics, 'org.apache.tools.ant')
+    directory = 'org.apache.tools.ant.taskdefs'
+    contributions = pre_correlation(metrics, directory)
+    with open(directory+'.csv', 'w') as csvFile:
+        writer = csv.writer(csvFile)
+        for contribution in contributions:
+            writer.writerow(contribution)
+    csvFile.close()
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 def calculate_architecture_metrics(request, file_id):
