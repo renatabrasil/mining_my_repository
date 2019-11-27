@@ -218,7 +218,123 @@ class ProjectIndividualContribution(models.Model):
     bf_file = models.FloatField(null=True, default=0.0)
     bf_cloc = models.FloatField(null=True, default=0.0)
 
+    def calculate_boosting_factor(self,activity_array):
+        if not activity_array or len(activity_array) == 1:
+            return 0.0
+        mean_value = np.mean(activity_array)
+        min_value = np.min(activity_array)
+        max_value = np.max(activity_array)
+
+        numerator = (mean_value - min_value)
+
+        if numerator == 0.0:
+            return 0.0
+        try:
+            return numerator / (max_value - min_value)
+        except ZeroDivisionError:
+            return 0.0
+
     def save(self, *args, **kwargs):
+        self.ownership_commits_in_this_tag = self.ownership_commits
+        self.ownership_files_in_this_tag = self.ownership_files
+        self.ownership_cloc_in_this_tag = self.ownership_cloc
+        total_commits = 0
+        total_files = 0
+        total_cloc = 0
+
+        if self.project_report.tag.previous_tag:
+            previous_individual_contribution = ProjectIndividualContribution.objects.filter(
+                project_report__tag_id=self.project_report.tag.previous_tag.id, author_id=self.author.id)
+            commits_in_this_tag = self.commits
+            files_in_this_tag = self.files
+            cloc_in_this_tag = self.cloc
+            if previous_individual_contribution.count() > 0:
+                previous_individual_contribution = previous_individual_contribution[0]
+                commits_in_this_tag = commits_in_this_tag - previous_individual_contribution.commits
+                files_in_this_tag = files_in_this_tag - previous_individual_contribution.files
+                cloc_in_this_tag = cloc_in_this_tag - previous_individual_contribution.cloc
+                total_commits = previous_individual_contribution.project_report.total_commits
+                total_files = previous_individual_contribution.project_report.total_files
+                total_cloc = previous_individual_contribution.project_report.total_cloc
+            else:
+                project_report = ProjectReport.objects.filter(tag_id=self.project_report.tag.previous_tag.id)
+                if project_report.count() > 0:
+                    project_report = project_report[0]
+                    total_commits = project_report.total_commits
+                    total_files = project_report.total_files
+                    total_cloc = project_report.total_cloc
+
+            total_commits_in_this_tag = self.project_report.total_commits - total_commits
+            total_files_in_this_tag = self.project_report.total_files - total_files
+            total_cloc_in_this_tag = self.project_report.total_cloc - total_cloc
+            try:
+                self.ownership_commits_in_this_tag = commits_in_this_tag / total_commits_in_this_tag
+                self.ownership_files_in_this_tag = files_in_this_tag / total_files_in_this_tag
+                self.ownership_cloc_in_this_tag = cloc_in_this_tag / total_cloc_in_this_tag
+            except ZeroDivisionError:
+                self.ownership_commits_in_this_tag = 0.0
+                self.ownership_files_in_this_tag = 0.0
+                self.ownership_cloc_in_this_tag = 0.0
+
+        first_tag_id = Tag.objects.filter(project_id=self.project_report.tag.project.id).first().id
+        current_tag_id = self.project_report.tag.id
+        if current_tag_id == first_tag_id:
+            self.commit_exp = self.ownership_commits
+            self.file_exp = self.ownership_files
+            self.cloc_exp = self.ownership_cloc
+            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
+            self.experience = self.experience_bf
+        else:
+            tag_ids = list(range(first_tag_id, current_tag_id))
+
+            contributions = ProjectIndividualContribution.objects.filter(
+                project_report__tag_id__in=tag_ids,
+                author_id=self.author.id)
+
+            first_tag__in_contributions_id = contributions.first().project_report.tag.id if contributions else current_tag_id
+
+            extra_values = []
+            # whether there is any contribution in this directory from other authors
+            # It means that is not a new directory, so we have to count all period
+            first_report = ProjectReport.objects.filter(tag_id__lt=current_tag_id).order_by("tag_id").first()
+            if first_report:
+                i = len(contributions)
+                if current_tag_id - i > 1:
+                    for i in range(0, current_tag_id - (first_report.tag.id + len(contributions))):
+                        extra_values.append(0.0)
+
+            contributions = list(contributions)
+            contributions.append(self)
+
+            commit_activity = [i.ownership_commits_in_this_tag for i in contributions]
+            commit_activity = commit_activity + extra_values
+
+            file_activity = [i.ownership_files_in_this_tag for i in contributions]
+            file_activity = file_activity + extra_values
+            # file_activity.append(self.ownership_files)
+            #
+            cloc_activity = [i.ownership_cloc_in_this_tag for i in contributions]
+            cloc_activity = cloc_activity + extra_values
+            # cloc_activity.append(self.ownership_cloc)
+
+            # commit activity
+            self.bf_commit = self.calculate_boosting_factor(commit_activity)
+            # file activity
+            self.bf_file = self.calculate_boosting_factor(file_activity)
+            # cloc_activity
+            self.bf_cloc = self.calculate_boosting_factor(cloc_activity)
+            # denominator = len(contributions)+1 if len(contributions) != 0 else 1
+
+            # denominator = current_tag_id-first_tag__in_contributions_id
+            # denominator = denominator + 1
+            denominator = len(contributions) + len(extra_values)
+            # self.commit_exp = (self.bf_commit + 1) * (sum(commit_activity) / denominator)
+            self.commit_exp = (self.bf_commit + 1) * self.ownership_commits
+            self.file_exp = (self.bf_file + 1) * self.ownership_files
+            self.cloc_exp = (self.bf_cloc + 1) * self.ownership_cloc
+            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
+
+
         self.experience = 0.4 * self.ownership_commits + 0.4 * self.ownership_files + 0.2 * self.ownership_cloc
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
@@ -443,8 +559,8 @@ class IndividualContribution(models.Model):
             # denominator = current_tag_id-first_tag__in_contributions_id
             # denominator = denominator + 1
             denominator = len(contributions) + len(extra_values)
-            self.commit_exp = (self.bf_commit + 1)*(sum(commit_activity)/denominator)
-            # self.commit_exp = (self.bf_commit + 1) * self.ownership_commits
+            # self.commit_exp = (self.bf_commit + 1)*(sum(commit_activity)/denominator)
+            self.commit_exp = (self.bf_commit + 1) * self.ownership_commits
             self.file_exp = (self.bf_file + 1)*self.ownership_files
             self.cloc_exp = (self.bf_cloc + 1)*self.ownership_cloc
             self.experience_bf = 0.4*self.commit_exp + 0.4*self.file_exp + 0.2*self.cloc_exp
