@@ -22,9 +22,17 @@
   </div>
 </div>
 
+<input type="hidden" name="refresh" value="False">
 <div class="float-right">
-    <a class="btn btn-primary" href="/contributions/authors_to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> Exportar para CSV</a>
+    <form action="{{request_path}}?project=true" method="post">{% csrf_token %}
+        <a class="btn btn-primary" href="/contributions/authors_to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> CSV</a>
+        <input type="hidden" name="refresh" value="True">
+        <button type="submit" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Métricas</button>
+    </form>
+
 </div>
+
+
 <br>
 <h5>Classificação dos desenvolvedores por commits</h5>
 <div class="table-responsive">
