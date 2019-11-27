@@ -17,7 +17,7 @@ import architecture
 from architecture.forms import FilesCompiledForm
 from architecture.models import Compiled, FileCommits
 from common.utils import ViewUtils
-from contributions.models import Project, Commit, Developer, IndividualContribution
+from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution
 
 
 def index(request):
@@ -154,9 +154,9 @@ def calculate_metrics(request, file_id):
     directory_name = file.__str__().replace(".txt", "")
     directory_name = directory_name + "/jars"
     metrics = read_PM_file(directory_name)
-    directory = 'org.apache.tools.ant.taskdefs'
+    directory = 'org/apache/tools/ant'
     contributions = pre_correlation(metrics, directory)
-    with open(directory+'.csv', 'w') as csvFile:
+    with open(directory.replace('/','_')+'.csv', 'w') as csvFile:
         writer = csv.writer(csvFile)
         for contribution in contributions:
             writer.writerow(contribution)
@@ -215,6 +215,7 @@ def read_PM_file(folder):
                     print(line)
                     row = line.split(',')
                     row[5]=row[5].replace('\n', '')
+                    row[0] = row[0].replace('.','/')
                     if row[0] not in metrics:
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
@@ -252,11 +253,13 @@ def get_quality_contribution_by_developer(metrics, component, developer, tag):
     full_component = 'src/main/'+component.replace(".","/")
     contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory__name__exact=full_component,
                                                        directory_report__tag_id=tag.id)
+    global_contributor = ProjectIndividualContribution.objects.filter(author_id=developer.id, project_report__tag_id=tag.id)
     contributions = []
-    if contributor.count() > 0:
+    if contributor.count() > 0 and global_contributor.count() > 0:
         contributor = contributor[0]
+        global_contributor = global_contributor[0]
     else:
-        return [0,0,0]
+        return [0,0,0,0]
 
     contributions_pairs = {}
     delta = 0.0
@@ -265,7 +268,8 @@ def get_quality_contribution_by_developer(metrics, component, developer, tag):
             delta += float(metric[1])
         # if commit not in contributions_pairs:
         #     contributions_pairs.setdefault()
-    return [contributor.author.name, contributor.experience, delta]
+
+    return [contributor.author.name, global_contributor.experience, contributor.experience, delta]
 
 def list_commits(project,form):
     first_commit = Commit.objects.filter(children_commit__gt=0).first()
