@@ -12,13 +12,13 @@
     <h5 class="card-title">Parâmetros do Projeto</h5>
       <p class="card-text"><strong>Threshold (file)
           <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de arquivos"></i></strong>:
-    {{latest_commit_list.0.file_threshold|floatformat:3}}</p>
+    {{latest_commit_list.core_developers_threshold_file|floatformat:3}}</p>
 
       <p class="card-text"><strong>Threshold (commit)
           <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de commits"></i></strong>:
-    {{latest_commit_list.0.commit_threshold|floatformat:3}}</p>
+    {{latest_commit_list.core_developers_threshold_commit|floatformat:3}}</p>
 
-      <li>Threshold (experience): {{latest_commit_list.0.experience_threshold|floatformat:3}}</li>
+      <li>Threshold (experience): {{latest_commit_list.core_developers_threshold_experience|floatformat:3}}</li>
   </div>
 </div>
 
@@ -29,7 +29,7 @@
 <h5>Classificação dos desenvolvedores por commits</h5>
 <div class="table-responsive">
     <table class="table table-striped table-sm col-md-8">
-        <caption>Core developers por commits ({{latest_commit_list.0.core_developers_experience|length}})</caption>
+        <caption>Core developers por commits ({{latest_commit_list.core_developers_experience|length}})</caption>
         <thead class="thead-dark">
             <tr>
                 <th></th>
@@ -38,8 +38,8 @@
         </thead>
         <tbody>
         {% if latest_commit_list %}
-            {% if latest_commit_list.0.core_developers_experience %}
-                {% for author in latest_commit_list.0.core_developers_experience %}
+            {% if latest_commit_list.core_developers_commits %}
+                {% for author in latest_commit_list.core_developers_experience %}
                     <tr>
                         <td>{{forloop.counter}}</td>
                         <td>{{author.name}}</td>
@@ -52,7 +52,7 @@
 </div>
 <div class="table-responsive">
     <table class="table table-striped table-sm col-md-8">
-        <caption>Peripheral developers ({{latest_commit_list.0.peripheral_developers_experience|length}})</caption>
+        <caption>Peripheral developers ({{latest_commit_list.peripheral_developers_experience|length}})</caption>
         <thead class="thead-dark">
             <tr>
                 <th></th>
@@ -61,8 +61,8 @@
             </tr>
         </thead>
         <tbody>
-            {% if latest_commit_list.0.peripheral_developers_experience %}
-                {% for author in latest_commit_list.0.peripheral_developers_experience %}
+            {% if latest_commit_list.peripheral_developers_commits %}
+                {% for author in latest_commit_list.peripheral_developers_experience %}
                     <tr>
                         <td>{{forloop.counter}}</td>
                         <td>{{author.name}}</td>
@@ -75,7 +75,6 @@
     </table>
 </div>
 <hr>
-
 <div class="table-responsive">
     <table class="table table-striped table-sm">
         <caption>Commits</caption>
@@ -94,33 +93,27 @@
         </thead>
         <tbody>
             {% if latest_commit_list %}
-                <tr class="p-3 mb-2 bg-secondary text-white">
 
-                        <td colspan="6"></td>
-                        <td style="text-align:right" nowrap><small>Media: {{latest_commit_list.0.mean|floatformat:5}}</small></td>
-                        <td style="text-align:right" nowrap><small>Mediana: {{latest_commit_list.0.median|floatformat:5}}</small></td>
-                        <td style="text-align:right"><small>Desvio padrão: {{latest_commit_list.0.standard_deviation|floatformat:5}}</small></td>
-                    </tr>
-                {% for contribution in latest_commit_list.1 %}
+                {% for author, totals in latest_commit_list.commits_by_author.items %}
                     <tr>
                         <td>{{forloop.counter}}</td>
-                        <td nowrap="">{{contribution.author.name}}</td>
-                        <td style="text-align:right">{{contribution.commits}}</td>
-                        <td style="text-align:right">{{contribution.files}}</td>
-                        <td style="text-align:right">{{contribution.cloc}}</td>
-                        <td style="text-align:right">{{contribution.ownership_commits|percentage}}</td>
-                        <td style="text-align:right">{{contribution.ownership_files|percentage}}</td>
-                        <td style="text-align:right">{{contribution.ownership_cloc|percentage}}</td>
-                        <td style="text-align:right">{{contribution.experience|floatformat:6}}</td>
+                        <td nowrap="">{{author.name}}</td>
+                        <td style="text-align:right">{{totals.commit_count}}</td>
+                        <td style="text-align:right">{{totals.file_count}}</td>
+                        <td style="text-align:right">{{totals.loc_count}}</td>
+                        <td style="text-align:right">{{totals.commit_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.file_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.loc_percentage|percentage}}</td>
+                        <td style="text-align:right">{{totals.experience|floatformat:3}}</td>
                     </tr>
                 {% endfor %}
             <tfoot>
                 <tr>
                     <th>Total:</th>
                     <td></td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_commits}}</td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_files}}</td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_cloc}}</td>
+                    <td style="text-align:right">{{latest_commit_list.total_commits}}</td>
+                    <td style="text-align:right">{{latest_commit_list.total_java_files}}</td>
+                    <td style="text-align:right">{{latest_commit_list.total_loc}}</td>
                     <td>
 
                     </td>

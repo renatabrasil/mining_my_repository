@@ -23,7 +23,7 @@ from pydriller.git_repository import GitRepository
 from architecture.models import Compiled
 from common.utils import CommitUtils, ViewUtils
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
-    Directory, DirectoryReport, IndividualContribution, MetricsReport
+    Directory, DirectoryReport, IndividualContribution, MetricsReport, ProjectIndividualContribution, ProjectReport
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -137,7 +137,7 @@ def index(request):
         latest_commit_list = process_commits_by_directories(request,load_commits_from_tags(tag))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('project'):
-        latest_commit_list = process_commits_by_project(load_commits_from_tags(tag))
+        latest_commit_list = process_commits_by_project(request, load_commits_from_tags(tag))
 
         url_path = 'contributions/detail_by_project.html'
     elif request.GET.get('author'):
@@ -356,7 +356,7 @@ def export_to_csv_commit_by_author(request):
 
     commits_by_author = {}
     if tag:
-        commits_by_author = process_commits_by_project(load_commits_from_tags(tag))
+        commits_by_author = process_commits_by_project(request, load_commits_from_tags(tag))
         writer.writerow(["Tag:", tag.description])
     # commits_by_author = request.session['commits']
 
@@ -439,7 +439,6 @@ def load_commits_from_tags(tag):
 #                     - float: core_developers_threshold_commit
 def process_commits_by_directories(request,commits):
    report = OrderedDict()
-   report_repo = list()
    answer = OrderedDict()
    directories_report = list()
    review_modification = []
@@ -570,31 +569,93 @@ def process_commits_by_directories(request,commits):
 #                     - float: core_developers_threshold_loc
 #                     - float: core_developers_threshold_file
 #                     - float: core_developers_threshold_commit
-def process_commits_by_project(commits):
+def process_commits_by_project(request, commits):
+   answer_report = list()
    report = ContributionByAuthorReport()
+   project_reports = list()
+
+   forced_refresh = request.POST.get("refresh") if request.POST.get("refresh") else False
+   tag = ViewUtils.load_tag(request)
+
+   if forced_refresh:
+       ProjectIndividualContribution.objects.filter(
+           project_report__in=ProjectReport.objects.filter(tag_id=tag.id)).delete()
+       ProjectReport.objects.filter(tag_id=tag.id).delete()
+
+   developers = set(Commit.objects.filter(tag_id=tag.pk).values_list("committer", flat=True))
+   project_report = ProjectReport.objects.filter(tag_id=tag.pk)
+   contributions = ProjectIndividualContribution.objects.filter(project_report__in=ProjectReport.objects.filter(tag_id=tag.id))
+   individual_contributions = set(contributions.values_list("author", flat=True))
+   # contributions = list(contributions)
+
+   # developers = developers.difference(individual_contributions)
+   for developer in contributions:
+       report.commits_by_author.setdefault(developer.author, None)
+
+   # if len(project_report) == 0:
+   #     answer_report = ContributionByAuthorReport()
+   # else:
+   #
+   #     directories_report.append(directory_report[0])
+
+
    total_commits = 0
    total_java_files = 0
    total_loc = 0
    for commit in commits:
-       if commit.author not in report.commits_by_author:
-           report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
-       report.commits_by_author[commit.author].commit_count = report.commits_by_author[commit.author].commit_count + 1
-       for modification in commit.modifications.all():
-           if modification.is_java_file:
-               report.commits_by_author[commit.author].file_count = report.commits_by_author[
-                                                                        commit.author].file_count + 1
-               total_java_files = total_java_files + 1
-               report.commits_by_author[commit.author].loc_count = report.commits_by_author[
-                                                                        commit.author].loc_count + modification.cloc
-               total_loc = total_loc + modification.cloc
-       total_commits = total_commits + 1
-   report.total_commits = total_commits
-   report.total_java_files = total_java_files
-   report.total_loc = total_loc
-   report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
-                                                 key=lambda x: x[1].experience, reverse=True))
+       if not __author_is_in_project_report__(report, commit.author):
+           if commit.author not in report.commits_by_author:
+               report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
+           report.commits_by_author[commit.author].commit_count = report.commits_by_author[commit.author].commit_count + 1
+           for modification in commit.modifications.all():
+               if modification.is_java_file:
+                   report.commits_by_author[commit.author].file_count = report.commits_by_author[
+                                                                            commit.author].file_count + 1
+                   total_java_files = total_java_files + 1
+                   report.commits_by_author[commit.author].loc_count = report.commits_by_author[
+                                                                            commit.author].loc_count + modification.cloc
+                   total_loc = total_loc + modification.cloc
+           total_commits = total_commits + 1
+   if contributions.count() == 0:
+       report.total_commits = total_commits
+       report.total_java_files = total_java_files
+       report.total_loc = total_loc
+       report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
+                                                     key=lambda x: x[1].experience, reverse=True))
 
-   return report
+   if project_report.count() > 0:
+       project_report = project_report[0]
+   if len(report.commits_by_author) > 0:
+       if not project_report:
+           project_report = ProjectReport(tag=tag, total_cloc=report.total_loc, total_files=report.total_java_files,
+                                          total_commits=report.total_commits, commit_threshold=report.core_developers_threshold_commit,
+                                                                 file_threshold=report.core_developers_threshold_file,
+                                                                 cloc_threshold=0.0,
+                                                                experience_threshold=report.core_developers_threshold_experience)
+           project_report.save()
+       answer_report.append(project_report)
+       report_repo = []
+       for author, author_report in report.commits_by_author.items():
+           contribution_repo = ProjectIndividualContribution.objects.filter(author_id=author.pk,
+                                                                     project_report_id=project_report.pk)
+           if not contribution_repo:
+               contribution_repo = ProjectIndividualContribution(author=author, project_report=project_report,
+                                                                 cloc=author_report.loc_count, files=author_report.file_count,
+                                                                 commits=author_report.commit_count,
+                                                                 ownership_cloc=author_report.loc_percentage,
+                                                                 ownership_files=author_report.file_percentage,
+                                                                 ownership_commits=author_report.commit_percentage)
+               contribution_repo.save()
+           else:
+               contribution_repo = contribution_repo[0]
+           report_repo.append(contribution_repo)
+       project_report.calculate_statistical_metrics()
+       answer_report.append(report_repo)
+
+       # report_repo.append(contributions)
+       # report_repo = sorted(report_repo, key=lambda x: x.experience, reverse=True)
+
+   return answer_report
 
 def process_commits_by_author(developer_id):
     contributions = list(IndividualContribution.objects.filter(author_id=developer_id).order_by("directory_report__tag_id"))
@@ -628,6 +689,5 @@ def process_commits_by_author(developer_id):
 
 
 
-
-
-
+def __author_is_in_project_report__(report, developer):
+    return developer in report.commits_by_author and report.commits_by_author[developer] is None

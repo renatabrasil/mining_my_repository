@@ -195,6 +195,124 @@ class Modification(models.Model):
             self.cloc = self.added + self.removed
             super().save(*args, **kwargs)  # Call the "real" save() method.
 
+# TODO: Change to a heritage relation. Distinct Types: Project and Directory
+class ProjectIndividualContribution(models.Model):
+    author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
+    project_report = models.ForeignKey('ProjectReport', on_delete=models.DO_NOTHING)
+    cloc = models.IntegerField(null=True, default=0)
+    files = models.IntegerField(null=True, default=0)
+    commits = models.IntegerField(null=True, default=0)
+    ownership_cloc = models.FloatField(null=True, default=0.0)
+    ownership_cloc_in_this_tag = models.FloatField(null=True, default=0.0)
+    cloc_exp = models.FloatField(null=True, default=0.0)
+    ownership_files = models.FloatField(null=True, default=0.0)
+    ownership_files_in_this_tag = models.FloatField(null=True, default=0.0)
+    file_exp = models.FloatField(null=True, default=0.0)
+    ownership_commits = models.FloatField(null=True, default=0.0)
+    ownership_commits_in_this_tag = models.FloatField(null=True, default=0.0)
+    commit_exp = models.FloatField(null=True, default=0.0)
+    experience = models.FloatField(null=True, default=0.0)
+    experience_bf = models.FloatField(null=True, default=0.0)
+    abs_experience = models.FloatField(null=True, default=0.0)
+    bf_commit = models.FloatField(null=True, default=0.0)
+    bf_file = models.FloatField(null=True, default=0.0)
+    bf_cloc = models.FloatField(null=True, default=0.0)
+
+    def save(self, *args, **kwargs):
+        self.experience = 0.4 * self.ownership_commits + 0.4 * self.ownership_files + 0.2 * self.ownership_cloc
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
+class ProjectReport(models.Model):
+    tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='project_reports')
+    authors = models.ManyToManyField(Developer, through=ProjectIndividualContribution)
+    total_cloc = models.IntegerField(null=True, default=0)
+    total_files = models.IntegerField(null=True, default=0)
+    total_commits = models.IntegerField(null=True, default=0)
+    cloc_threshold = models.FloatField(null=True, default=0.0)
+    file_threshold = models.FloatField(null=True, default=0.0)
+    commit_threshold = models.FloatField(null=True, default=0.0)
+    experience_threshold = models.FloatField(null=True, default=0.0)
+    standard_deviation = models.FloatField(null=True, default=0)
+    mean = models.FloatField(null=True, default=0)
+    median = models.FloatField(null=True, default=0)
+
+    def calculate_statistical_metrics(self):
+        experiences = [c.experience for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))]
+        interval = np.array(experiences)
+        if interval.any():
+            self.experience_threshold = np.percentile(interval, 80)
+        self.standard_deviation = np.std(experiences, ddof=1)
+        self.mean = np.mean(experiences)
+        self.median = np.median(experiences)
+        self.save()
+
+    @property
+    def core_developers_experience(self):
+        core_developers = []
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+        #     # TODO: check if it makes sense
+            if len(contributions) == 1:
+                return [contributor.author]
+            if contributor.experience > self.experience_threshold:
+                core_developers.append(contributor.author)
+        return core_developers
+
+    @property
+    def peripheral_developers_experience(self):
+        peripheral_developers = []
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.experience <= self.experience_threshold:
+                peripheral_developers.append(contributor.author)
+        return peripheral_developers
+
+    @property
+    def experience(self):
+        higher_value = -1.0
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.experience >= higher_value:
+                higher_value = contributor.experience
+        return higher_value
+
+    @property
+    def abs_experience(self):
+        higher_value = -1.0
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.abs_experience >= higher_value:
+                higher_value = contributor.abs_experience
+        return higher_value
+
+    @property
+    def ownership(self):
+        higher_value = -1.0
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.ownership_commits >= higher_value:
+                higher_value = contributor.ownership_commits
+        return higher_value
+
+    @property
+    def minor(self):
+        minor = 0
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.ownership_commits <= 0.05:
+                minor = minor + 1
+        return minor
+
+    @property
+    def major(self):
+        major = 0
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        for contributor in contributions:
+            if contributor.ownership_commits > 0.05:
+                major = major + 1
+        return major
+
 class IndividualContribution(models.Model):
     author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
     directory_report = models.ForeignKey('DirectoryReport', on_delete=models.DO_NOTHING)
