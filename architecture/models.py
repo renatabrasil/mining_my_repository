@@ -2,7 +2,8 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from contributions.models import Project, Commit
+from contributions.models import Project, Commit, Directory, Tag, Developer
+
 
 class FileCommits(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='files')
@@ -23,7 +24,19 @@ class Compiled(models.Model):
     filename = models.CharField(max_length=300)
     quality_delta = models.IntegerField(default=0)
 
+class ArchitectureQualityMetrics(models.Model):
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='architecture_quality_metrics')
+    # All metrics are deltas
+    rmd = models.FloatField(null=True, default=0.0)
+    rma = models.FloatField(null=True, default=0.0)
+    rmi = models.FloatField(null=True, default=0.0)
+    ca = models.FloatField(null=True, default=0.0)
+    ce = models.FloatField(null=True, default=0.0)
 
+class ArchitectureQualityByDeveloper(models.Model):
+    architecture_quality_metrics = models.ForeignKey(ArchitectureQualityMetrics, on_delete=models.CASCADE, related_name='metrics_by_developer')
+    developer = models.ForeignKey(Developer, related_name='developer_id', on_delete=models.CASCADE)
 
 # method for updating
 @receiver(post_save, sender=Compiled, dispatch_uid="update_compiled")

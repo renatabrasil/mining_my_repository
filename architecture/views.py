@@ -15,9 +15,10 @@ from django.urls import reverse
 
 import architecture
 from architecture.forms import FilesCompiledForm
-from architecture.models import Compiled, FileCommits
+from architecture.models import Compiled, FileCommits, ArchitectureQualityMetrics
 from common.utils import ViewUtils
-from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution
+from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
+    Directory
 
 
 def index(request):
@@ -217,6 +218,17 @@ def read_PM_file(folder):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
                     if row[0] not in metrics:
+                        architecture_metrics = ArchitectureQualityMetrics.objects.filter(directory__name__exact='src/main/'+row[0])
+                        if architecture_metrics.count() == 0:
+                            directory = Directory.objects.filter(name__exact='src/main/'+row[0])
+                            directory = directory[0]
+                            # TODO: use delta
+                            architecture_metrics = ArchitectureQualityMetrics(directory=directory, tag=commit.tag,
+                                                                              rmd=float(row[5]),rma=float(row[4]),
+                                                                              rmi=float(row[3]), ca=float(row[1]),
+                                                                              ce=float(row[2]))
+                        else:
+                            architecture_metrics =architecture_metrics[0]
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
                         delta = float(metrics[row[0]][previous_commit][0]) - float(row[5])
@@ -224,9 +236,11 @@ def read_PM_file(folder):
                         delta = 0.0
                     else:
                         delta = float(row[5])
+                    architecture_metrics.rmd = delta
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
+                    architecture_metrics.save()
 
                 previous_commit = commit
             finally:
