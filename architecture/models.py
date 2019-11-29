@@ -31,7 +31,9 @@ class ArchitectureQualityByDeveloper(models.Model):
 
     @property
     def commit_activity_in_this_tag(self):
-        return len(self.metrics.all())
+        return Commit.objects.filter(tag_id=self.tag.id, committer_id=self.developer.id).count()
+        # return Commit.objects.filter(tag_id=self.tag.id).count()
+        # return len(self.metrics.all())
 
     @property
     def architecturally_impactful_commits(self):
