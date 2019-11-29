@@ -25,14 +25,42 @@ class Compiled(models.Model):
     quality_delta = models.IntegerField(default=0)
 
 class ArchitectureQualityMetrics(models.Model):
+    previous_architecture_quality_metrics = models.ForeignKey('ArchitectureQualityMetrics', on_delete=models.SET_NULL, null=True, default=None)
+    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics')
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
-    tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='architecture_quality_metrics')
-    # All metrics are deltas
     rmd = models.FloatField(null=True, default=0.0)
     rma = models.FloatField(null=True, default=0.0)
     rmi = models.FloatField(null=True, default=0.0)
-    ca = models.FloatField(null=True, default=0.0)
-    ce = models.FloatField(null=True, default=0.0)
+    ca = models.IntegerField(null=True, default=0)
+    ce = models.IntegerField(null=True, default=0)
+
+    def delta_metrics(self, metric, value):
+        previous_metric_value = 0.0
+        if self.previous_architecture_quality_metrics is None:
+            return previous_metric_value
+        previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
+
+        return value - previous_metric_value
+
+    @property
+    def delta_rmd(self):
+        return self.delta_metrics("rmd",self.rmd)
+
+    @property
+    def delta_rma(self):
+        return self.delta_metrics("rma", self.rma)
+
+    @property
+    def delta_rmi(self):
+        return self.delta_metrics("rmd", self.rmi)
+
+    @property
+    def delta_ca(self):
+        return self.delta_metrics("ca", self.ca)
+
+    @property
+    def delta_ce(self):
+        return self.delta_metrics("ce", self.ce)
 
 class ArchitectureQualityByDeveloper(models.Model):
     architecture_quality_metrics = models.ForeignKey(ArchitectureQualityMetrics, on_delete=models.CASCADE, related_name='metrics_by_developer')

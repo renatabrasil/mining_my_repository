@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import re
 import csv
+from collections import OrderedDict
 
 from django.contrib import messages
 from django.core.files import File
@@ -212,35 +213,44 @@ def read_PM_file(folder):
                 else:
                     continue
 
+                architecture_metrics = None
                 for line in content[2:]:
                     print(line)
                     row = line.split(',')
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
+
+                    architecture_metrics = ArchitectureQualityMetrics.objects.filter(
+                        directory__name__exact='src/main/' + row[0], commit_id=commit.id)
+                    if architecture_metrics.count() == 0:
+                        directory = Directory.objects.filter(name__exact='src/main/' + row[0])
+                        directory = directory[0]
+                        # TODO: use delta
+                        architecture_metrics = ArchitectureQualityMetrics(directory=directory, commit=commit,
+                                                                          rmd=float(row[5]), rma=float(row[4]),
+                                                                          rmi=float(row[3]), ca=float(row[1]),
+                                                                          ce=float(row[2]))
+                    # else:
+                    #     architecture_metrics = architecture_metrics[0]
+
                     if row[0] not in metrics:
-                        architecture_metrics = ArchitectureQualityMetrics.objects.filter(directory__name__exact='src/main/'+row[0])
-                        if architecture_metrics.count() == 0:
-                            directory = Directory.objects.filter(name__exact='src/main/'+row[0])
-                            directory = directory[0]
-                            # TODO: use delta
-                            architecture_metrics = ArchitectureQualityMetrics(directory=directory, tag=commit.tag,
-                                                                              rmd=float(row[5]),rma=float(row[4]),
-                                                                              rmi=float(row[3]), ca=float(row[1]),
-                                                                              ce=float(row[2]))
-                        else:
-                            architecture_metrics =architecture_metrics[0]
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
-                        delta = float(metrics[row[0]][previous_commit][0]) - float(row[5])
+                        if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
+                            previous_architecture_quality_metrics = ArchitectureQualityMetrics.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
+                            if previous_architecture_quality_metrics.count() > 0:
+                                architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
+                            architecture_metrics.save()
+                        delta = float(row[5]) - float(metrics[row[0]][previous_commit][0])
                     elif not previous_commit:
                         delta = 0.0
                     else:
                         delta = float(row[5])
-                    architecture_metrics.rmd = delta
+                    # architecture_metrics.rmd = delta
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
-                    architecture_metrics.save()
+
 
                 previous_commit = commit
             finally:
@@ -335,6 +345,23 @@ def list_commits(project,form):
         print(e.args[0])
         files = []
     return files
+
+def architecture_metrics(request):
+    template = loader.get_template('architecture/architecture_metrics_by_directories.html')
+    tag = ViewUtils.load_tag(request)
+    architectural_metrics = ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
+    results = OrderedDict()
+    for metric in architectural_metrics:
+        if metric.directory not in results:
+            results.setdefault(metric.directory, list())
+        results[metric.directory].append(metric)
+    context = {
+        'tag': tag,
+        'results': results,
+        # 'latest_question_list': latest_question_list,
+    }
+
+    return HttpResponse(template.render(context, request))
 
 def __update_file_commits__(form, filename):
     file = FileCommits.objects.filter(name=filename)
