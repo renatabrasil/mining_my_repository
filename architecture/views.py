@@ -16,7 +16,7 @@ from django.urls import reverse
 
 import architecture
 from architecture.forms import FilesCompiledForm
-from architecture.models import Compiled, FileCommits, ArchitectureQualityMetrics
+from architecture.models import Compiled, FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
 from common.utils import ViewUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
     Directory
@@ -156,13 +156,14 @@ def calculate_metrics(request, file_id):
     directory_name = file.__str__().replace(".txt", "")
     directory_name = directory_name + "/jars"
     metrics = read_PM_file(directory_name)
-    directory = 'org/apache/tools/ant'
-    contributions = pre_correlation(metrics, directory)
-    with open(directory.replace('/','_')+'.csv', 'w') as csvFile:
-        writer = csv.writer(csvFile)
-        for contribution in contributions:
-            writer.writerow(contribution)
-    csvFile.close()
+    directories = metrics.keys()
+    for directory in directories:
+        contributions = pre_correlation(metrics, directory)
+        with open(directory.replace('/','_')+'.csv', 'w') as csvFile:
+            writer = csv.writer(csvFile)
+            for contribution in contributions:
+                writer.writerow(contribution)
+        csvFile.close()
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 def calculate_architecture_metrics(request, file_id):
@@ -221,12 +222,24 @@ def read_PM_file(folder):
                     row[0] = row[0].replace('.','/')
 
                     architecture_metrics = ArchitectureQualityMetrics.objects.filter(
-                        directory__name__exact='src/main/' + row[0], commit_id=commit.id)
+                        architecture_quality_by_developer_and_directory__directory__name__exact='src/main/' + row[0], commit_id=commit.id)
                     if architecture_metrics.count() == 0:
                         directory = Directory.objects.filter(name__exact='src/main/' + row[0])
                         directory = directory[0]
+
+                        architecture_quality_by_developer = ArchitectureQualityByDeveloper.objects.filter(tag_id=commit.tag.id, directory_id=directory.id,
+                                                                      developer_id=commit.committer.id)
+                        if architecture_quality_by_developer.count() > 0:
+                            architecture_quality_by_developer=architecture_quality_by_developer[0]
+                        else:
+                            architecture_quality_by_developer = ArchitectureQualityByDeveloper(developer=commit.committer,
+                                                                                               directory=directory,
+                                                                                               tag=commit.tag)
+                            architecture_quality_by_developer.save()
+
                         # TODO: use delta
-                        architecture_metrics = ArchitectureQualityMetrics(directory=directory, commit=commit,
+                        architecture_metrics = ArchitectureQualityMetrics(commit=commit,
+                                                                          architecture_quality_by_developer_and_directory=architecture_quality_by_developer,
                                                                           rmd=float(row[5]), rma=float(row[4]),
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
@@ -237,15 +250,16 @@ def read_PM_file(folder):
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
                         if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
-                            previous_architecture_quality_metrics = ArchitectureQualityMetrics.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
+                            previous_architecture_quality_metrics = ArchitectureQualityMetrics.objects.filter(architecture_quality_by_developer_and_directory__directory_id=directory.id, commit_id=previous_commit.id)
                             if previous_architecture_quality_metrics.count() > 0:
                                 architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
-                            architecture_metrics.save()
                         delta = float(row[5]) - float(metrics[row[0]][previous_commit][0])
                     elif not previous_commit:
                         delta = 0.0
                     else:
                         delta = float(row[5])
+                    if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
+                        architecture_metrics.save()
                     # architecture_metrics.rmd = delta
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
@@ -347,20 +361,55 @@ def list_commits(project,form):
     return files
 
 def architecture_metrics(request):
+    # ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
+    directories = Directory.objects.filter(visible=True).order_by("name")
     template = loader.get_template('architecture/architecture_metrics_by_directories.html')
     tag = ViewUtils.load_tag(request)
-    architectural_metrics = ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
+    # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
+    architectural_metrics_list = []
+
+    directories_filter = None
+    if request.POST.get('directory_id'):
+        directories_filter = request.POST.get('directory_id')
+        # directories_filter = Directory.objects.get(pk=directories_filter)
+        if request.POST.get('developer_id'):
+            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),
+                                                                                       developer_id=int(request.POST.get('developer_id')),
+                                                                                       tag_id=tag)
+            # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(directory_id=int(directories_filter),
+            #                                                                        commit__author_id=int(request.POST.get('developer_id')),
+            #                                                                        commit__tag_id=tag)
+        else:
+            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
+
     results = OrderedDict()
-    for metric in architectural_metrics:
+    for metric in architectural_metrics_list:
         if metric.directory not in results:
             results.setdefault(metric.directory, list())
-        results[metric.directory].append(metric)
+        results[metric.directory] += metric.metrics.all()
     context = {
         'tag': tag,
         'results': results,
-        # 'latest_question_list': latest_question_list,
+        'directories': directories,
     }
 
+    return HttpResponse(template.render(context, request))
+
+def architecture_metrics_by_developer(request):
+    template = loader.get_template('architecture/architecture_metrics_by_developer.html')
+    tag = ViewUtils.load_tag(request)
+    architectural_metrics_list = []
+    developer = None
+    if request.POST.get('developer_id'):
+        developer_id = int(request.POST.get('developer_id'))
+        developer = Developer.objects.get(pk=developer_id)
+        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(developer_id=developer_id,
+                                                                                   tag_id=tag.id)
+    context = {
+        'tag': tag,
+        'results': architectural_metrics_list,
+        'current_developer': developer,
+    }
     return HttpResponse(template.render(context, request))
 
 def __update_file_commits__(form, filename):

@@ -6,21 +6,51 @@
 {% block content %}
 {{ block.super }}
 
+<form action="{{request_path}}" method="post">{% csrf_token %}
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <label for="directory_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-4" id="directory_selector" placeholder="Selecione a tag" name="directory_id" multiple>
+              <option selected value="{{developer.id}}">Selecione diretórios</option>
+              {% for directory in directories %} {{current_directory}}
+                <option value="{{directory.id}}"
+                   {% if directory.id == current_directory.id %}selected="selected"{% endif %}>
+                   {{directory.name}}
+                </option>
+                {% endfor %}
+              </select>
+        </div>
+        <div class="col-auto">
+            <label for="developer_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-4" id="developer_selector" placeholder="Selecione a tag" name="developer_id" multiple>
+              <option selected value="{{developer.id}}">Selecione desenvolvedores</option>
+              {% for developer in developers %} {{current_developer}}
+                <option value="{{developer.id}}"
+                   {% if developer.id == current_developer.id %}selected="selected"{% endif %}>
+                   {{developer.name}}
+                </option>
+                {% endfor %}
+              </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
+        </div>
+    </div>
+</form>
 
 {% if results %}
-<div class="table-responsive" id="metrics">
-    <table class="table table-striped table-sm" id="headingOne" style="font-size: small;">
-        {% for directory, metrics in results.items %}
-        <tr>
-            <td colspan="7">
+
+        {% for directory, metrics_by_developer in results.items %}
+        <div><a data-toggle="collapse" href="#commit-{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample1">
+                   {{directory.name}}
+                </a></div>
 <!--                <a href="#" data-toggle="collapse" data-target="#commit-{{forloop.counter}}" aria-expanded="false" aria-controls="commit-{{forloop.counter}}">-->
 <!--                {{directory}}-->
 <!--                </a>-->
-                <a data-toggle="collapse" href="#commit-{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample1">
-                   {{directory}}
-                </a>
-            </td>
-        </tr>
+
+
+    <div class="table-responsive" id="metrics">
+        <table class="table table-striped table-sm" id="headingOne" style="font-size: small;">
         <div id="commit-{{forloop.counter}}" class="collapse" aria-labelledby="headingOne" data-parent="#metrics">
         <tr>
             <th>Commit (autor)</th>
@@ -32,8 +62,8 @@
             <th>Delta RMD</th>
         </tr>
 
-        {% for metric in metrics %}
-        <tr>
+        {% for metric in metrics_by_developer %}
+        <tr class="{% if metric.delta_rmd != 0 %} text-danger {% endif %}">
             <td>
                 {{metric.commit.hash}} ({{metric.commit.committer.name}})</td>
             <td>{{metric.ca}}</td>
@@ -45,10 +75,11 @@
         </tr>
         {% endfor %}
             </div>
+            </table>
+    </div>
         {% endfor %}
 
-    </table>
-</div>
+
 
 {% endif %}
 
