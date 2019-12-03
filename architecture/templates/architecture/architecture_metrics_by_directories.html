@@ -63,7 +63,7 @@
         </tr>
 
         {% for metric in metrics_by_developer %}
-        <tr class="{% if metric.delta_rmd != 0 %} text-danger {% endif %}">
+        <tr class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}">
             <td>
                 {{metric.commit.hash}} ({{metric.commit.committer.name}})</td>
             <td>{{metric.ca}}</td>

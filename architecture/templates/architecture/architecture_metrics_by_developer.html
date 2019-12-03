@@ -41,7 +41,7 @@
                 </thead>
                 <tbody>
                     {% for metrics_by_developer in results %}
-                    <tr class="{% if metrics_by_developer.delta_rmd != 0 %} text-danger {% endif %}">
+                    <tr class="{% if metrics_by_developer.delta_rmd > 0 %} text-danger {% elif metrics_by_developer.delta_rmd < 0 %} text-success {% endif %}">
                         <td>{{metrics_by_developer.directory.name}}</td>
                         <td>{{metrics_by_developer.commit_activity_in_this_tag}}</td>
                         <td>{{metrics_by_developer.architecturally_impactful_commits}}</td>

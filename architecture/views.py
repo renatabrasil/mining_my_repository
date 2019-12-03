@@ -191,7 +191,6 @@ def generate_csv(folder):
             else:
                 continue
 
-
 # return a dictionary
 # key: module (component)
 # value: dictionary
@@ -202,11 +201,15 @@ def read_PM_file(folder):
     metrics = {}
     collected_data = []
     previous_commit = None
-    for dirpath, dirnames, filenames in os.walk(folder):
-        for filename in [f for f in filenames if f.endswith(".csv")]:
-            print(os.path.join(dirpath, filename))
+    # To sort in natural order
+    arr = os.listdir(folder)
+    sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
+    for subdirectory in sorted_files:
+        subdirectory = os.path.join(folder, subdirectory)
+        print(os.path.join(folder, subdirectory))
+        for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
             try:
-                f = open(os.path.join(dirpath, filename), "r")
+                f = open(os.path.join(subdirectory, filename), "r")
                 content = f.readlines()
                 hash = f.name.split('\\')[1].split('-')[2]
                 if Commit.objects.filter(hash=hash).count() > 0:
