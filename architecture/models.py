@@ -16,14 +16,6 @@ class FileCommits(models.Model):
     def __str__(self):
         return self.directory+"/"+self.name
 
-class Compiled(models.Model):
-    file = models.ForeignKey(FileCommits, on_delete=models.CASCADE, related_name='compileds')
-    previous_compiled = models.ForeignKey('Compiled', on_delete=models.SET_NULL, null=True, default=None)
-    name = models.CharField(max_length=200)
-    hash_commit = models.CharField(max_length=300)
-    filename = models.CharField(max_length=300)
-    quality_delta = models.IntegerField(default=0)
-
 class ArchitectureQualityByDeveloper(models.Model):
     developer = models.ForeignKey(Developer, related_name='developer_id', on_delete=models.CASCADE)
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
@@ -31,7 +23,7 @@ class ArchitectureQualityByDeveloper(models.Model):
 
     @property
     def commit_activity_in_this_tag(self):
-        return Commit.objects.filter(tag_id=self.tag.id, committer_id=self.developer.id).count()
+        return Commit.objects.filter(tag_id=self.tag.id, author_id=self.developer.id).count()
         # return Commit.objects.filter(tag_id=self.tag.id).count()
         # return len(self.metrics.all())
 
@@ -83,7 +75,7 @@ class ArchitectureQualityMetrics(models.Model):
 
     @property
     def delta_rmi(self):
-        return self.delta_metrics("rmd", self.rmi)
+        return self.delta_metrics("rmi", self.rmi)
 
     @property
     def delta_ca(self):
@@ -95,14 +87,14 @@ class ArchitectureQualityMetrics(models.Model):
 
 
 # method for updating
-@receiver(post_save, sender=Compiled, dispatch_uid="update_compiled")
-def update_compiled(sender, instance, **kwargs):
-    commit=Commit.objects.filter(hash=instance.hash_commit)
-    if commit.count() > 0:
-        commit=commit[0]
-        if commit.parents:
-            for parent in commit.parents:
-                compiled = Compiled.objects.filter(hash_commit=parent.hash)
-                instance.previous_compiled=compiled[0] if compiled.count() > 0 else None
-                break
-        instance.save()
+# @receiver(post_save, sender=Compiled, dispatch_uid="update_compiled")
+# def update_compiled(sender, instance, **kwargs):
+#     commit=Commit.objects.filter(hash=instance.hash_commit)
+#     if commit.count() > 0:
+#         commit=commit[0]
+#         if commit.parents:
+#             for parent in commit.parents:
+#                 compiled = Compiled.objects.filter(hash_commit=parent.hash)
+#                 instance.previous_compiled=compiled[0] if compiled.count() > 0 else None
+#                 break
+#         instance.save()

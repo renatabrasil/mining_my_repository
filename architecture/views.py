@@ -16,7 +16,7 @@ from django.urls import reverse
 
 import architecture
 from architecture.forms import FilesCompiledForm
-from architecture.models import Compiled, FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
+from architecture.models import FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
 from common.utils import ViewUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
     Directory

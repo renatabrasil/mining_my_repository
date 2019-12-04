@@ -20,7 +20,6 @@ from django.template.loader import render_to_string
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
-from architecture.models import Compiled
 from common.utils import CommitUtils, ViewUtils
 from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
     Directory, DirectoryReport, IndividualContribution, MetricsReport, ProjectIndividualContribution, ProjectReport

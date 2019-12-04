@@ -41,7 +41,6 @@ class Directory(models.Model):
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='commits')
     # commit_set.all()
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
     hash = models.CharField(max_length=300)
@@ -54,7 +53,7 @@ class Commit(models.Model):
     _parents = []
 
     def __str__(self):
-        return self.hash
+        return self.hash + "- Author: " + self.author.name
 
     # @property
     # def parents(self):
@@ -90,10 +89,6 @@ class Commit(models.Model):
                 total_java_files = total_java_files + 1
         return total_java_files
 
-
-class Method(models.Model):
-    name = models.CharField(max_length=150)
-
 class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     old_path = models.CharField(max_length=200, null=True)
@@ -127,6 +122,9 @@ class Modification(models.Model):
 
     # def __eq__(self, other):
     # 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
+
+    def __str__(self):
+        return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
 
     def __diff_text__(self):
         GR = GitRepository(self.commit.project.project_path)
@@ -217,6 +215,9 @@ class ProjectIndividualContribution(models.Model):
     bf_commit = models.FloatField(null=True, default=0.0)
     bf_file = models.FloatField(null=True, default=0.0)
     bf_cloc = models.FloatField(null=True, default=0.0)
+
+    def __str__(self):
+        return "Author: " + self.author.name + " - Experience: " + str(self.experience) + " Tag: " + self.project_report.tag.description
 
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:
@@ -353,6 +354,9 @@ class ProjectReport(models.Model):
     mean = models.FloatField(null=True, default=0)
     median = models.FloatField(null=True, default=0)
 
+    def __str__(self):
+        return "Project tag: " + self.tag.description
+
     def calculate_statistical_metrics(self):
         experiences = [c.experience for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))]
         interval = np.array(experiences)
@@ -450,6 +454,11 @@ class IndividualContribution(models.Model):
     bf_commit = models.FloatField(null=True, default=0.0)
     bf_file = models.FloatField(null=True, default=0.0)
     bf_cloc = models.FloatField(null=True, default=0.0)
+
+    def __str__(self):
+        return "Author: " + self.author.name + " - Directory: " + \
+               self.directory_report.directory.name + " - Experience: " + \
+               str(self.experience) + " - Tag: " + self.directory_report.tag.description
 
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:
@@ -583,6 +592,9 @@ class DirectoryReport(models.Model):
     standard_deviation = models.FloatField(null=True, default=0)
     mean = models.FloatField(null=True, default=0)
     median = models.FloatField(null=True, default=0)
+
+    def __str__(self):
+        return "Tag: " + self.tag.description + " - Directory: " + self.directory.name
 
     def calculate_statistical_metrics(self):
         experiences = [c.experience for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]
