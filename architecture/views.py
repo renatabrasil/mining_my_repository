@@ -95,40 +95,48 @@ def build_compileds(request, file_id):
                 build_path = commit
             else:
                 try:
-                    # Ir para a versao
-                    # checkout = subprocess.Popen('git reset --hard '+commit, cwd=file.local_repository)
-                    hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
-                    checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
-                    checkout.wait()
-                    print(os.environ.get('JAVA_HOME'))
-
-                    # compilar
-                    # TODO: Check whether it is a successfull action.
-                    build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
-                    build.wait()
-                    # stdout, stderr = build.communicate()
-
-                    # criar o jar
-                    # index = re.search(r'[^-*/+-]+', commit).group(0)
                     jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
                                                                                                                 "").replace(
                         ".", "-")
-                    jar_file = '"'+current_project_path+'/'+compiled_directory+'/'+ 'version-' + commit.replace("/","").replace(".","-") +'/version-' + commit.replace("/","").replace(".","-") + '.jar"'
 
-                    os.makedirs(jar_folder, exist_ok=True)
-                    # m = re.search(r'[^-*/+-]+', commit).group(0)
-                    input_files = "'"+file.local_repository+"/"+build_path+"'"
-                    print("comando: jar -cf "+jar_file+" "+input_files )
-                    # FIX: create on local repository folder
-                    # subprocess.Popen("jar -cf "+jar_file+" "+build_path, cwd=file.local_repository)
-                    process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
-                    process.wait()
+                    if not __has_jar_file__(jar_folder):
+                        # Ir para a versao
+                        # checkout = subprocess.Popen('git reset --hard '+commit, cwd=file.local_repository)
+                        hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
+                        checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
+                        checkout.wait()
+                        print(os.environ.get('JAVA_HOME'))
 
-                    build_path_repository = build_path
-                    if build_path.count('\\')==0 and build_path.count('/')==0:
-                        build_path_repository = file.local_repository+"/"+build_path
-                    if os.path.exists(build_path_repository):
-                        shutil.rmtree(build_path_repository)
+                        # compilar
+                        # TODO: Check whether it is a successfull action.
+                        # build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
+                        build.wait()
+                        # response = build.communicate()
+                        # print(response)
+                        # if str(response[0]).find('BUILD FAILED') > -1:
+                        #     continue
+
+                        # criar o jar
+                        jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
+                                                                                                                    "").replace(
+                            ".", "-")
+                        jar_file = '"'+current_project_path+'/'+compiled_directory+'/'+ 'version-' + commit.replace("/","").replace(".","-") +'/version-' + commit.replace("/","").replace(".","-") + '.jar"'
+
+                        os.makedirs(jar_folder, exist_ok=True)
+
+                        input_files = "'"+file.local_repository+"/"+build_path+"'"
+                        print("comando: jar -cf "+jar_file+" "+input_files )
+                        # FIX: create on local repository folder
+                        # subprocess.Popen("jar -cf "+jar_file+" "+build_path, cwd=file.local_repository)
+                        process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
+                        process.wait()
+
+                        build_path_repository = build_path
+                        if build_path.count('\\')==0 and build_path.count('/')==0:
+                            build_path_repository = file.local_repository+"/"+build_path
+                        if os.path.exists(build_path_repository):
+                            shutil.rmtree(build_path_repository)
 
 
                 except Exception as er:
@@ -136,9 +144,6 @@ def build_compileds(request, file_id):
                     messages.error(request, 'Erro: '+er)
 
             i+=1
-            # subprocess.run(["jar", "-cf", commit+".jar", ""])
-            # compiled = Compiled(file=file, name="1"+commit, hash_commit=commit, previous_compiled=previous_commit)
-            # compiled.save()
             previous_commit = commit
     except Exception as e:
         print(e)
@@ -171,8 +176,10 @@ def calculate_architecture_metrics(request, file_id):
     directory_name = file.__str__().replace(".txt","")
     directory_name = directory_name+"/jars"
     if os.path.exists(directory_name):
-        for filename in os.listdir(directory_name):
-            generate_csv(directory_name+"/"+filename)
+        arr = os.listdir(directory_name)
+        sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
+        for subdirectory in sorted_files:
+            generate_csv(directory_name+"/"+subdirectory)
     return HttpResponseRedirect(reverse('architecture:index',))
 
 def generate_csv(folder):
@@ -426,3 +433,13 @@ def __update_file_commits__(form, filename):
                            local_repository=form['git_local_repository'].value())
 
     return file
+
+def __has_jar_file__(directory):
+    exists = False
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            if exists:
+                break
+            if filename.endswith(".jar"):
+                exists = True
+    return exists
