@@ -4,6 +4,8 @@
 /architecture/__pycache__
 /architecture/migrations/__pycache__
 /architecture/templatetags/__pycache__
+/architecture/templates/__pycache__
+/architecture/templates/architecture/__pycache__/
 /common/__pycache__
 /contributions/__pycache__
 /contributions/migrations/__pycache__
@@ -15,3 +17,5 @@
 db.sqlite3
 db.sqlite3-journal
 Arcan-1.2.1-SNAPSHOT
+Arcan-1.2.1-SNAPSHOT.jar
+shell.txt

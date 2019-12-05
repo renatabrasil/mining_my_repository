@@ -8,7 +8,7 @@ from collections import OrderedDict
 from django.contrib import messages
 from django.core.files import File
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 from django.template import loader
@@ -24,12 +24,8 @@ from contributions.models import Project, Commit, Developer, IndividualContribut
 
 def index(request):
     tag = ViewUtils.load_tag(request)
-    # latest_question_list = Question.objects.order_by('-pub_date')[:5]
     template = loader.get_template('architecture/index.html')
     files = []
-    # if 'files' in request.session:
-    #     files = request.session['files']
-    #     del request.session['files']
 
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
@@ -41,7 +37,7 @@ def index(request):
             # process the data in form.cleaned_data as required
             # ...
             # redirect to a new URL:
-            files = create_files(form, project_id)
+            files = __create_files__(form, project_id)
             if files:
                 messages.success(request, 'Files successfully created!')
             else:
@@ -53,40 +49,31 @@ def index(request):
         form = FilesCompiledForm(initial={'directory': 'compiled',
                                           'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
                                           'build_path': 'build'})
-        # files = FileCommits.objects.filter(directory='compiled', build_path='build')
         files = FileCommits.objects.all().order_by("name")
 
     context = {
         'tag': tag,
         'files': files,
         'form': form,
-        # 'latest_question_list': latest_question_list,
     }
 
     return HttpResponse(template.render(context, request))
-
 
 def results(request, project_id):
     response = "You're looking at the results of question %s."
     return HttpResponse(response % project_id)
 
-def build_compileds(request, file_id):
+def compileds(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     current_project_path = os.getcwd()
     try:
         f = open(file.__str__(), 'r')
         myfile = File(f)
-        previous_commit = None
         compiled_directory = file.directory+"/"+file.name.replace(".txt","")+"/jars"
         if not os.path.exists(compiled_directory):
             os.makedirs(compiled_directory, exist_ok=True)
         os.chdir(file.local_repository)
-        # FIX: if we are using local repository as entry point
-        # if not os.path.exists("jars"):
-        #     os.mkdir("jars")
         i = 0
-        # bootstrap = subprocess.Popen('bootstrap.bat', shell=False, cwd=file.local_repository)
-        # bootstrap.wait()
         for commit in myfile:
             commit = commit.replace('\n','')
             if i==0:
@@ -100,24 +87,17 @@ def build_compileds(request, file_id):
                         ".", "-")
 
                     if not __has_jar_file__(jar_folder):
-                        # Ir para a versao
-                        # checkout = subprocess.Popen('git reset --hard '+commit, cwd=file.local_repository)
+                        # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
                         checkout.wait()
                         print(os.environ.get('JAVA_HOME'))
 
-                        # compilar
-                        # TODO: Check whether it is a successfull action.
-                        # build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        # Compile
                         build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
                         build.wait()
-                        # response = build.communicate()
-                        # print(response)
-                        # if str(response[0]).find('BUILD FAILED') > -1:
-                        #     continue
 
-                        # criar o jar
+                        # Create jar
                         jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
                                                                                                                     "").replace(
                             ".", "-")
@@ -127,10 +107,19 @@ def build_compileds(request, file_id):
 
                         input_files = "'"+file.local_repository+"/"+build_path+"'"
                         print("comando: jar -cf "+jar_file+" "+input_files )
-                        # FIX: create on local repository folder
-                        # subprocess.Popen("jar -cf "+jar_file+" "+build_path, cwd=file.local_repository)
                         process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
                         process.wait()
+
+                        # Check whether created jar is valid
+                        os.chdir(current_project_path)
+                        jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
+                        if os.path.getsize(jar) < 1080:
+                            os.chdir(current_project_path + '/' + compiled_directory)
+                            folder = 'version-' + commit.replace("/","").replace(".","-")
+                            shutil.rmtree(folder, ignore_errors=True)
+                            print("BUILD FAILED or Jar creation failed\n")
+                            print(jar+" DELETED")
+                        os.chdir(file.local_repository)
 
                         build_path_repository = build_path
                         if build_path.count('\\')==0 and build_path.count('/')==0:
@@ -139,12 +128,14 @@ def build_compileds(request, file_id):
                             shutil.rmtree(build_path_repository)
 
 
+                except OSError as e:
+                    print("Error: %s - %s." % (e.filename, e.strerror))
                 except Exception as er:
                     print(er)
                     messages.error(request, 'Erro: '+er)
-
+                finally:
+                    os.chdir(file.local_repository)
             i+=1
-            previous_commit = commit
     except Exception as e:
         print(e)
         shutil.rmtree(compiled_directory, ignore_errors=True)
@@ -160,10 +151,10 @@ def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
     directory_name = directory_name + "/jars"
-    metrics = read_PM_file(directory_name)
+    metrics = __read_PM_file__(directory_name)
     directories = metrics.keys()
     for directory in directories:
-        contributions = pre_correlation(metrics, directory)
+        contributions = __pre_correlation__(metrics, directory)
         with open(directory.replace('/','_')+'.csv', 'w') as csvFile:
             writer = csv.writer(csvFile)
             for contribution in contributions:
@@ -179,24 +170,65 @@ def calculate_architecture_metrics(request, file_id):
         arr = os.listdir(directory_name)
         sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
         for subdirectory in sorted_files:
-            generate_csv(directory_name+"/"+subdirectory)
+            __generate_csv__(directory_name + "/" + subdirectory)
     return HttpResponseRedirect(reverse('architecture:index',))
 
-def generate_csv(folder):
-    current_project_path = os.getcwd()
-    if os.path.exists(folder):
-        for filename in os.listdir(folder):
-            if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
-                # print(os.path.join(directory, filename))
-                try:
-                    arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
-                                                     ' -p ' + folder + ' -out ' + folder + ' -pm -folderOfJars', cwd=current_project_path)
-                    arcan_metrics.wait()
-                except Exception as er:
-                    print(er)
-                continue
-            else:
-                continue
+def metrics_by_commits(request):
+    directories = Directory.objects.filter(visible=True).order_by("name")
+    template = loader.get_template('architecture/metrics_by_directories.html')
+    tag = ViewUtils.load_tag(request)
+    architectural_metrics_list = []
+
+    directories_filter = 0
+    developer_id = 0
+    if request.POST.get('directory_id'):
+        directories_filter = int(request.POST.get('directory_id'))
+        # directories_filter = Directory.objects.get(pk=directories_filter)
+        if request.POST.get('developer_id'):
+            developer_id = int(request.POST.get('developer_id'))
+            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=directories_filter,
+                                                                                       developer_id=developer_id,
+                                                                                       tag_id=tag)
+            # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(directory_id=int(directories_filter),
+            #                                                                        commit__author_id=int(request.POST.get('developer_id')),
+            #                                                                        commit__tag_id=tag)
+        else:
+            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
+
+    results = OrderedDict()
+    for metric in architectural_metrics_list:
+        if metric.directory not in results:
+            results.setdefault(metric.directory, list())
+        results[metric.directory] += metric.metrics.all()
+    context = {
+        'tag': tag,
+        'results': results,
+        'directories': directories,
+        'current_directory_id': directories_filter,
+        'current_developer_id': developer_id,
+    }
+
+    return HttpResponse(template.render(context, request))
+
+def metrics_by_developer(request):
+    template = loader.get_template('architecture/metrics_by_developer.html')
+    tag = ViewUtils.load_tag(request)
+    architectural_metrics_list = []
+    developer = None
+    if request.POST.get('developer_id'):
+        developer_id = int(request.POST.get('developer_id'))
+        developer = Developer.objects.get(pk=developer_id)
+        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(developer_id=developer_id,
+                                                                                   tag_id=tag.id)
+    context = {
+        'tag': tag,
+        'results': architectural_metrics_list,
+        'current_developer': developer,
+    }
+    return HttpResponse(template.render(context, request))
+
+
+################ Auxiliary methods ###################
 
 # return a dictionary
 # key: module (component)
@@ -204,7 +236,7 @@ def generate_csv(folder):
 #   key: commit
 #   value: metrics (RMD)
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
-def read_PM_file(folder):
+def __read_PM_file__(folder):
     metrics = {}
     collected_data = []
     previous_commit = None
@@ -254,7 +286,7 @@ def read_PM_file(folder):
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
                     # else:
-                    #     architecture_metrics = architecture_metrics[0]
+                    #     metrics_by_commits = metrics_by_commits[0]
 
                     if row[0] not in metrics:
                         metrics.setdefault(row[0],{})
@@ -270,7 +302,7 @@ def read_PM_file(folder):
                         delta = float(row[5])
                     if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
                         architecture_metrics.save()
-                    # architecture_metrics.rmd = delta
+                    # metrics_by_commits.rmd = delta
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
@@ -281,22 +313,22 @@ def read_PM_file(folder):
                 f.close()
     return metrics
 
-def create_files(form, project_id):
+def __create_files__(form, project_id):
     project = get_object_or_404(Project, pk=project_id)
     files=list_commits(project, form)
     return files
 
-def pre_correlation(metrics, component):
+def __pre_correlation__(metrics, component):
     correlation = []
     # developers = list(metrics[component].keys()).values_list("committer__name", flat=True).distinct()
     developers = set([d.committer for d in list(metrics[component].keys())])
     tag = list(metrics[component].keys())[0].tag
     for developer in developers:
-        correlation.append(get_quality_contribution_by_developer(metrics, component, developer, tag))
+        correlation.append(__get_quality_contribution_by_developer__(metrics, component, developer, tag))
     print(correlation)
     return correlation
 
-def get_quality_contribution_by_developer(metrics, component, developer, tag):
+def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
     # Developer experience in this component
     full_component = 'src/main/'+component.replace(".","/")
     contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory__name__exact=full_component,
@@ -370,57 +402,21 @@ def list_commits(project,form):
         files = []
     return files
 
-def architecture_metrics(request):
-    # ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
-    directories = Directory.objects.filter(visible=True).order_by("name")
-    template = loader.get_template('architecture/architecture_metrics_by_directories.html')
-    tag = ViewUtils.load_tag(request)
-    # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(commit__tag_id=tag)
-    architectural_metrics_list = []
-
-    directories_filter = None
-    if request.POST.get('directory_id'):
-        directories_filter = request.POST.get('directory_id')
-        # directories_filter = Directory.objects.get(pk=directories_filter)
-        if request.POST.get('developer_id'):
-            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),
-                                                                                       developer_id=int(request.POST.get('developer_id')),
-                                                                                       tag_id=tag)
-            # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(directory_id=int(directories_filter),
-            #                                                                        commit__author_id=int(request.POST.get('developer_id')),
-            #                                                                        commit__tag_id=tag)
-        else:
-            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
-
-    results = OrderedDict()
-    for metric in architectural_metrics_list:
-        if metric.directory not in results:
-            results.setdefault(metric.directory, list())
-        results[metric.directory] += metric.metrics.all()
-    context = {
-        'tag': tag,
-        'results': results,
-        'directories': directories,
-    }
-
-    return HttpResponse(template.render(context, request))
-
-def architecture_metrics_by_developer(request):
-    template = loader.get_template('architecture/architecture_metrics_by_developer.html')
-    tag = ViewUtils.load_tag(request)
-    architectural_metrics_list = []
-    developer = None
-    if request.POST.get('developer_id'):
-        developer_id = int(request.POST.get('developer_id'))
-        developer = Developer.objects.get(pk=developer_id)
-        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(developer_id=developer_id,
-                                                                                   tag_id=tag.id)
-    context = {
-        'tag': tag,
-        'results': architectural_metrics_list,
-        'current_developer': developer,
-    }
-    return HttpResponse(template.render(context, request))
+def __generate_csv__(folder):
+    current_project_path = os.getcwd()
+    if os.path.exists(folder):
+        for filename in os.listdir(folder):
+            if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
+                # print(os.path.join(directory, filename))
+                try:
+                    arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
+                                                     ' -p ' + folder + ' -out ' + folder + ' -pm -folderOfJars', cwd=current_project_path)
+                    arcan_metrics.wait()
+                except Exception as er:
+                    print(er)
+                continue
+            else:
+                continue
 
 def __update_file_commits__(form, filename):
     file = FileCommits.objects.filter(name=filename)
