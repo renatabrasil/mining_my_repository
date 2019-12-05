@@ -24,7 +24,8 @@ class ArchitectureQualityByDeveloperModelTests(TestCase):
         project = Project(pk=10,project_name="Ant")
         project.save()
         developer = Developer(pk=1,name="Jack",email="jack@gmail.com")
-        directory = Directory(pk=1,name="src/main/org/apache/ant", project=project).save()
+        directory = Directory(pk=1,name="src/main/org/apache/ant", project=project)
+        directory.save()
         tag = Tag(pk=1,description="rel/1.1",project=project)
         tag2 = Tag(pk=2,description="rel/1.2",project=project)
         commit = Commit(pk=1,hash="oioioi", tag=tag, author=developer, committer=developer,
