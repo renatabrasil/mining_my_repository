@@ -5,6 +5,7 @@ import re
 import csv
 from collections import OrderedDict
 
+import pandas as pd
 from django.contrib import messages
 from django.core.files import File
 from django.http import HttpResponse, HttpResponseRedirect
@@ -74,6 +75,7 @@ def compileds(request, file_id):
             os.makedirs(compiled_directory, exist_ok=True)
         os.chdir(file.local_repository)
         i = 0
+        commit_with_errors = []
         for commit in myfile:
             commit = commit.replace('\n','')
             if i==0:
@@ -116,9 +118,10 @@ def compileds(request, file_id):
                         if os.path.getsize(jar) < 1080:
                             os.chdir(current_project_path + '/' + compiled_directory)
                             folder = 'version-' + commit.replace("/","").replace(".","-")
+                            commit_with_errors.append(commit.replace("/","").replace(".","-"))
                             shutil.rmtree(folder, ignore_errors=True)
                             print("BUILD FAILED or Jar creation failed\n")
-                            print(jar+" DELETED")
+                            print(jar+" DELETED\n")
                         os.chdir(file.local_repository)
 
                         build_path_repository = build_path
@@ -142,6 +145,23 @@ def compileds(request, file_id):
         messages.error(request, 'Could not create compiled.')
     finally:
         os.chdir(current_project_path)
+    if len(commit_with_errors) > 0:
+        try:
+            f = open(compiled_directory.replace("jars","")+"log-compilation-errors.txt", 'w')
+            myfile = File(f)
+            first = True
+            myfile.write(local_repository+"\n")
+            myfile.write(build_path+"\n")
+            for commit in commit_with_errors:
+                if first:
+                    myfile.write(commit)
+                    first = False
+                else:
+                    myfile.write("\n"+commit)
+        except OSError as e:
+            print("Error: %s - %s." % (e.filename, e.strerror))
+        finally:
+            f.close()
     file.has_compileds=True
     file.save()
 
@@ -150,16 +170,16 @@ def compileds(request, file_id):
 def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
+    metrics_directory = directory_name+"/metrics"
+    if not os.path.exists(metrics_directory):
+        os.makedirs(metrics_directory, exist_ok=True)
     directory_name = directory_name + "/jars"
     metrics = __read_PM_file__(directory_name)
     directories = metrics.keys()
     for directory in directories:
         contributions = __pre_correlation__(metrics, directory)
-        with open(directory.replace('/','_')+'.csv', 'w') as csvFile:
-            writer = csv.writer(csvFile)
-            for contribution in contributions:
-                writer.writerow(contribution)
-        csvFile.close()
+        my_df = pd.DataFrame(contributions)
+        my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=False)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 def calculate_architecture_metrics(request, file_id):

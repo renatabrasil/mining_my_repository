@@ -58,3 +58,7 @@ class ViewUtils(object):
         if query.count() > 0:
             tag = query[0]
         return tag
+
+    @staticmethod
+    def current_project(request):
+        return models.Project.objects.all().first()
