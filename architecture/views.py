@@ -180,7 +180,7 @@ def calculate_metrics(request, file_id):
         contributions = __pre_correlation__(metrics, directory)
         if contributions:
             my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degradation delta"]
+            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Loc", "Degrad Delta/Loc"]
             my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -211,9 +211,6 @@ def metrics_by_commits(request):
             architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=directories_filter,
                                                                                        developer_id=developer_id,
                                                                                        tag_id=tag)
-            # architectural_metrics_list = ArchitectureQualityMetrics.objects.filter(directory_id=int(directories_filter),
-            #                                                                        commit__author_id=int(request.POST.get('developer_id')),
-            #                                                                        commit__tag_id=tag)
         else:
             architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
 
@@ -282,7 +279,7 @@ def __read_PM_file__(folder):
                     previous_commit = commit.parents[0]
                 else:
                     previous_commit = None
-                architecture_metrics = None
+
                 for line in content[1:]:
                     row = line.split(',')
                     row[5]=row[5].replace('\n', '')
@@ -292,6 +289,8 @@ def __read_PM_file__(folder):
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
+                    if not commit.__has_files_in_this_directory__(directory):
+                        continue
 
                     print(line.replace("\n",""))
 
@@ -354,11 +353,47 @@ def __pre_correlation__(metrics, component):
     developers = set([d.committer for d in list(metrics[component].keys())])
     tag = list(metrics[component].keys())[0].tag
     for developer in developers:
-        individual_metrics = __get_quality_contribution_by_developer__(metrics, component, developer, tag)
+        # individual_metrics = __get_quality_contribution_by_developer__(metrics, component, developer, tag)
+        individual_metrics = __get_quality_contribution_by_developer2__(component, developer, tag)
         if individual_metrics is not None:
             correlation.append(individual_metrics)
     print(correlation)
     return correlation
+
+
+def __get_quality_contribution_by_developer2__(component, developer, tag):
+    # Developer experience in this component
+    full_component = 'src/main/'+component.replace(".","/")
+    directory = Directory.objects.filter(name__exact=full_component)
+    if directory.count() == 0:
+        return None
+    directory = directory[0]
+    contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory=directory,
+                                                       directory_report__tag_id=tag.id)
+    global_contributor = ProjectIndividualContribution.objects.filter(author_id=developer.id, project_report__tag_id=tag.id)
+
+    contributions = []
+    if contributor.count() > 0 and global_contributor.count() > 0:
+        contributor = contributor[0]
+        global_contributor = global_contributor[0]
+    else:
+        return None
+
+    metrics_by_developer = ArchitectureQualityByDeveloper.objects.filter(developer=developer, tag=tag, directory=directory)
+    if metrics_by_developer.count() == 0:
+        return None
+
+    metrics_by_developer = metrics_by_developer[0]
+    # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
+    xp = (2*global_contributor.experience + 8*contributor.experience)/10
+    try:
+        ratio_degrad_loc = (metrics_by_developer.delta_rmd / metrics_by_developer.architectural_impactful_loc)*1000
+    except ZeroDivisionError:
+        ratio_degrad_loc = 0.0
+
+    return [contributor.author.name, global_contributor.experience, contributor.experience, xp,
+            metrics_by_developer.delta_rmd, metrics_by_developer.architectural_impactful_loc, ratio_degrad_loc]
+
 
 def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
     # Developer experience in this component
@@ -378,8 +413,7 @@ def __get_quality_contribution_by_developer__(metrics, component, developer, tag
     for commit, metric in metrics[component].items():
         if commit.committer == developer:
             delta += float(metric[1])
-        # if commit not in contributions_pairs:
-        #     contributions_pairs.setdefault()
+
     xp = (2*global_contributor.experience + 8*contributor.experience)/10
     return [contributor.author.name, global_contributor.experience, contributor.experience, xp, delta]
 

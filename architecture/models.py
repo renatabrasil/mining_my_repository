@@ -22,6 +22,16 @@ class ArchitectureQualityByDeveloper(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
     @property
+    def architectural_impactful_loc(self):
+        number = 0
+        for metric in self.metrics.all():
+            for mod in metric.commit.modifications.all():
+                if mod.directory == self.directory:
+                    if metric.delta_rmd != 0:
+                        number += mod.cloc
+        return number
+
+    @property
     def commit_activity_in_this_tag(self):
         return Commit.objects.filter(tag_id=self.tag.id, author_id=self.developer.id).count()
         # return Commit.objects.filter(tag_id=self.tag.id).count()

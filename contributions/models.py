@@ -41,7 +41,6 @@ class Directory(models.Model):
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
-    # commit_set.all()
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
     hash = models.CharField(max_length=300)
     msg = models.CharField(max_length=300)
@@ -55,13 +54,12 @@ class Commit(models.Model):
     def __str__(self):
         return self.hash + "- Author: " + self.author.name
 
-    # @property
-    # def parents(self):
-    #     return self._parents
-    #
-    # @parents.setter
-    # def parents(self,list):
-    #     self._parents=list
+    # @classmethod
+    def __has_files_in_this_directory__(self,directory):
+        for mod in self.modifications.all():
+            if mod.directory == directory:
+                return True
+        return False
 
     @property
     def parents(self):

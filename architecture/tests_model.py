@@ -57,7 +57,7 @@ class ArchitectureQualityByDeveloperModelTests(TestCase):
         commit5 = Commit.objects.create(hash="commit5", tag=tag, author=developer, committer=developer2,
                                         author_date=datetime.datetime.now().date(),
                                         committer_date=datetime.datetime.now().date())
-
+        # modification
         metrics_by_developer = ArchitectureQualityByDeveloper.objects.create(developer=developer, tag=tag, directory=directory)
 
         previous_metrics = ArchitectureQualityMetrics.objects.create(architecture_quality_by_developer_and_directory=metrics_by_developer,
@@ -76,4 +76,5 @@ class ArchitectureQualityByDeveloperModelTests(TestCase):
         self.assertEqual(metrics_by_developer.architecturally_impactful_commits,2)
         self.assertEqual(metrics_by_developer.exposition, (metrics_by_developer.architecturally_impactful_commits/metrics_by_developer.commit_activity_in_this_tag))
         self.assertEqual(metrics_by_developer.delta_rmd, 0.7)
+        self.assertEqual(metrics_by_developer.architectural_impactful_loc, 0.0)
         self.assertIs(metrics_by_developer.directory.visible, True)
