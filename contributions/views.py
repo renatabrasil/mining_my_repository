@@ -79,7 +79,7 @@ def index(request):
                             committer.save()
                         else:
                             committer = committer[0]
-                    commit = Commit(project=project, hash=commit_repository.hash, tag=tag,
+                    commit = Commit(hash=commit_repository.hash, tag=tag,
                                                     parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
                                                    msg=commit_repository.msg,
                                                    author=author, author_date=commit_repository.author_date,

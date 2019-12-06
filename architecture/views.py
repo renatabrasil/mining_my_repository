@@ -278,6 +278,10 @@ def __read_PM_file__(folder):
                 else:
                     continue
 
+                if commit.parents and commit.parents[0] is not None:
+                    previous_commit = commit.parents[0]
+                else:
+                    previous_commit = None
                 architecture_metrics = None
                 for line in content[1:]:
                     row = line.split(',')
