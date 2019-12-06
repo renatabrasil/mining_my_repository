@@ -125,7 +125,7 @@ class Modification(models.Model):
         return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
 
     def __diff_text__(self):
-        GR = GitRepository(self.commit.project.project_path)
+        GR = GitRepository(self.commit.tag.project.project_path)
 
         parsed_lines = GR.parse_diff(self.diff)
 
