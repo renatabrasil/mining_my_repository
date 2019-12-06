@@ -178,8 +178,10 @@ def calculate_metrics(request, file_id):
     directories = metrics.keys()
     for directory in directories:
         contributions = __pre_correlation__(metrics, directory)
-        my_df = pd.DataFrame(contributions)
-        my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=False)
+        if contributions:
+            my_df = pd.DataFrame(contributions)
+            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degradation delta"]
+            my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 def calculate_architecture_metrics(request, file_id):
@@ -265,7 +267,7 @@ def __read_PM_file__(folder):
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
-        print(os.path.join(folder, subdirectory))
+        print("\n"+os.path.join(folder, subdirectory)+"\n----------------------\n")
         for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
             try:
                 f = open(os.path.join(subdirectory, filename), "r")
@@ -277,17 +279,21 @@ def __read_PM_file__(folder):
                     continue
 
                 architecture_metrics = None
-                for line in content[2:]:
-                    print(line)
+                for line in content[1:]:
                     row = line.split(',')
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
+                    directory = Directory.objects.filter(name__exact='src/main/' + row[0], visible=True)
+                    if directory.count() == 0:
+                        continue
+                    directory = directory[0]
+
+                    print(line.replace("\n",""))
+
                     architecture_metrics = ArchitectureQualityMetrics.objects.filter(
                         architecture_quality_by_developer_and_directory__directory__name__exact='src/main/' + row[0], commit_id=commit.id)
                     if architecture_metrics.count() == 0:
-                        directory = Directory.objects.filter(name__exact='src/main/' + row[0])
-                        directory = directory[0]
 
                         architecture_quality_by_developer = ArchitectureQualityByDeveloper.objects.filter(tag_id=commit.tag.id, directory_id=directory.id,
                                                                       developer_id=commit.committer.id)
@@ -344,7 +350,9 @@ def __pre_correlation__(metrics, component):
     developers = set([d.committer for d in list(metrics[component].keys())])
     tag = list(metrics[component].keys())[0].tag
     for developer in developers:
-        correlation.append(__get_quality_contribution_by_developer__(metrics, component, developer, tag))
+        individual_metrics = __get_quality_contribution_by_developer__(metrics, component, developer, tag)
+        if individual_metrics is not None:
+            correlation.append(individual_metrics)
     print(correlation)
     return correlation
 
@@ -359,7 +367,7 @@ def __get_quality_contribution_by_developer__(metrics, component, developer, tag
         contributor = contributor[0]
         global_contributor = global_contributor[0]
     else:
-        return [0,0,0,0]
+        return None
 
     contributions_pairs = {}
     delta = 0.0
@@ -368,8 +376,8 @@ def __get_quality_contribution_by_developer__(metrics, component, developer, tag
             delta += float(metric[1])
         # if commit not in contributions_pairs:
         #     contributions_pairs.setdefault()
-
-    return [contributor.author.name, global_contributor.experience, contributor.experience, delta]
+    xp = (2*global_contributor.experience + 8*contributor.experience)/10
+    return [contributor.author.name, global_contributor.experience, contributor.experience, xp, delta]
 
 def list_commits(project,form):
     first_commit = Commit.objects.filter(children_commit__gt=0).first()

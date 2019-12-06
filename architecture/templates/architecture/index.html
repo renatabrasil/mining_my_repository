@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Buscar commits{% endblock %}
+{% block title %}Configuração do projeto{% endblock %}
 
 {% block content %}
 
@@ -8,6 +8,7 @@
   da análise de impacto de commits.</p>
   <p>É necessário:</p>
   <ol>
+    <li>Gerar informações sobre commits por <a href="/contributions?project=true">projeto</a> e por <a href="/contributions?directories=true">diretorio</a></li> para as tags desejadas
     <li>Gerar lista de commits</li>
     <li>Gerar compiláveis</li>
     <li>Calcular métricas</li>
