@@ -180,7 +180,7 @@ def calculate_metrics(request, file_id):
         contributions = __pre_correlation__(metrics, directory)
         if contributions:
             my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Loc", "Degrad Delta/Loc"]
+            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits", "Loc", "Degrad Delta/Loc"]
             my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -387,12 +387,13 @@ def __get_quality_contribution_by_developer2__(component, developer, tag):
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
     xp = (2*global_contributor.experience + 8*contributor.experience)/10
     try:
-        ratio_degrad_loc = (metrics_by_developer.delta_rmd / metrics_by_developer.architectural_impactful_loc)*1000
+        ratio_degrad_loc = (metrics_by_developer.delta_rmd / metrics_by_developer.architectural_impactful_loc)
     except ZeroDivisionError:
         ratio_degrad_loc = 0.0
 
     return [contributor.author.name, global_contributor.experience, contributor.experience, xp,
-            metrics_by_developer.delta_rmd, metrics_by_developer.architectural_impactful_loc, ratio_degrad_loc]
+            metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
+            metrics_by_developer.architectural_impactful_loc, ratio_degrad_loc]
 
 
 def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
