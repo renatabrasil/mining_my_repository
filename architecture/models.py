@@ -6,7 +6,7 @@ from contributions.models import Project, Commit, Directory, Tag, Developer
 
 
 class FileCommits(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='files')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='files')
     name = models.CharField(max_length=200)
     directory = models.CharField(max_length=100)
     has_compileds = models.BooleanField(default=False)
@@ -55,6 +55,14 @@ class ArchitectureQualityByDeveloper(models.Model):
         for metric in self.metrics.all():
             delta_rmd += metric.delta_rmd
         return delta_rmd
+
+    @property
+    def ratio_degrad_loc(self):
+        try:
+            ratio_degrad_loc = (self.delta_rmd / self.architectural_impactful_loc)
+        except ZeroDivisionError:
+            ratio_degrad_loc = 0.0
+        return ratio_degrad_loc
 
 class ArchitectureQualityMetrics(models.Model):
     previous_architecture_quality_metrics = models.ForeignKey('ArchitectureQualityMetrics', on_delete=models.SET_NULL, null=True, default=None)

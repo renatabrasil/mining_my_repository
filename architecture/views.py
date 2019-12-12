@@ -1,8 +1,10 @@
+import json
 import os
 import shutil
 import subprocess
 import re
 import csv
+import matplotlib.pyplot as plt
 from collections import OrderedDict
 
 import pandas as pd
@@ -122,7 +124,8 @@ def compileds(request, file_id):
                             shutil.rmtree(folder, ignore_errors=True)
                             print("BUILD FAILED or Jar creation failed\n")
                             print(jar+" DELETED\n")
-                        os.chdir(file.local_repository)
+
+                            os.chdir(file.local_repository)
 
                         build_path_repository = build_path
                         if build_path.count('\\')==0 and build_path.count('/')==0:
@@ -246,6 +249,84 @@ def metrics_by_developer(request):
     }
     return HttpResponse(template.render(context, request))
 
+def quality_between_versions(request):
+    template = loader.get_template('architecture/metrics_between_versions.html')
+    tag = ViewUtils.load_tag(request)
+    directory = request.POST.get('directory')
+    metrics_by_directories = OrderedDict()
+    if directory:
+        if os.path.exists(directory):
+            arr = os.listdir(directory)
+            sorted_files = sorted(arr, key=lambda x: int(x.split('-')[2]))
+            for subdirectory in sorted_files:
+                __generate_csv__(directory + "/" + subdirectory)
+                version = subdirectory
+                subdirectory = os.path.join(directory, subdirectory)
+                print("\n" + subdirectory + "\n----------------------\n")
+                for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
+                    try:
+                        f = open(os.path.join(subdirectory, filename), "r")
+                        content = f.readlines()
+                        for line in content[1:]:
+                            row = line.split(',')
+                            row[5] = row[5].replace('\n', '')
+                            row[0] = row[0].replace('.', '/')
+                            print(line.replace("\n", ""))
+
+                            if row[0] not in metrics_by_directories:
+                                metrics_by_directories.setdefault(row[0], {})
+                            if version not in metrics_by_directories[row[0]]:
+                                metrics_by_directories[row[0]].setdefault(version, 0.0)
+                            metrics_by_directories[row[0]][version] = row[5]
+
+                    finally:
+                        f.close()
+        my_df = pd.DataFrame(metrics_by_directories)
+        print(my_df)
+        my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
+        # df = pd.read_csv('versoes-ant.csv', sep=';')
+        # df.plot(x='Quartals', y='Counts')
+        # plt.show()
+        # for directory in my_df.keys():
+        #
+        #     x = list(my_df[directory].axes[0])
+        #     y = list(my_df[directory].array)
+        #     plt.plot(x, y)
+            # my_df[directory].plot(kind='scatter', color='red')
+            # my_df.show()
+    context = {
+        'tag': tag,
+        # 'results': architectural_metrics_list,
+        # 'current_developer': developer,
+    }
+
+    # for directory in directories:
+    #     # contributions = __pre_correlation__(metrics_by_directories, directory)
+    #     # if contributions:
+    #     my_df = pd.DataFrame(metrics_by_directories[directory])
+    #     my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits",
+    #                      "Loc", "Degrad Delta/Loc"]
+    #     my_df.to_csv(directory.replace('/', '_') + '.csv', index=False, header=True)
+    return HttpResponse(template.render(context, request))
+
+# values: [degradation, impactful commits, loc, degrad/loc]
+def metrics_by_developer_csv(request, file_id):
+    file = FileCommits.objects.get(pk=file_id)
+    developers_metrics = ArchitectureQualityByDeveloper.objects.filter(tag_id=file.tag.id)
+    metrics = {}
+    for info_developer in developers_metrics:
+        if info_developer.developer not in metrics:
+            metrics.setdefault(info_developer.developer, [0.0, 0, 0, 0.0])
+        metrics[info_developer.developer][0] = info_developer.delta_rmd
+        metrics[info_developer.developer][1] = info_developer.architecturally_impactful_commits
+        metrics[info_developer.developer][2] = info_developer.architectural_impactful_loc
+        metrics[info_developer.developer][2] = info_developer.ratio_degrad_loc
+
+    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc', 'Degrad/Loc'])
+    print(my_df)
+    my_df.to_csv(file.directory + '/' + file.name.replace(file.directory,"").replace(".txt","") +'.csv', index=True, header=True)
+
+    return HttpResponseRedirect(reverse('architecture:index', ))
 
 ################ Auxiliary methods ###################
 
@@ -335,9 +416,6 @@ def __read_PM_file__(folder):
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
-
-
-                previous_commit = commit
             finally:
                 f.close()
     return metrics
@@ -386,14 +464,10 @@ def __get_quality_contribution_by_developer2__(component, developer, tag):
     metrics_by_developer = metrics_by_developer[0]
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
     xp = (2*global_contributor.experience + 8*contributor.experience)/10
-    try:
-        ratio_degrad_loc = (metrics_by_developer.delta_rmd / metrics_by_developer.architectural_impactful_loc)
-    except ZeroDivisionError:
-        ratio_degrad_loc = 0.0
 
     return [contributor.author.name, global_contributor.experience, contributor.experience, xp,
             metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
-            metrics_by_developer.architectural_impactful_loc, ratio_degrad_loc]
+            metrics_by_developer.architectural_impactful_loc, metrics_by_developer.ratio_degrad_loc]
 
 
 def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
@@ -433,7 +507,7 @@ def list_commits(project,form):
         j=j.replace("/","-")
         filename = "commits-" + j + ".txt"
         file = __update_file_commits__(form,filename)
-        file.project = project
+        file.tag = first_commit.tag
         files.append(file)
         f = open(file.__str__(), 'w')
         myfile = File(f)
@@ -453,7 +527,7 @@ def list_commits(project,form):
                 j = commit_tag
                 filename="commits-" + j + ".txt"
                 file = __update_file_commits__(form,filename)
-                file.project = project
+                file.tag = commit.tag
                 f = open(file.__str__(), 'w')
                 myfile = File(f)
                 files.append(file)

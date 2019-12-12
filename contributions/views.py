@@ -44,10 +44,6 @@ def index(request):
             load_commits = True
 
     if load_commits:
-        # for commit_repository in RepositoryMining(project.project_path, only_in_branch='master', to_tag=tag_description,
-        #                                           from_tag=tag.previous_tag.description if tag.previous_tag else None,
-        #                                           only_modifications_with_file_types=['.java'],
-        #                                           only_no_merge=True).traverse_commits():
         total_commits = Commit.objects.all().count() - 1
         if total_commits > 0:
             hash = Commit.objects.all()[total_commits].hash
