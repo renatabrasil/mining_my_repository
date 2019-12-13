@@ -183,7 +183,7 @@ def calculate_metrics(request, file_id):
         contributions = __pre_correlation__(metrics, directory)
         if contributions:
             my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits", "Loc", "Degrad Delta/Loc"]
+            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits", "Loc"]
             my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -320,7 +320,7 @@ def metrics_by_developer_csv(request, file_id):
         metrics[info_developer.developer][0] += info_developer.delta_rmd
         metrics[info_developer.developer][1] += info_developer.architecturally_impactful_commits
         metrics[info_developer.developer][2] += info_developer.architectural_impactful_loc
-        metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
+        # metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
 
     my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc'])
     print(my_df)
