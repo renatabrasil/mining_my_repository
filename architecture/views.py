@@ -322,7 +322,7 @@ def metrics_by_developer_csv(request, file_id):
         metrics[info_developer.developer][2] += info_developer.architectural_impactful_loc
         metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
 
-    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc', 'Degrad/Loc'])
+    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc'])
     print(my_df)
     my_df.to_csv(file.directory + '/' + file.name.replace(file.directory,"").replace(".txt","") +'.csv', index=True, header=True)
 
@@ -467,7 +467,7 @@ def __get_quality_contribution_by_developer2__(component, developer, tag):
 
     return [contributor.author.name, global_contributor.experience, contributor.experience, xp,
             metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
-            metrics_by_developer.architectural_impactful_loc, metrics_by_developer.ratio_degrad_loc]
+            metrics_by_developer.architectural_impactful_loc]
 
 
 def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
