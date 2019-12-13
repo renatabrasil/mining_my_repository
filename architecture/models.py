@@ -81,7 +81,7 @@ class ArchitectureQualityMetrics(models.Model):
             return previous_metric_value
         previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
         cloc = 0
-        for mod in self.commit:
+        for mod in self.commit.modifications.all():
             if mod.directory == self.architecture_quality_by_developer_and_directory.directory:
                 cloc += mod.cloc
         try:
