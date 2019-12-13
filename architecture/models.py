@@ -80,8 +80,14 @@ class ArchitectureQualityMetrics(models.Model):
         if self.previous_architecture_quality_metrics is None:
             return previous_metric_value
         previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
-
-        return value - previous_metric_value
+        cloc = 0
+        for mod in self.commit:
+            if mod.directory == self.architecture_quality_by_developer_and_directory.directory:
+                cloc += mod.cloc
+        try:
+            return (value - previous_metric_value)/cloc
+        except ZeroDivisionError:
+            return 0.0
 
     @property
     def delta_rmd(self):
