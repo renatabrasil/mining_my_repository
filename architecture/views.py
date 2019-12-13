@@ -317,10 +317,10 @@ def metrics_by_developer_csv(request, file_id):
     for info_developer in developers_metrics:
         if info_developer.developer not in metrics:
             metrics.setdefault(info_developer.developer, [0.0, 0, 0, 0.0])
-        metrics[info_developer.developer][0] = info_developer.delta_rmd
-        metrics[info_developer.developer][1] = info_developer.architecturally_impactful_commits
-        metrics[info_developer.developer][2] = info_developer.architectural_impactful_loc
-        metrics[info_developer.developer][2] = info_developer.ratio_degrad_loc
+        metrics[info_developer.developer][0] += info_developer.delta_rmd
+        metrics[info_developer.developer][1] += info_developer.architecturally_impactful_commits
+        metrics[info_developer.developer][2] += info_developer.architectural_impactful_loc
+        metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
 
     my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc', 'Degrad/Loc'])
     print(my_df)
