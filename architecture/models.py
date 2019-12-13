@@ -68,7 +68,6 @@ class ArchitectureQualityMetrics(models.Model):
     previous_architecture_quality_metrics = models.ForeignKey('ArchitectureQualityMetrics', on_delete=models.SET_NULL, null=True, default=None)
     architecture_quality_by_developer_and_directory = models.ForeignKey(ArchitectureQualityByDeveloper, on_delete=models.CASCADE, related_name="metrics")
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics')
-    # directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
     rmd = models.FloatField(null=True, default=0.0)
     rma = models.FloatField(null=True, default=0.0)
     rmi = models.FloatField(null=True, default=0.0)
@@ -78,14 +77,10 @@ class ArchitectureQualityMetrics(models.Model):
     def delta_metrics(self, metric, value):
         previous_metric_value = 0.0
         if self.previous_architecture_quality_metrics is None:
-            return previous_metric_value
+            return value/self.commit.cloc
         previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
-        cloc = 0
-        for mod in self.commit.modifications.all():
-            if mod.directory == self.architecture_quality_by_developer_and_directory.directory:
-                cloc += mod.cloc
         try:
-            return (value - previous_metric_value)/cloc
+            return (value - previous_metric_value)/self.commit.cloc
         except ZeroDivisionError:
             return 0.0
 
