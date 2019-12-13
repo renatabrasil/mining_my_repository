@@ -30,8 +30,6 @@ def index(request):
     template = loader.get_template('architecture/index.html')
     files = []
 
-    a = CommitUtils.strip_accents("Jãn Mártene")
-
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
         form = FilesCompiledForm(request.POST)
