@@ -20,7 +20,7 @@ from django.urls import reverse
 import architecture
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
-from common.utils import ViewUtils
+from common.utils import ViewUtils, CommitUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
     Directory
 
@@ -29,6 +29,8 @@ def index(request):
     tag = ViewUtils.load_tag(request)
     template = loader.get_template('architecture/index.html')
     files = []
+
+    a = CommitUtils.strip_accents("Jãn Mártene")
 
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:

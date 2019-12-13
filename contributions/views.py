@@ -59,18 +59,18 @@ def index(request):
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 with transaction.atomic():
-                    author = Developer.objects.filter(name=commit_repository.author.name)
+                    author = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.author.name))
                     if author.count() == 0:
-                        author = Developer(name=commit_repository.author.name, email=commit_repository.author.email)
+                        author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
                         author.save()
                     else:
                         author = author[0]
                     if commit_repository.author.name == commit_repository.committer.name:
                         committer = author
                     else:
-                        committer = Developer.objects.filter(name=commit_repository.committer.name)
+                        committer = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.committer.name))
                         if committer.count() == 0:
-                            committer = Developer(name=commit_repository.committer.name,
+                            committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
                                                   email=commit_repository.committer.email)
                             committer.save()
                         else:

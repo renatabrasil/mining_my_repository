@@ -87,6 +87,13 @@ class Commit(models.Model):
                 total_java_files = total_java_files + 1
         return total_java_files
 
+    @property
+    def cloc(self):
+        cloc = 0.0
+        for mod in self.modifications.all():
+            cloc += mod.cloc
+        return cloc
+
 class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     old_path = models.CharField(max_length=200, null=True)
