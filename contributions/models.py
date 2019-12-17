@@ -94,6 +94,13 @@ class Commit(models.Model):
             cloc += mod.cloc
         return cloc
 
+    @property
+    def cloc_uncommented(self):
+        u_cloc = 0.0
+        for mod in self.modifications.all():
+            u_cloc += mod.cloc_uncommented
+        return u_cloc
+
 class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     old_path = models.CharField(max_length=200, null=True)
@@ -142,6 +149,15 @@ class Modification(models.Model):
         for line in text:
             result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
         return result
+
+    @property
+    def cloc_uncommented(self):
+        diff_text = self.__diff_text__()
+        added_text = self.__print_text_in_lines__(diff_text['added'],"","")
+        deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
+        added_uncommented_lines = CommitUtils.count_uncommented_lines(added_text)
+        deleted_uncommented_lines = CommitUtils.count_uncommented_lines(deleted_text)
+        return added_uncommented_lines + deleted_uncommented_lines
 
     @property
     def diff_added(self):

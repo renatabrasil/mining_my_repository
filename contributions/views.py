@@ -226,9 +226,10 @@ def data_by_directory(request, directory_id):
 
 def detail(request, commit_id):
     try:
-        diff = ""
-
         commit = Commit.objects.get(pk=commit_id)
+        commit.cloc_uncommented
+        print(commit.cloc_uncommented)
+
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
     return render(request, 'contributions/detail.html', {'commit': commit})
