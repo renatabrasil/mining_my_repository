@@ -91,17 +91,18 @@ class Commit(models.Model):
 
     @property
     def cloc(self):
-        cloc = 0.0
+        cloc = 0
         for mod in self.modifications.all():
             cloc += mod.cloc
         return cloc
 
     @property
     def cloc_uncommented(self):
-        u_cloc = 0.0
+        u_cloc = 0
         for mod in self.modifications.all():
-            u_cloc += mod.cloc_uncommented
+            u_cloc += mod.u_cloc
         return u_cloc
+
 
 class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
@@ -130,6 +131,7 @@ class Modification(models.Model):
     added = models.IntegerField(null=True)
     removed = models.IntegerField(null=True)
     cloc = models.IntegerField(default=0)
+    u_cloc = models.IntegerField(default=0)
     nloc = models.IntegerField(null=True)
     complexity = models.IntegerField(null=True)
     # token_count = models.CharField(max_length=200,null=True)
@@ -152,14 +154,15 @@ class Modification(models.Model):
             result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
         return result
 
-    @property
-    def cloc_uncommented(self):
+
+    def __cloc_uncommented__(self):
         diff_text = self.__diff_text__()
         added_text = self.__print_text_in_lines__(diff_text['added'],"","")
         deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
         added_uncommented_lines = count_uncommented_lines(added_text)
         deleted_uncommented_lines = count_uncommented_lines(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
+        # return 0
 
     @property
     def diff_added(self):
@@ -214,6 +217,8 @@ class Modification(models.Model):
 
 
             self.cloc = self.added + self.removed
+
+            self.u_cloc = self.__cloc_uncommented__()
             super().save(*args, **kwargs)  # Call the "real" save() method.
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
@@ -753,6 +758,13 @@ class Contributor(TransientModel):
             return 0.0
 
     @property
+    def experience_bf(self):
+        try:
+            return 0.4 * self.bf_commit + 0.4 * self.bf_file + 0.2 * self.bf_cloc
+        except ZeroDivisionError:
+            return 0.0
+
+    @property
     def abs_experience(self):
         try:
             return 0.4 * self.commit_count + 0.4 * self.total_loc + 0.2 * self.loc_count
@@ -1021,10 +1033,27 @@ def count_uncommented_lines(code):
                 if line.strip().isdigit():
                     commented_lines += 1
 
-    comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)]
-    for comment in comments:
-        commented_lines += comment.count('\n')
-        commented_lines += 1
+    if code:
+        code_parts = []
+        snippet = ""
+        i = 0
+        for line in code.split("\n"):
+            snippet += line + "\n"
+            if i == 20:
+                code_parts.append(snippet)
+                snippet = ''
+                i=0
+            else:
+                i+=1
+
+            # code_parts.append(code[i:i + chunk_size])
+
+        # code_parts = [code[i:i + chunk_size] for i in range(0, chunks, chunk_size)]
+        for part in code_parts:
+            comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", part)]
+            for comment in comments:
+                commented_lines += comment.count('\n')
+                commented_lines += 1
 
     return total_lines - (commented_lines + count_blank_lines(code))
 

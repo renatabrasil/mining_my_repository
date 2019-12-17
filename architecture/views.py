@@ -432,14 +432,14 @@ def __pre_correlation__(metrics, component):
     tag = list(metrics[component].keys())[0].tag
     for developer in developers:
         # individual_metrics = __get_quality_contribution_by_developer__(metrics, component, developer, tag)
-        individual_metrics = __get_quality_contribution_by_developer2__(component, developer, tag)
+        individual_metrics = __get_quality_contribution_by_developer__(component, developer, tag)
         if individual_metrics is not None:
             correlation.append(individual_metrics)
     print(correlation)
     return correlation
 
 
-def __get_quality_contribution_by_developer2__(component, developer, tag):
+def __get_quality_contribution_by_developer__(component, developer, tag):
     # Developer experience in this component
     full_component = 'src/main/'+component.replace(".","/")
     directory = Directory.objects.filter(name__exact=full_component)
@@ -463,34 +463,11 @@ def __get_quality_contribution_by_developer2__(component, developer, tag):
 
     metrics_by_developer = metrics_by_developer[0]
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
-    xp = (2*global_contributor.experience + 8*contributor.experience)/10
+    xp = (2*global_contributor.experience_bf + 8*contributor.experience_bf)/10
 
-    return [contributor.author.name, global_contributor.experience, contributor.experience, xp,
+    return [contributor.author.name, global_contributor.experience_bf, contributor.experience_bf, xp,
             metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
             metrics_by_developer.architectural_impactful_loc]
-
-
-def __get_quality_contribution_by_developer__(metrics, component, developer, tag):
-    # Developer experience in this component
-    full_component = 'src/main/'+component.replace(".","/")
-    contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory__name__exact=full_component,
-                                                       directory_report__tag_id=tag.id)
-    global_contributor = ProjectIndividualContribution.objects.filter(author_id=developer.id, project_report__tag_id=tag.id)
-    contributions = []
-    if contributor.count() > 0 and global_contributor.count() > 0:
-        contributor = contributor[0]
-        global_contributor = global_contributor[0]
-    else:
-        return None
-
-    contributions_pairs = {}
-    delta = 0.0
-    for commit, metric in metrics[component].items():
-        if commit.committer == developer:
-            delta += float(metric[1])
-
-    xp = (2*global_contributor.experience + 8*contributor.experience)/10
-    return [contributor.author.name, global_contributor.experience, contributor.experience, xp, delta]
 
 def list_commits(project,form):
     first_commit = Commit.objects.filter(children_commit__gt=0).first()

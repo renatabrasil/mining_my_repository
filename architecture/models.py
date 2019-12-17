@@ -77,10 +77,10 @@ class ArchitectureQualityMetrics(models.Model):
     def delta_metrics(self, metric, value):
         previous_metric_value = 0.0
         if self.previous_architecture_quality_metrics is None:
-            return previous_metric_value/self.commit.cloc
+            return previous_metric_value/self.commit.cloc_uncommented
         previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
         try:
-            return (value - previous_metric_value)/self.commit.cloc
+            return (value - previous_metric_value)/self.commit.cloc_uncommented
         except ZeroDivisionError:
             return 0.0
 
