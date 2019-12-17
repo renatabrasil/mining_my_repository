@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 import numpy as np
 
@@ -155,8 +157,8 @@ class Modification(models.Model):
         diff_text = self.__diff_text__()
         added_text = self.__print_text_in_lines__(diff_text['added'],"","")
         deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
-        added_uncommented_lines = CommitUtils.count_uncommented_lines(added_text)
-        deleted_uncommented_lines = CommitUtils.count_uncommented_lines(deleted_text)
+        added_uncommented_lines = count_uncommented_lines(added_text)
+        deleted_uncommented_lines = count_uncommented_lines(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
 
     @property
@@ -1002,3 +1004,48 @@ def update_commit(sender, instance, **kwargs):
             parent = parent[0]
             parent.children_commit = instance
             parent.save()
+
+
+def count_uncommented_lines(code):
+    total_lines = code.count('\n')
+    commented_lines = 0
+    lines = code.split("\n")
+    for line in lines:
+        m = re.search(r"\u002F/.*", line)
+        found = ''
+        if m:
+            found = m.group(0)
+            if found:
+                line = re.sub(r'\u002F/.*','',line)
+                line.replace(' ','',1)
+                if line.strip().isdigit():
+                    commented_lines += 1
+
+    comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)]
+    for comment in comments:
+        commented_lines += comment.count('\n')
+        commented_lines += 1
+
+    return total_lines - (commented_lines + count_blank_lines(code))
+
+def get_commented_lines(code):
+    m = re.search(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)
+    found = ''
+    if m:
+        found = m.group(1)
+        if not found:
+            return ''
+    return found
+
+
+def count_blank_lines(code):
+    total_lines = code.count('\n')
+    blank_lines = 0
+    code = code.replace(get_commented_lines(code).replace('\n',''), '')
+    lines = code.split('\n')
+    for line in lines[1:]:
+        if not line.strip():
+            blank_lines += 1
+        elif line.replace(" ","").isdigit():
+            blank_lines += 1
+    return blank_lines

@@ -21,52 +21,6 @@ class CommitUtils(object):
         return path
 
     @staticmethod
-    def count_uncommented_lines(code):
-        total_lines = code.count('\n')
-        commented_lines = 0
-        lines = code.split("\n")
-        for line in lines:
-            m = re.search(r"\u002F/.*", line)
-            found = ''
-            if m:
-                found = m.group(0)
-                if found:
-                    line = re.sub(r'\u002F/.*','',line)
-                    line.replace(' ','',1)
-                    if line.strip().isdigit():
-                        commented_lines += 1
-
-        comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)]
-        for comment in comments:
-            commented_lines += comment.count('\n')
-            commented_lines += 1
-
-        return total_lines - (commented_lines + CommitUtils.count_blank_lines(code))
-
-    @staticmethod
-    def get_commented_lines(code):
-        m = re.search(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)
-        found = ''
-        if m:
-            found = m.group(1)
-            if not found:
-                return ''
-        return found
-
-    @staticmethod
-    def count_blank_lines(code):
-        total_lines = code.count('\n')
-        blank_lines = 0
-        code = code.replace(CommitUtils.get_commented_lines(code).replace('\n',''), '')
-        lines = code.split('\n')
-        for line in lines[1:]:
-            if not line.strip():
-                blank_lines += 1
-            elif line.replace(" ","").isdigit():
-                blank_lines += 1
-        return blank_lines
-
-    @staticmethod
     def strip_accents(text):
 
         try:
