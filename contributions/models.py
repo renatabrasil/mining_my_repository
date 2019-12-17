@@ -1046,35 +1046,23 @@ def count_uncommented_lines(code):
             else:
                 i+=1
 
-            # code_parts.append(code[i:i + chunk_size])
-
-        # code_parts = [code[i:i + chunk_size] for i in range(0, chunks, chunk_size)]
+        blank_lines = 0
         for part in code_parts:
-            comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", part)]
+            comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\**\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", part)]
             for comment in comments:
                 commented_lines += comment.count('\n')
                 commented_lines += 1
+                part_without_comment = part.replace(comment,'').replace('\n','',1)
+                blank_lines += count_blank_lines(part_without_comment)
 
-    return total_lines - (commented_lines + count_blank_lines(code))
-
-def get_commented_lines(code):
-    m = re.search(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", code)
-    found = ''
-    if m:
-        found = m.group(1)
-        if not found:
-            return ''
-    return found
-
+    return total_lines - (commented_lines + blank_lines)
 
 def count_blank_lines(code):
-    total_lines = code.count('\n')
     blank_lines = 0
-    code = code.replace(get_commented_lines(code).replace('\n',''), '')
     lines = code.split('\n')
     for line in lines[1:]:
         if not line.strip():
             blank_lines += 1
         elif line.replace(" ","").isdigit():
             blank_lines += 1
-    return blank_lines
+    return blank_lines-1
