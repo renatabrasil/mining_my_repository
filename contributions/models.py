@@ -1043,7 +1043,7 @@ def count_uncommented_lines(code):
         comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
         part_without_comment = code
         for comment in comments:
-            part_without_comment = part_without_comment.replace(comment, '')
+            part_without_comment = part_without_comment.replace(comment, '',1)
 
         blank_lines += count_blank_lines(part_without_comment)
         uncommented_lines += part_without_comment.count('\n')
