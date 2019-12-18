@@ -97,7 +97,7 @@ class Commit(models.Model):
         return cloc
 
     @property
-    def cloc_uncommented(self):
+    def u_cloc(self):
         u_cloc = 0
         for mod in self.modifications.all():
             u_cloc += mod.u_cloc

@@ -227,8 +227,8 @@ def data_by_directory(request, directory_id):
 def detail(request, commit_id):
     try:
         commit = Commit.objects.get(pk=commit_id)
-        commit.cloc_uncommented
-        print(commit.cloc_uncommented)
+        commit.u_cloc
+        print(commit.u_cloc)
 
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
@@ -460,7 +460,7 @@ def process_commits_by_directories(request,commits):
 
        for commit in commits:
            number_of_files = 0
-           if commit.cloc_uncommented > 0:
+           if commit.u_cloc > 0:
                for modification in commit.modifications.all():
                    if modification.u_cloc > 0:
                        if modification.is_java_file:
@@ -572,7 +572,7 @@ def process_commits_by_project(request, commits):
    total_java_files = 0
    total_loc = 0
    for commit in commits:
-       if commit.cloc_uncommented > 0:
+       if commit.u_cloc > 0:
            if not __author_is_in_project_report__(report, commit.author):
                if commit.author not in report.commits_by_author:
                    report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
