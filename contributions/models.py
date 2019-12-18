@@ -1,5 +1,4 @@
 import re
-from datetime import datetime, time
 
 from django.db import models
 import numpy as np
@@ -8,7 +7,6 @@ import numpy as np
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from pydriller import GitRepository
-from regex import regex
 
 from common.utils import CommitUtils
 
@@ -1046,7 +1044,7 @@ def count_uncommented_lines(code):
         part_without_comment = code
         for comment in comments:
             part_without_comment = part_without_comment.replace(comment, '')
-            
+
         blank_lines += count_blank_lines(part_without_comment)
         uncommented_lines += part_without_comment.count('\n')
         uncommented_lines -= blank_lines
