@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, time
 
 from django.db import models
 import numpy as np
@@ -7,6 +8,7 @@ import numpy as np
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from pydriller import GitRepository
+from regex import regex
 
 from common.utils import CommitUtils
 
@@ -1021,41 +1023,53 @@ def update_commit(sender, instance, **kwargs):
 def count_uncommented_lines(code):
     total_lines = code.count('\n')
     commented_lines = 0
-    lines = code.split("\n")
-    for line in lines:
-        m = re.search(r"\u002F/.*", line)
-        found = ''
-        if m:
-            found = m.group(0)
-            if found:
-                line = re.sub(r'\u002F/.*','',line)
-                line.replace(' ','',1)
-                if line.strip().isdigit():
-                    commented_lines += 1
+    blank_lines = 0
+    uncommented_lines = 0
+    if total_lines > 0:
+        # FIXME: Put this part on loop below
+        lines = code.split("\n")
+        for line in lines:
+            m = re.search(r"\u002F/.*", line)
+            found = ''
+            if m:
+                found = m.group(0)
+                if found:
+                    line = re.sub(r'\u002F/.*','',line)
+                    line.replace(' ','',1)
+                    if line.strip().isdigit():
+                        commented_lines += 1
+        uncommented_lines -= commented_lines
 
-    if code:
-        code_parts = []
-        snippet = ""
-        i = 0
-        for line in code.split("\n"):
-            snippet += line + "\n"
-            if i == 20:
-                code_parts.append(snippet)
-                snippet = ''
-                i=0
-            else:
-                i+=1
+        # code_parts = []
+        # snippet = ""
+        # i = 0
+        # for line in code.split("\n"):
+        #     snippet += line + "\n"
+        #     if i == 30:
+        #         code_parts.append(snippet)
+        #         snippet = ''
+        #         i=0
+        #     else:
+        #         i+=1
 
-        blank_lines = 0
-        for part in code_parts:
-            comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\**\/)|(\/\/.*)'.*?\n|\*[^;][\s\S][^\r\n]*", part)]
-            for comment in comments:
-                commented_lines += comment.count('\n')
-                commented_lines += 1
-                part_without_comment = part.replace(comment,'').replace('\n','',1)
-                blank_lines += count_blank_lines(part_without_comment)
-
-    return total_lines - (commented_lines + blank_lines)
+        comments = []
+        comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][\s\S][^\r\n]*", code)]
+        # pattern = regex.compile(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\*[^;][\s\S][^\r\n]*")
+        # for comment in comments:
+        #     commented_lines += comment.count('\n')
+        #     commented_lines += 1
+        #     part_without_comment = code.replace(comment,'').replace('\n','',1)
+        #     blank_lines += count_blank_lines(part_without_comment)
+        part_without_comment = code
+        for comment in comments:
+            part_without_comment = part_without_comment.replace(comment, '')
+        blank_lines += count_blank_lines(part_without_comment)
+        # because each commented part leave one line when they are removed from the code snippet
+        # if len(comments) > 0:
+        #     blank_lines += len(comments)
+        uncommented_lines += part_without_comment.count('\n')
+        uncommented_lines -= blank_lines
+    return 0 if uncommented_lines < 0 else uncommented_lines
 
 def count_blank_lines(code):
     blank_lines = 0
@@ -1065,4 +1079,4 @@ def count_blank_lines(code):
             blank_lines += 1
         elif line.replace(" ","").isdigit():
             blank_lines += 1
-    return blank_lines-1
+    return blank_lines
