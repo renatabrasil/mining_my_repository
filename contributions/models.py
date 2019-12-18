@@ -1040,34 +1040,14 @@ def count_uncommented_lines(code):
                         commented_lines += 1
         uncommented_lines -= commented_lines
 
-        # code_parts = []
-        # snippet = ""
-        # i = 0
-        # for line in code.split("\n"):
-        #     snippet += line + "\n"
-        #     if i == 30:
-        #         code_parts.append(snippet)
-        #         snippet = ''
-        #         i=0
-        #     else:
-        #         i+=1
-
         comments = []
 
         comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,400}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
-        # pattern = regex.compile(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\*[^;][\s\S][^\r\n]*")
-        # for comment in comments:
-        #     commented_lines += comment.count('\n')
-        #     commented_lines += 1
-        #     part_without_comment = code.replace(comment,'').replace('\n','',1)
-        #     blank_lines += count_blank_lines(part_without_comment)
         part_without_comment = code
         for comment in comments:
             part_without_comment = part_without_comment.replace(comment, '')
+            
         blank_lines += count_blank_lines(part_without_comment)
-        # because each commented part leave one line when they are removed from the code snippet
-        # if len(comments) > 0:
-        #     blank_lines += len(comments)
         uncommented_lines += part_without_comment.count('\n')
         uncommented_lines -= blank_lines
     return 0 if uncommented_lines < 0 else uncommented_lines
