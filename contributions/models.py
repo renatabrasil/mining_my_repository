@@ -1053,7 +1053,8 @@ def count_uncommented_lines(code):
         #         i+=1
 
         comments = []
-        comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][\s\S][^\r\n]*", code)]
+
+        comments = [x.group() for x in re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,400}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
         # pattern = regex.compile(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\*[^;][\s\S][^\r\n]*")
         # for comment in comments:
         #     commented_lines += comment.count('\n')
