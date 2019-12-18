@@ -578,11 +578,12 @@ def process_commits_by_project(request, commits):
                    report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
                report.commits_by_author[commit.author].commit_count += 1
                for modification in commit.modifications.all():
-                   if modification.is_java_file:
-                       report.commits_by_author[commit.author].file_count += 1
-                       total_java_files += 1
-                       report.commits_by_author[commit.author].loc_count += modification.u_cloc
-                       total_loc += modification.u_cloc
+                   if modification.u_cloc > 0:
+                       if modification.is_java_file:
+                           report.commits_by_author[commit.author].file_count += 1
+                           total_java_files += 1
+                           report.commits_by_author[commit.author].loc_count += modification.u_cloc
+                           total_loc += modification.u_cloc
                total_commits += 1
    if contributions.count() == 0:
        report.total_commits = total_commits

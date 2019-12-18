@@ -51,7 +51,7 @@ def index(request):
     else:
         form = FilesCompiledForm(initial={'directory': 'compiled',
                                           'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
-                                          'build_path': 'build'})
+                                          'build_path': 'build/classes'})
         files = FileCommits.objects.all().order_by("name")
 
     context = {
@@ -183,7 +183,7 @@ def calculate_metrics(request, file_id):
         contributions = __pre_correlation__(metrics, directory)
         if contributions:
             my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits", "Loc"]
+            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (8/2)", "Degrad Delta", "Impactful commits", "Loc"]
             my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -463,17 +463,21 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
 
     metrics_by_developer = metrics_by_developer[0]
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
-    xp = (2*global_contributor.experience_bf + 8*contributor.experience_bf)/10
+    xp = (8*global_contributor.experience_bf + 2*contributor.experience_bf)/10
 
     return [contributor.author.name, global_contributor.experience_bf, contributor.experience_bf, xp,
             metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
             metrics_by_developer.architectural_impactful_loc]
 
 def list_commits(project,form):
-    first_commit = Commit.objects.filter(children_commit__gt=0).first()
+    # Restricting to commits which has children
+    # first_commit = Commit.objects.filter(children_commit__gt=0).first()
     folder = form['directory'].value()
 
-    commits = [i for i in list(Commit.objects.filter(id__gte=first_commit.id).order_by("id"))]
+    # commits = [i for i in list(Commit.objects.filter(id__gte=first_commit.id).order_by("id"))]
+    commits = [i for i in list(Commit.objects.all().order_by("id"))]
+    first_commit = commits[0]
+
     files = []
 
     if not os.path.exists(folder):
