@@ -103,6 +103,13 @@ class Commit(models.Model):
             u_cloc += mod.u_cloc
         return u_cloc
 
+    def cloc_uncommented(self, directory):
+        cloc = 0
+        for mod in self.modifications.all():
+            if mod.directory == directory:
+                cloc += mod.u_cloc
+        return cloc
+
 
 class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')

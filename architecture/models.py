@@ -28,7 +28,7 @@ class ArchitectureQualityByDeveloper(models.Model):
             for mod in metric.commit.modifications.all():
                 if mod.directory == self.directory:
                     if metric.delta_rmd != 0:
-                        number += mod.cloc
+                        number += mod.u_cloc
         return number
 
     @property
@@ -76,11 +76,11 @@ class ArchitectureQualityMetrics(models.Model):
 
     def delta_metrics(self, metric, value):
         previous_metric_value = 0.0
-        if self.previous_architecture_quality_metrics is None:
-            return previous_metric_value/self.commit.cloc_uncommented
-        previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
         try:
-            return (value - previous_metric_value)/self.commit.cloc_uncommented
+            if self.previous_architecture_quality_metrics is None:
+                return previous_metric_value/self.commit.cloc_uncommented(self.architecture_quality_by_developer_and_directory.directory)
+            previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
+            return (value - previous_metric_value)/self.commit.cloc_uncommented(self.architecture_quality_by_developer_and_directory.directory)
         except ZeroDivisionError:
             return 0.0
 
