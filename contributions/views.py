@@ -462,26 +462,25 @@ def process_commits_by_directories(request,commits):
            number_of_files = 0
            if commit.u_cloc > 0:
                for modification in commit.modifications.all():
-                   if modification.u_cloc > 0:
-                       if modification.is_java_file:
-                           if modification.directory in report:
-                               # Second hierarchy
-                               if commit.author not in report[modification.directory].commits_by_author:
-                                   report[modification.directory].commits_by_author.setdefault(commit.author,
-                                                                                               Contributor(commit.author))
-                               if commit not in report[modification.directory].commits_by_author[commit.author].commits:
-                                   report[modification.directory].commits_by_author[commit.author].commits.append(commit)
-                                   report[modification.directory].commits_by_author[commit.author].commit_count += 1
-                                   report[modification.directory].commits_by_author[commit.author].total_commit += 1
-                               # to avoid duplicate (should be fixed soon)
-                               if modification not in review_modification:
-                                   report[modification.directory].commits_by_author[commit.author].file_count += 1
-                                   report[modification.directory].commits_by_author[commit.author].total_file += 1
-                                   report[modification.directory].commits_by_author[commit.author].files.append(modification)
-                                   report[modification.directory].commits_by_author[commit.author].loc_count += modification.u_cloc
-                                   report[modification.directory].commits_by_author[commit.author].total_loc += modification.u_cloc
+                   if modification.u_cloc > 0 and modification.is_java_file:
+                       if modification.directory in report:
+                           # Second hierarchy
+                           if commit.author not in report[modification.directory].commits_by_author:
+                               report[modification.directory].commits_by_author.setdefault(commit.author,
+                                                                                           Contributor(commit.author))
+                           if commit not in report[modification.directory].commits_by_author[commit.author].commits:
+                               report[modification.directory].commits_by_author[commit.author].commits.append(commit)
+                               report[modification.directory].commits_by_author[commit.author].commit_count += 1
+                               report[modification.directory].commits_by_author[commit.author].total_commit += 1
+                           # to avoid duplicate (should be fixed soon)
+                           if modification not in review_modification:
+                               report[modification.directory].commits_by_author[commit.author].file_count += 1
+                               report[modification.directory].commits_by_author[commit.author].total_file += 1
+                               report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                               report[modification.directory].commits_by_author[commit.author].loc_count += modification.u_cloc
+                               report[modification.directory].commits_by_author[commit.author].total_loc += modification.u_cloc
 
-                               review_modification.append(modification)
+                           review_modification.append(modification)
 
    for directory,author_report in report.items():
        total_commit = 0

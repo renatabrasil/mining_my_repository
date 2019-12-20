@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from contributions.models import Project, Commit, Directory, Tag, Developer
+from contributions.models import Project, Commit, Directory, Tag, Developer, ProjectIndividualContribution
 
 
 class FileCommits(models.Model):
@@ -17,7 +17,7 @@ class FileCommits(models.Model):
         return self.directory+"/"+self.name
 
 class ArchitectureQualityByDeveloper(models.Model):
-    developer = models.ForeignKey(Developer, related_name='developer_id', on_delete=models.CASCADE)
+    project_individual_contribution = models.ForeignKey(ProjectIndividualContribution, related_name='project_individual_contribution_id', on_delete=models.CASCADE)
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
@@ -33,9 +33,7 @@ class ArchitectureQualityByDeveloper(models.Model):
 
     @property
     def commit_activity_in_this_tag(self):
-        return Commit.objects.filter(tag_id=self.tag.id, author_id=self.developer.id).count()
-        # return Commit.objects.filter(tag_id=self.tag.id).count()
-        # return len(self.metrics.all())
+        return Commit.objects.filter(tag_id=self.tag.id, author_id=self.project_individual_contribution.author.id).count()
 
     @property
     def architecturally_impactful_commits(self):

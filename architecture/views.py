@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import re
-import csv
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 
@@ -17,10 +16,9 @@ from django.shortcuts import get_object_or_404
 from django.template import loader
 from django.urls import reverse
 
-import architecture
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
-from common.utils import ViewUtils, CommitUtils
+from common.utils import ViewUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
     Directory
 
@@ -212,7 +210,7 @@ def metrics_by_commits(request):
         if request.POST.get('developer_id'):
             developer_id = int(request.POST.get('developer_id'))
             architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=directories_filter,
-                                                                                       developer_id=developer_id,
+                                                                                       project_individual_contribution__author_id=developer_id,
                                                                                        tag_id=tag)
         else:
             architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
@@ -240,7 +238,7 @@ def metrics_by_developer(request):
     if request.POST.get('developer_id'):
         developer_id = int(request.POST.get('developer_id'))
         developer = Developer.objects.get(pk=developer_id)
-        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(developer_id=developer_id,
+        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(project_individual_contribution__author_id=developer_id,
                                                                                    tag_id=tag.id)
     context = {
         'tag': tag,
@@ -284,29 +282,9 @@ def quality_between_versions(request):
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
         my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
-        # df = pd.read_csv('versoes-ant.csv', sep=';')
-        # df.plot(x='Quartals', y='Counts')
-        # plt.show()
-        # for directory in my_df.keys():
-        #
-        #     x = list(my_df[directory].axes[0])
-        #     y = list(my_df[directory].array)
-        #     plt.plot(x, y)
-            # my_df[directory].plot(kind='scatter', color='red')
-            # my_df.show()
     context = {
         'tag': tag,
-        # 'results': architectural_metrics_list,
-        # 'current_developer': developer,
     }
-
-    # for directory in directories:
-    #     # contributions = __pre_correlation__(metrics_by_directories, directory)
-    #     # if contributions:
-    #     my_df = pd.DataFrame(metrics_by_directories[directory])
-    #     my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (2/8)", "Degrad Delta", "Impactful commits",
-    #                      "Loc", "Degrad Delta/Loc"]
-    #     my_df.to_csv(directory.replace('/', '_') + '.csv', index=False, header=True)
     return HttpResponse(template.render(context, request))
 
 # values: [degradation, impactful commits, loc, degrad/loc]
@@ -315,14 +293,14 @@ def metrics_by_developer_csv(request, file_id):
     developers_metrics = ArchitectureQualityByDeveloper.objects.filter(tag_id=file.tag.id)
     metrics = {}
     for info_developer in developers_metrics:
-        if info_developer.developer not in metrics:
-            metrics.setdefault(info_developer.developer, [0.0, 0, 0])
-        metrics[info_developer.developer][0] += info_developer.delta_rmd
-        metrics[info_developer.developer][1] += info_developer.architecturally_impactful_commits
-        metrics[info_developer.developer][2] += info_developer.architectural_impactful_loc
+        if info_developer.project_individual_contribution.author not in metrics:
+            metrics.setdefault(info_developer.project_individual_contribution.author, [info_developer.project_individual_contribution.experience_bf, 0.0, 0, 0])
+        metrics[info_developer.project_individual_contribution.author][1] += info_developer.delta_rmd
+        metrics[info_developer.project_individual_contribution.author][2] += info_developer.architecturally_impactful_commits
+        metrics[info_developer.project_individual_contribution.author][3] += info_developer.architectural_impactful_loc
         # metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
 
-    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Impactful Commit', 'Loc'])
+    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Global XP (BF)', 'Impactful Commit', 'Loc'])
     print(my_df)
     my_df.to_csv(file.directory + '/' + file.name.replace(file.directory,"").replace(".txt","") +'.csv', index=True, header=True)
 
@@ -379,12 +357,20 @@ def __read_PM_file__(folder):
                         architecture_quality_by_developer_and_directory__directory__name__exact='src/main/' + row[0], commit_id=commit.id)
                     if architecture_metrics.count() == 0:
 
+                        try:
+                            project_individual_contribution = ProjectIndividualContribution.objects.filter(
+                                author_id=commit.committer.id, project_report__tag_id=commit.tag.id)
+                            project_individual_contribution = project_individual_contribution[0]
+                        except ProjectIndividualContribution.DoesNotExist:
+                            print("it is necessary to generate the contributions by project")
+                            break
+
                         architecture_quality_by_developer = ArchitectureQualityByDeveloper.objects.filter(tag_id=commit.tag.id, directory_id=directory.id,
-                                                                      developer_id=commit.committer.id)
+                                                                      project_individual_contribution__author_id=commit.committer.id)
                         if architecture_quality_by_developer.count() > 0:
                             architecture_quality_by_developer=architecture_quality_by_developer[0]
                         else:
-                            architecture_quality_by_developer = ArchitectureQualityByDeveloper(developer=commit.committer,
+                            architecture_quality_by_developer = ArchitectureQualityByDeveloper(project_individual_contribution=project_individual_contribution,
                                                                                                directory=directory,
                                                                                                tag=commit.tag)
                             architecture_quality_by_developer.save()
@@ -395,9 +381,6 @@ def __read_PM_file__(folder):
                                                                           rmd=float(row[5]), rma=float(row[4]),
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
-                    # else:
-                    #     metrics_by_commits = metrics_by_commits[0]
-
                     if row[0] not in metrics:
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
@@ -412,7 +395,7 @@ def __read_PM_file__(folder):
                         delta = float(row[5])
                     if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
                         architecture_metrics.save()
-                    # metrics_by_commits.rmd = delta
+
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
@@ -457,7 +440,7 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
     else:
         return None
 
-    metrics_by_developer = ArchitectureQualityByDeveloper.objects.filter(developer=developer, tag=tag, directory=directory)
+    metrics_by_developer = ArchitectureQualityByDeveloper.objects.filter(project_individual_contribution=global_contributor, tag=tag, directory=directory)
     if metrics_by_developer.count() == 0:
         return None
 
@@ -465,7 +448,8 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
     xp = (8*global_contributor.experience_bf + 2*contributor.experience_bf)/10
 
-    return [contributor.author.name, global_contributor.experience_bf, contributor.experience_bf, xp,
+    return [metrics_by_developer.project_individual_contribution.author.name,
+            metrics_by_developer.project_individual_contribution.experience_bf, contributor.experience_bf, xp,
             metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
             metrics_by_developer.architectural_impactful_loc]
 
@@ -497,9 +481,9 @@ def list_commits(project,form):
         # myfile.write(ViewUtils.load_tag(request) + "\n")
         i = 1
         for commit in commits:
-            myfile.write(str(i)+"-"+commit.hash+"\n")
+
             commit_tag = commit.tag.description.replace("/","-")
-            i += 1
+
             if j != commit_tag:
                 myfile.closed
                 f.closed
@@ -514,6 +498,8 @@ def list_commits(project,form):
                 files.append(file)
                 myfile.write(form['git_local_repository'].value() + "\n")
                 myfile.write(form['build_path'].value() + "\n")
+            myfile.write(str(i) + "-" + commit.hash + "\n")
+            i += 1
         myfile.closed
         f.closed
         file.save()
