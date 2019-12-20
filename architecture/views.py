@@ -300,7 +300,7 @@ def metrics_by_developer_csv(request, file_id):
         metrics[info_developer.project_individual_contribution.author][3] += info_developer.architectural_impactful_loc
         # metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
 
-    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Degrad', 'Global XP (BF)', 'Impactful Commit', 'Loc'])
+    my_df = pd.DataFrame.from_dict(metrics, orient='index', columns=['Global XP (BF)', 'Degrad', 'Impactful Commit', 'Loc'])
     print(my_df)
     my_df.to_csv(file.directory + '/' + file.name.replace(file.directory,"").replace(".txt","") +'.csv', index=True, header=True)
 
