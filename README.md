@@ -1,4 +1,4 @@
-# mining_my_repository
+# Mining my repository
 
 Pre-requisites:
 - Python 3.7.4
@@ -8,6 +8,8 @@ Pre-requisites:
 - Django-mathfilters: https://pypi.org/project/django-mathfilters/0.4.0/
 - PyYAML (5.1.2 or above) = https://pypi.org/project/PyYAML/#history
 - numPY
+- unicoded
+- whitenoise
 - matplotlib: https://matplotlib.org/users/installing.html
 - pandas: https://pandas.pydata.org/
 
@@ -17,3 +19,16 @@ Run:
 - python manage.py migrate
 - python manage.py loaddata init.yaml
 - python manage.py runserver
+
+Tests:
+
+- python -m coverage run manage.py test contributions
+- python -m coverage run manage.py test architecture
+
+ou
+
+- python -m coverage run --source '.' --omit 'manage.py,mining_my_repository/*,*/migrations/*,*__init__*' manage.py test contributions
+
+---
+
+- coverage html

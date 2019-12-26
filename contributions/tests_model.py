@@ -18,8 +18,8 @@ class CommitModelTests(TestCase):
                                         author_date=datetime.datetime.now().date(),
                                         committer_date=datetime.datetime.now().date(), parents_str='oioioi')
         # commit.children_commit = commit2
-        # commit.save()
-        # commit2.save()
+        commit.save()
+        commit2.save()
 
         # TODO: tests
         # self.assertEqual(commit.children_commit.id, commit2.id)
