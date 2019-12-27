@@ -28,6 +28,7 @@ Tests:
 ou
 
 - python -m coverage run --source '.' --omit 'manage.py,mining_my_repository/*,*/migrations/*,*__init__*' manage.py test contributions
+- python -m coverage run --source '.' --omit '*/migrations/*,*__init__*' manage.py test contributions architecture
 
 ---
 

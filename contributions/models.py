@@ -16,7 +16,7 @@ class Developer(models.Model):
     email = models.CharField(max_length=200)
 
     def __str__(self):
-        return self.name + '('+self.email+')'
+        return self.name + ' ('+self.email+')'
 
 class Project(models.Model):
     project_name = models.CharField(max_length=200)
@@ -44,7 +44,7 @@ class Directory(models.Model):
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
-    hash = models.CharField(max_length=300)
+    hash = models.CharField(max_length=180)
     msg = models.CharField(max_length=300)
     author = models.ForeignKey(Developer, related_name='author_id', on_delete=models.CASCADE)
     author_date = models.DateField()
@@ -54,10 +54,9 @@ class Commit(models.Model):
     _parents = []
 
     def __str__(self):
-        return self.hash + "- Author: " + self.author.name
+        return self.hash + " - Author: " + self.author.name
 
-    # @classmethod
-    def __has_files_in_this_directory__(self,directory):
+    def has_files_in_this_directory(self, directory):
         for mod in self.modifications.all():
             if mod.directory == directory:
                 return True
@@ -112,10 +111,10 @@ class Commit(models.Model):
 
 
 class Modification(models.Model):
-    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     old_path = models.CharField(max_length=200, null=True)
     new_path = models.CharField(max_length=200, null=True)
-    path = models.CharField(max_length=200, null=True, default="-")
+    path = models.CharField(max_length=200, null=True, default="")
+    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
     ADDED = 'ADD'
     DELETED = 'DEL'
@@ -132,14 +131,14 @@ class Modification(models.Model):
         choices=CHANGE_TYPES_CHOICES,
         default=MODIFIED,
     )
-    diff = models.TextField()
+    diff = models.TextField(default="")
     source_code = models.TextField(null=True)
     source_code_before = models.TextField(null=True)
-    added = models.IntegerField(null=True)
-    removed = models.IntegerField(null=True)
+    added = models.IntegerField(default=0)
+    removed = models.IntegerField(default=0)
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
-    nloc = models.IntegerField(null=True)
+    nloc = models.IntegerField(default=0)
     complexity = models.IntegerField(null=True)
     # token_count = models.CharField(max_length=200,null=True)
 
@@ -173,9 +172,7 @@ class Modification(models.Model):
 
     @property
     def diff_added(self):
-
         parsed_lines = self.__diff_text__()
-
         added_text = parsed_lines['added']
 
         diff_text = None
@@ -186,7 +183,6 @@ class Modification(models.Model):
 
     @property
     def diff_removed(self):
-
         deleted_text = self.__diff_text__()['deleted']
         diff_text = '\n' + str(self.removed) + ' lines removed:  \n'
         diff_text = self.__print_text_in_lines__(deleted_text,diff_text, '-')
@@ -217,16 +213,15 @@ class Modification(models.Model):
 
             directory = Directory.objects.filter(name=directory_str)
             if directory.count() == 0:
-                directory = Directory(name=directory_str, visible=True, project=self.commit.project)
+                directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project)
                 directory.save()
             else:
                 self.directory = directory[0]
 
-
             self.cloc = self.added + self.removed
 
             self.u_cloc = self.__cloc_uncommented__()
-            super().save(*args, **kwargs)  # Call the "real" save() method.
+            super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
 class ProjectIndividualContribution(models.Model):
@@ -252,7 +247,7 @@ class ProjectIndividualContribution(models.Model):
     bf_cloc = models.FloatField(null=True, default=0.0)
 
     def __str__(self):
-        return "Author: " + self.author.name + " - Experience: " + str(self.experience) + " Tag: " + self.project_report.tag.description
+        return "Author: " + self.author.name + " - Experience: " + str(self.experience) + " - Tag: " + self.project_report.tag.description
 
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:
@@ -274,60 +269,30 @@ class ProjectIndividualContribution(models.Model):
         self.ownership_commits_in_this_tag = self.ownership_commits
         self.ownership_files_in_this_tag = self.ownership_files
         self.ownership_cloc_in_this_tag = self.ownership_cloc
-        total_commits = 0
-        total_files = 0
-        total_cloc = 0
 
         if self.project_report.tag.previous_tag:
             previous_individual_contribution = ProjectIndividualContribution.objects.filter(
                 project_report__tag_id=self.project_report.tag.previous_tag.id, author_id=self.author.id)
-            commits_in_this_tag = self.commits
-            files_in_this_tag = self.files
-            cloc_in_this_tag = self.cloc
             if previous_individual_contribution.count() > 0:
                 previous_individual_contribution = previous_individual_contribution[0]
-                commits_in_this_tag = commits_in_this_tag - previous_individual_contribution.commits
-                files_in_this_tag = files_in_this_tag - previous_individual_contribution.files
-                cloc_in_this_tag = cloc_in_this_tag - previous_individual_contribution.cloc
-                total_commits = previous_individual_contribution.project_report.total_commits
-                total_files = previous_individual_contribution.project_report.total_files
-                total_cloc = previous_individual_contribution.project_report.total_cloc
-            else:
-                project_report = ProjectReport.objects.filter(tag_id=self.project_report.tag.previous_tag.id)
-                if project_report.count() > 0:
-                    project_report = project_report[0]
-                    total_commits = project_report.total_commits
-                    total_files = project_report.total_files
-                    total_cloc = project_report.total_cloc
+                self.ownership_commits_in_this_tag = self.ownership_commits-previous_individual_contribution.ownership_commits
+                self.ownership_files_in_this_tag = self.ownership_files-previous_individual_contribution.ownership_files
+                self.ownership_cloc_in_this_tag = self.ownership_cloc-previous_individual_contribution.ownership_cloc
 
-            total_commits_in_this_tag = self.project_report.total_commits - total_commits
-            total_files_in_this_tag = self.project_report.total_files - total_files
-            total_cloc_in_this_tag = self.project_report.total_cloc - total_cloc
-            try:
-                self.ownership_commits_in_this_tag = commits_in_this_tag / total_commits_in_this_tag
-                self.ownership_files_in_this_tag = files_in_this_tag / total_files_in_this_tag
-                self.ownership_cloc_in_this_tag = cloc_in_this_tag / total_cloc_in_this_tag
-            except ZeroDivisionError:
-                self.ownership_commits_in_this_tag = 0.0
-                self.ownership_files_in_this_tag = 0.0
-                self.ownership_cloc_in_this_tag = 0.0
+        denominator=1
 
-        first_tag_id = Tag.objects.filter(project_id=self.project_report.tag.project.id).first().id
+        first_tag_id = ProjectReport.objects.filter(tag__project_id=self.project_report.tag.project.id).first().tag.id
         current_tag_id = self.project_report.tag.id
         if current_tag_id == first_tag_id:
             self.commit_exp = self.ownership_commits
             self.file_exp = self.ownership_files
             self.cloc_exp = self.ownership_cloc
-            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
-            self.experience = self.experience_bf
         else:
             tag_ids = list(range(first_tag_id, current_tag_id))
 
             contributions = ProjectIndividualContribution.objects.filter(
                 project_report__tag_id__in=tag_ids,
                 author_id=self.author.id)
-
-            first_tag__in_contributions_id = contributions.first().project_report.tag.id if contributions else current_tag_id
 
             extra_values = []
             # whether there is any contribution in this directory from other authors
@@ -365,13 +330,12 @@ class ProjectIndividualContribution(models.Model):
             # denominator = denominator + 1
             denominator = len(contributions) + len(extra_values)
             # self.commit_exp = (self.bf_commit + 1) * (sum(commit_activity) / denominator)
-            self.commit_exp = (self.bf_commit + 1) * self.ownership_commits
-            self.file_exp = (self.bf_file + 1) * self.ownership_files
-            self.cloc_exp = (self.bf_cloc + 1) * self.ownership_cloc
-            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
+            self.commit_exp = (self.bf_commit + 1) * self.ownership_commits/denominator
+            self.file_exp = (self.bf_file + 1) * self.ownership_files/denominator
+            self.cloc_exp = (self.bf_cloc + 1) * self.ownership_cloc/denominator
 
-
-        self.experience = 0.4 * self.ownership_commits + 0.4 * self.ownership_files + 0.2 * self.ownership_cloc
+        self.experience = 0.4 * self.ownership_commits/denominator + 0.4 * self.ownership_files/denominator + 0.2 * self.ownership_cloc/denominator
+        self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

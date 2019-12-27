@@ -89,7 +89,6 @@ def index(request):
                             directory_str = CommitUtils.directory_to_str(path)
                             directory = Directory.objects.filter(name=directory_str)
                             if directory.count() == 0:
-                                # directory = Directory(name=directory_str, visible=True, project=project, parent_tag=tag)
                                 directory = Directory(name=directory_str, visible=True, project=project)
                                 directory.save()
                             else:
@@ -119,7 +118,6 @@ def index(request):
                             except Exception as e:
                                 # raise  # reraises the exceptio
                                 print(str(e))
-
 
     url_path = 'contributions/index.html'
     current_developer = None

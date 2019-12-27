@@ -9,11 +9,13 @@ class CommitUtils(object):
 
     @staticmethod
     def true_path(modification):
+        old_path = ''
+        new_path = ''
         if modification.old_path:
             old_path = modification.old_path.replace("\\", "/")
         if modification.new_path:
             new_path = modification.new_path.replace("\\", "/")
-        if modification.change_type.name == 'DELETE':
+        if modification.change_type == 'DELETE':
             path = old_path
         else:
             path = new_path
