@@ -24,7 +24,7 @@
 
             {% for directory, infos in latest_commit_list.items %}
                 <tr class="table-light">
-                    <td colspan="7">
+                    <td colspan="8">
                         <ul>
                             <strong>Bird metrics</strong>
                             <li>Ownership: {{directory.ownership|percentage}}</li>
@@ -58,16 +58,18 @@
                     <th style="text-align:right">Commits</th>
                     <th style="text-align:right">Files</th>
                     <th style="text-align:right">LOC</th>
-                    <th style="text-align:right" width="12%">% commits (BF)</th>
+                    <th style="text-align:right" width="10%">% commits (BF)</th>
                     <th style="text-align:right">% files (BF)</th>
                     <th style="text-align:right">% cloc (BF)</th>
-                    <th style="text-align:right">Experience</th>
-                    <th style="text-align:right">Experience com BF</th>
+                    <th style="text-align:right">Exp</th>
+                    <th style="text-align:right">Exp com BF</th>
+                    <th style="text-align:right">Exp (cloc) com BF</th>
                 </tr>
             </thead>
             <tbody>
                     <tr class="p-3 mb-2 bg-secondary text-white">
                         <td colspan="6"><strong>{{directory.directory.name}}</strong></td>
+                        <td></td>
                         <td></td>
                         <td style="text-align:right" nowrap><small>Media: {{directory.mean|floatformat:5}}</small></td>
                         <td style="text-align:right" nowrap><small>Mediana: {{directory.median|floatformat:5}}</small></td>
@@ -86,6 +88,7 @@
                         <td style="text-align:right">{{contribution.ownership_cloc|percentage}} <strong>({{contribution.bf_cloc|floatformat:2}})</strong></td>
                         <td style="text-align:right">{{contribution.experience|floatformat:5}}</td>
                         <td style="text-align:right">{{contribution.experience_bf|floatformat:5}}</td>
+                        <td style="text-align:right">{{contribution.cloc_exp|floatformat:5}}</td>
                     </tr>
                     {% endfor %}
                     <tr class="p-3 mb-2 bg-info text-white">
@@ -93,11 +96,7 @@
                         <th style="text-align:right">{{directory.total_commits}}</th>
                         <th style="text-align:right">{{directory.total_files}}</th>
                         <th style="text-align:right">{{directory.total_cloc}}</th>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td colspan="6"></td>
                     </tr>
                 {% endfor %}
             {% else %}

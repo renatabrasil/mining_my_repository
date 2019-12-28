@@ -97,18 +97,19 @@
                 <th style="text-align:right">Ownership (commits)</th>
                 <th style="text-align:right">Ownership (files)</th>
                 <th style="text-align:right">Ownership (loc)</th>
-                <th style="text-align:right">Experience</th>
-                <th style="text-align:right">Experience (BF)</th>
+                <th style="text-align:right" width="10%">Exp</th>
+                <th style="text-align:right" width="10%">Exp (BF)</th>
+                <th style="text-align:right" width="10%">Exp (cloc) com BF</th>
             </tr>
         </thead>
         <tbody>
             {% if latest_commit_list %}
                 <tr class="p-3 mb-2 bg-secondary text-white">
 
-                        <td colspan="4"></td>
+                        <td colspan="5"></td>
                         <td style="text-align:right" colspan="2" nowrap><small>Media: {{latest_commit_list.0.mean|floatformat:5}}</small></td>
                         <td style="text-align:right" colspan="2" nowrap><small>Mediana: {{latest_commit_list.0.median|floatformat:5}}</small></td>
-                        <td style="text-align:right" colspan="2"><small>Desvio padrão: {{latest_commit_list.0.standard_deviation|floatformat:5}}</small></td>
+                        <td style="text-align:right" colspan="3"><small>Desvio padrão: {{latest_commit_list.0.standard_deviation|floatformat:5}}</small></td>
                     </tr>
                 {% for contribution in latest_commit_list.1 %}
                     <tr>
@@ -122,6 +123,7 @@
                         <td style="text-align:right" nowrap>({{contribution.bf_cloc|floatformat:2}}) - {{contribution.ownership_cloc|percentage}}</td>
                         <td style="text-align:right" nowrap>{{contribution.experience|floatformat:5}}</td>
                         <td style="text-align:right" nowrap>{{contribution.experience_bf|floatformat:5}}</td>
+                        <td style="text-align:right" nowrap>{{contribution.cloc_exp|floatformat:5}}</td>
                     </tr>
                 {% endfor %}
             <tfoot>
@@ -131,11 +133,8 @@
                     <td style="text-align:right">{{latest_commit_list.0.total_commits}}</td>
                     <td style="text-align:right">{{latest_commit_list.0.total_files}}</td>
                     <td style="text-align:right">{{latest_commit_list.0.total_cloc}}</td>
-                    <td>
-
+                    <td colspan="5">
                     </td>
-                    <td></td>
-                    <td></td>
                 </tr>
             </tfoot>
             {% else %}

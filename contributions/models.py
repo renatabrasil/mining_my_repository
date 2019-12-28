@@ -144,7 +144,8 @@ class Modification(models.Model):
     removed = models.IntegerField(default=0)
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
-    nloc = models.IntegerField(default=0)
+    # FIXME
+    nloc = models.IntegerField(default=0, null=True)
     complexity = models.IntegerField(null=True)
     # token_count = models.CharField(max_length=200,null=True)
 
@@ -231,9 +232,9 @@ class Modification(models.Model):
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
 class ProjectIndividualContribution(models.Model):
-    author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
-    project_report = models.ForeignKey('ProjectReport', on_delete=models.DO_NOTHING)
-    previous_individual_contribution = models.ForeignKey('ProjectIndividualContribution', on_delete=models.DO_NOTHING,
+    author = models.ForeignKey(Developer, on_delete=models.CASCADE)
+    project_report = models.ForeignKey('ProjectReport', on_delete=models.CASCADE)
+    previous_individual_contribution = models.ForeignKey('ProjectIndividualContribution', on_delete=models.SET_NULL,
                                                          null=True, default=None)
     cloc = models.IntegerField(null=True, default=0)
     files = models.IntegerField(null=True, default=0)
@@ -375,7 +376,7 @@ class ProjectIndividualContribution(models.Model):
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class ProjectReport(models.Model):
-    tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='project_reports')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='project_reports')
     authors = models.ManyToManyField(Developer, through=ProjectIndividualContribution)
     total_cloc = models.IntegerField(null=True, default=0)
     total_files = models.IntegerField(null=True, default=0)
@@ -406,7 +407,7 @@ class ProjectReport(models.Model):
     @property
     def core_developers_experience(self):
         core_developers = []
-        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))
         for contributor in contributions:
         #     # TODO: check if it makes sense
             if len(contributions) == 1:
@@ -418,7 +419,7 @@ class ProjectReport(models.Model):
     @property
     def peripheral_developers_experience(self):
         peripheral_developers = []
-        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))
         if len(contributions) == 1:
             return  peripheral_developers
         for contributor in contributions:
@@ -436,14 +437,6 @@ class ProjectReport(models.Model):
                 higher_value = contributor.experience_bf
         return higher_value
 
-    # @property
-    # def abs_experience(self):
-    #     higher_value = -1.0
-    #     contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
-    #     for contributor in contributions:
-    #         if contributor.abs_experience >= higher_value:
-    #             higher_value = contributor.abs_experience
-    #     return higher_value
 
     @property
     def ownership(self):
@@ -473,9 +466,9 @@ class ProjectReport(models.Model):
         return major
 
 class IndividualContribution(models.Model):
-    author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
-    directory_report = models.ForeignKey('DirectoryReport', on_delete=models.DO_NOTHING)
-    previous_individual_contribution = models.ForeignKey('IndividualContribution', on_delete=models.DO_NOTHING, null=True, default=None)
+    author = models.ForeignKey(Developer, on_delete=models.CASCADE)
+    directory_report = models.ForeignKey('DirectoryReport', on_delete=models.CASCADE)
+    previous_individual_contribution = models.ForeignKey('IndividualContribution', on_delete=models.SET_NULL, null=True, default=None)
     cloc = models.IntegerField(null=True, default=0)
     files = models.IntegerField(null=True, default=0)
     commits = models.IntegerField(null=True, default=0)
@@ -617,8 +610,8 @@ class IndividualContribution(models.Model):
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class DirectoryReport(models.Model):
-    tag = models.ForeignKey(Tag, on_delete=models.DO_NOTHING, related_name='directory_reports')
-    directory = models.ForeignKey(Directory, on_delete=models.DO_NOTHING, related_name='directory_reports')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='directory_reports')
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='directory_reports')
     authors = models.ManyToManyField(Developer, through=IndividualContribution)
     total_cloc = models.IntegerField(null=True, default=0)
     total_files = models.IntegerField(null=True, default=0)
@@ -650,7 +643,7 @@ class DirectoryReport(models.Model):
     @property
     def core_developers_experience(self):
         core_developers = []
-        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id).order_by("-experience_bf"))
         for contributor in contributions:
         #     # TODO: check if it makes sense
             if len(contributions) == 1:
@@ -663,7 +656,7 @@ class DirectoryReport(models.Model):
     @property
     def peripheral_developers_experience(self):
         peripheral_developers = []
-        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id).order_by("-experience_bf"))
         if len(contributions) == 1:
             return  peripheral_developers
         for contributor in contributions:
@@ -675,7 +668,7 @@ class DirectoryReport(models.Model):
     @property
     def experience(self):
         higher_value = -1.0
-        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id).order_by("-experience_bf"))
         for contributor in contributions:
             if contributor.experience >= higher_value:
                 higher_value = contributor.experience
@@ -684,7 +677,7 @@ class DirectoryReport(models.Model):
     @property
     def ownership(self):
         higher_value = -1.0
-        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id).order_by("-ownership_commits"))
         for contributor in contributions:
             if contributor.ownership_commits >= higher_value:
                 higher_value = contributor.ownership_commits
@@ -765,17 +758,11 @@ class Contributor(TransientModel):
         except ZeroDivisionError:
             return 0.0
 
+    # FIXME:
     @property
     def experience_bf(self):
         try:
             return 0.4 * self.bf_commit + 0.4 * self.bf_file + 0.2 * self.bf_cloc
-        except ZeroDivisionError:
-            return 0.0
-
-    @property
-    def abs_experience(self):
-        try:
-            return 0.4 * self.commit_count + 0.4 * self.total_loc + 0.2 * self.loc_count
         except ZeroDivisionError:
             return 0.0
 

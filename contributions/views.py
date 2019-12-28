@@ -214,10 +214,10 @@ def data_by_directory(request, directory_id):
     response['Content-Disposition'] = 'attachment; filename='+ directory.name +'.csv'
     writer = csv.writer(response)
 
-    writer.writerow(['Version', 'Experience', 'Abs Experience', 'Mean', 'Median','Standard deviation'])
+    writer.writerow(['Version', 'Experience', 'Mean', 'Median','Standard deviation'])
     for report in directories_report:
 
-        writer.writerow([report.tag.description, report.experience, report.abs_experience, report.mean, report.median, report.standard_deviation])
+        writer.writerow([report.tag.description, report.experience, report.mean, report.median, report.standard_deviation])
     return response
 
 
@@ -514,8 +514,7 @@ def process_commits_by_directories(request,commits):
                                                     ownership_cloc=contribution.loc_percentage,
                                                     ownership_files = contribution.file_percentage,
                                                     ownership_commits=contribution.commit_percentage,
-                                                    experience=contribution.experience,
-                                                    abs_experience=contribution.abs_experience)
+                                                    experience=contribution.experience)
                    contribution_repo.save()
                report_repo.append(contribution_repo)
            directory_report.calculate_statistical_metrics()
@@ -616,6 +615,9 @@ def process_commits_by_project(request, commits):
                contribution_repo = contribution_repo[0]
            report_repo.append(contribution_repo)
        project_report.calculate_statistical_metrics()
+
+       report_repo = sorted(report_repo, key=lambda x: x.experience_bf, reverse=True)
+
        answer_report.append(report_repo)
 
    return answer_report

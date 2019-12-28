@@ -270,7 +270,7 @@ class ProjectReportModelTests(TestCase):
 
         # For more than one developer
         self.assertListEqual(project_r2.core_developers_experience, [dev3])
-        self.assertListEqual(project_r2.peripheral_developers_experience, [dev, dev2])
+        self.assertListEqual(project_r2.peripheral_developers_experience, [dev2,dev])
         self.assertAlmostEqual(project_r2.experience, 0.8, 5)
         self.assertAlmostEqual(project_r2.ownership, 0.8, 5)
         self.assertEqual(project_r2.major, 3)
