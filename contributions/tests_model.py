@@ -1,4 +1,5 @@
 import datetime
+import math
 
 from django.test import TestCase
 
@@ -6,7 +7,7 @@ from django.test import TestCase
 from model_mommy import mommy
 
 from contributions.models import Project, Developer, Tag, Directory, Commit, Modification, \
-    ProjectIndividualContribution, ProjectReport
+    ProjectIndividualContribution, ProjectReport, IndividualContribution, DirectoryReport
 
 
 class DeveloperModelTests(TestCase):
@@ -27,6 +28,14 @@ class ProjectModelTests(TestCase):
         proj = self.create_project()
 
         self.assertEqual(proj.__str__(), "Project 1")
+        
+    def test_first_tag(self):
+        project = mommy.make(Project)
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None, project=project)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=project)
+        tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=project)
+
+        self.assertEqual(project.first_tag, tag)
 
 class TagModelTests(TestCase):
     @classmethod
@@ -185,3 +194,268 @@ class ProjectReportModelTests(TestCase):
         report = mommy.make(ProjectReport,tag=tag)
 
         self.assertEqual(report.__str__(), 'Project tag: rel/1.2')
+
+    # mean
+    # standard deviation
+    # median
+    def test_statistics(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        tag1 = mommy.make(Tag, description='rel/1.1', previous_tag=None, id=1)
+        dev2 = mommy.make(Developer, name='Romulo')
+        dev3 = mommy.make(Developer, name='Renata')
+        project_r = mommy.make(ProjectReport, tag=tag1, total_commits=5, total_files=10, total_cloc=100)
+        project_report = mommy.make(ProjectIndividualContribution, author=dev,
+                                    ownership_commits=0.2, ownership_files=0.2,
+                                    ownership_cloc=0.2, project_report=project_r)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag1, id=2, project=tag1.project)
+        project_r2 = mommy.make(ProjectReport, tag=tag2)
+        project_report2 = mommy.make(ProjectIndividualContribution, author=dev, ownership_commits=0.6,
+                                     ownership_files=0.7,
+                                     ownership_cloc=0.5, project_report=project_r2)
+        project_report2_1 = mommy.make(ProjectIndividualContribution, author=dev2, ownership_commits=0.2,
+                                       ownership_files=0.2,
+                                       ownership_cloc=0.2, project_report=project_r2)
+        project_report2_2 = mommy.make(ProjectIndividualContribution, author=dev3, ownership_commits=0.8,
+                                     ownership_files=0.8,
+                                     ownership_cloc=0.8, project_report=project_r2)
+        project_r.calculate_statistical_metrics()
+        project_r2.calculate_statistical_metrics()
+        self.assertAlmostEqual(project_r.mean,0.2,5)
+        self.assertAlmostEqual(project_r.median, 0.2, 5)
+        self.assertTrue(math.isnan(project_r.standard_deviation))
+        #
+        self.assertAlmostEqual(project_r2.mean, 0.405, 5)
+        self.assertAlmostEqual(project_r2.median, 0.465, 5)
+        self.assertAlmostEqual(project_r2.standard_deviation, 0.230922, 5)
+
+    def test_lists(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        tag1 = mommy.make(Tag, description='rel/1.1', previous_tag=None, id=1)
+        dev2 = mommy.make(Developer, name='Romulo')
+        dev3 = mommy.make(Developer, name='Renata')
+        project_r = mommy.make(ProjectReport, tag=tag1, total_commits=5, total_files=10, total_cloc=100)
+        project_report = mommy.make(ProjectIndividualContribution, author=dev,
+                                    ownership_commits=0.2, ownership_files=0.2,
+                                    ownership_cloc=0.2, project_report=project_r)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag1, id=2, project=tag1.project)
+        project_r2 = mommy.make(ProjectReport, tag=tag2)
+        project_report2 = mommy.make(ProjectIndividualContribution, author=dev, ownership_commits=0.6,
+                                     ownership_files=0.7,
+                                     ownership_cloc=0.5, project_report=project_r2)
+        project_report2_1 = mommy.make(ProjectIndividualContribution, author=dev2, ownership_commits=0.2,
+                                       ownership_files=0.2,
+                                       ownership_cloc=0.2, project_report=project_r2)
+        project_report2_2 = mommy.make(ProjectIndividualContribution, author=dev3, ownership_commits=0.8,
+                                     ownership_files=0.8,
+                                     ownership_cloc=0.8, project_report=project_r2)
+        project_r.calculate_statistical_metrics()
+        project_r2.calculate_statistical_metrics()
+        # For one developer
+        self.assertListEqual(project_r.core_developers_experience,[dev])
+        self.assertListEqual(project_r.peripheral_developers_experience, [])
+        self.assertAlmostEqual(project_r.experience,0.2,5)
+        self.assertAlmostEqual(project_r.ownership, 0.2, 5)
+        self.assertEqual(project_r.major, 1)
+        self.assertEqual(project_r.minor, 0)
+
+        # For more than one developer
+        self.assertListEqual(project_r2.core_developers_experience, [])
+        self.assertListEqual(project_r2.peripheral_developers_experience, [dev, dev2, dev3])
+        self.assertAlmostEqual(project_r2.experience, 0.6, 5)
+        self.assertAlmostEqual(project_r2.ownership, 0.8, 5)
+        self.assertEqual(project_r2.major, 3)
+        self.assertEqual(project_r2.minor, 0)
+
+class IndividualContributionModelTests(TestCase):
+    def test_individual_contribution(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report,
+                                  ownership_commits=0.625,ownership_files=0.25,ownership_cloc=0.85)
+
+        self.assertEqual(contribution.__str__(),'Author: Ricardo - Directory: src/main/apache - Experience: 0.52 - Tag: rel/1.1')
+
+    def test_ownership_in_this_tag(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag, total_commits=16, total_files=8,
+                            total_cloc=100)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report,
+                                  commits=10,files=2,cloc=85,
+                                  ownership_commits=0.625, ownership_files=0.25, ownership_cloc=0.85)
+        report2 = mommy.make(DirectoryReport, directory=directory, tag=tag2, total_commits=26, total_files=18,
+                             total_cloc=150)
+        contribution2_1 = mommy.make(IndividualContribution, author=dev, directory_report=report2,
+                                     commits=18, files=6, cloc=95)
+
+        self.assertEqual(contribution.ownership_commits_in_this_tag, 0.625)
+        self.assertEqual(contribution.ownership_files_in_this_tag, 0.25)
+        self.assertEqual(contribution.ownership_cloc_in_this_tag, 0.85)
+
+        self.assertEqual(contribution2_1.ownership_commits_in_this_tag,0.8)
+        self.assertEqual(contribution2_1.ownership_files_in_this_tag, 0.4)
+        self.assertEqual(contribution2_1.ownership_cloc_in_this_tag, 0.2)
+
+    def test_calculate_boosting_factor(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=tag.project)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag, total_commits=16,total_files=8,total_cloc=100)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=10, files=2,
+                                  cloc=85,
+                                  ownership_commits=0.625, ownership_files=0.25, ownership_cloc=0.85)
+        report2 = mommy.make(DirectoryReport, directory=directory, tag=tag2, total_commits=26, total_files=18,
+                            total_cloc=150)
+        contribution2_1 = mommy.make(IndividualContribution, author=dev, directory_report=report2,
+                                     commits=18, files=6, cloc=95,
+                                     ownership_commits=18/26, ownership_files=6/18, ownership_cloc=95/150)
+
+        # For one developer
+        self.assertAlmostEqual(contribution.experience, 0.52, 5)
+        self.assertAlmostEqual(contribution.experience_bf, 0.52, 5)
+
+        # self.assertAlmostEqual(contribution2_1.ownership_commits_in_this_tag, 0.8, 5)
+        self.assertListEqual(contribution2_1.commit_activity,[0.625,0.8])
+        self.assertListEqual(contribution2_1.file_activity, [0.25, 4/10])
+        self.assertListEqual(contribution2_1.cloc_activity, [0.85, 10/50])
+
+        # For more than one tag
+        # self.assertAlmostEqual(contribution2_1.experience, 349/1300, 5)
+        # self.assertAlmostEqual(contribution2_1.experience_bf,17983/31200, 5)
+
+    def test_calculate_boosting_factor_with_skips(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=tag.project)
+        tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=tag.project)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag, total_commits=10,total_files=10,total_cloc=10)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=1, files=1,
+                                  cloc=1,
+                                  ownership_commits=0.1, ownership_files=0.1, ownership_cloc=0.1)
+        report3 = mommy.make(DirectoryReport, directory=directory, tag=tag3, total_commits=90, total_files=90,
+                            total_cloc=90)
+        contribution3_1 = mommy.make(IndividualContribution, author=dev, directory_report=report3,
+                                     commits=2, files=2, cloc=2,
+                                     ownership_commits=2/90, ownership_files=2/90, ownership_cloc=2/90)
+
+        # For one developer
+        self.assertAlmostEqual(contribution.experience, 0.1, 5)
+        self.assertAlmostEqual(contribution.experience_bf, 0.1, 5)
+
+        self.assertListEqual(contribution.commit_activity, [0.1])
+        self.assertEqual(len(contribution3_1.__all_previous_contributions__()),1)
+        self.assertListEqual(contribution3_1.commit_activity, [0.1, 0.0, 0.0125])
+        self.assertListEqual(contribution3_1.file_activity, [0.1,0.0,0.0125])
+        self.assertListEqual(contribution3_1.cloc_activity, [0.1,0.0,0.0125])
+
+        # For more than one tag
+        self.assertAlmostEqual(contribution3_1.bf_commit, 0.375, 5)
+        self.assertAlmostEqual(contribution3_1.bf_file, 0.375, 5)
+        self.assertAlmostEqual(contribution3_1.bf_cloc, 0.375, 5)
+
+        self.assertAlmostEqual(contribution3_1.commit_exp, 0.0515625, 5)
+        # self.assertEqual(len(contribution3_1.commit_activity), 3)
+        self.assertAlmostEqual(contribution3_1.experience, 0.0375, 5)
+        self.assertAlmostEqual(contribution3_1.experience_bf, 0.051563, 5)
+
+class DirectoryReportModelTests(TestCase):
+    def test_report_name(self):
+        tag = mommy.make(Tag, description='rel/1.1')
+        directory = mommy.make(Directory, name='src/main/apache')
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag)
+
+        self.assertEqual(report.__str__(), 'Tag: rel/1.1 - Directory: src/main/apache')
+
+    # mean
+    # standard deviation
+    # median
+    def test_statistics(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=tag.project)
+        tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=tag.project)
+        tag4 = mommy.make(Tag, description='rel/1.4', previous_tag=tag3, project=tag.project)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag, total_commits=10, total_files=10,
+                            total_cloc=10)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=1, files=1,
+                                  cloc=1,
+                                  ownership_commits=0.1, ownership_files=0.1, ownership_cloc=0.1)
+        contribution_ = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=1, files=1,
+                                  cloc=1,
+                                  ownership_commits=0.4, ownership_files=0.4, ownership_cloc=0.4)
+        contribution_2 = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=1, files=1,
+                                   cloc=1,
+                                   ownership_commits=0.3, ownership_files=0.3, ownership_cloc=0.3)
+
+        report3 = mommy.make(DirectoryReport, directory=directory, tag=tag3, total_commits=90, total_files=90,
+                             total_cloc=90)
+        contribution3_1 = mommy.make(IndividualContribution, author=dev, directory_report=report3,
+                                     commits=2, files=2, cloc=2,
+                                     ownership_commits=2 / 90, ownership_files=2 / 90, ownership_cloc=2 / 90)
+
+        report4 = mommy.make(DirectoryReport, directory=directory, tag=tag4, total_commits=120, total_files=120,
+                             total_cloc=120)
+        contribution4_1 = mommy.make(IndividualContribution, author=dev, directory_report=report4,
+                                     commits=3, files=3, cloc=3,
+                                     ownership_commits=3/120, ownership_files=3/120, ownership_cloc=3/120)
+
+        report.calculate_statistical_metrics()
+        report3.calculate_statistical_metrics()
+        report4.calculate_statistical_metrics()
+        self.assertAlmostEqual(report3.mean, 0.0515625, 5)
+        self.assertAlmostEqual(report3.median, 0.0515625, 5)
+        self.assertTrue(math.isnan(report3.standard_deviation))
+        self.assertAlmostEqual(report.mean, 0.266666667, 5)
+        self.assertAlmostEqual(report.median, 0.3, 5)
+        self.assertAlmostEqual(report.standard_deviation, 0.152752523, 5)
+
+        self.assertAlmostEqual(contribution.experience_bf, 0.1, 5)
+        self.assertAlmostEqual(contribution_.experience_bf, 0.4, 5)
+        self.assertAlmostEqual(contribution_2.experience_bf, 0.3, 5)
+        self.assertAlmostEqual(contribution3_1.experience_bf,0.0515625,5)
+
+        # self.assertAlmostEqual(contribution3_1.experience_bf, 0.049750434, 5)
+        self.assertAlmostEqual(contribution4_1.experience_bf, 0.049750434, 5)
+
+    def test_lists(self):
+        dev = mommy.make(Developer, name='Ricardo')
+        dev2 = mommy.make(Developer, name='Romulo')
+        dev3 = mommy.make(Developer, name='Renata')
+        dev4 = mommy.make(Developer, name='Daniela')
+        directory = mommy.make(Directory, name="src/main/apache")
+        tag = mommy.make(Tag, description='rel/1.1', previous_tag=None)
+        tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=tag.project)
+        tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=tag.project)
+        tag4 = mommy.make(Tag, description='rel/1.4', previous_tag=tag3, project=tag.project)
+        report = mommy.make(DirectoryReport, directory=directory, tag=tag, total_commits=10, total_files=10,
+                            total_cloc=10)
+        contribution = mommy.make(IndividualContribution, author=dev, directory_report=report, commits=1, files=1,
+                                  cloc=1,
+                                  ownership_commits=0.8, ownership_files=0.8, ownership_cloc=0.8)
+        contribution_ = mommy.make(IndividualContribution, author=dev2, directory_report=report, commits=1, files=1,
+                                   cloc=1,
+                                   ownership_commits=0.5, ownership_files=0.6, ownership_cloc=0.4)
+        contribution_2 = mommy.make(IndividualContribution, author=dev3, directory_report=report, commits=1, files=1,
+                                    cloc=1,
+                                    ownership_commits=0.003, ownership_files=0.003, ownership_cloc=0.003)
+        contribution_3 = mommy.make(IndividualContribution, author=dev4, directory_report=report, commits=1, files=1,
+                                    cloc=1,
+                                    ownership_commits=0.3, ownership_files=0.3, ownership_cloc=0.8)
+
+        # self.assertEqual(contribution_2.experience, 0)
+        # FIXME:
+        self.assertEqual(len(report.core_developers_experience),4)
+        # self.assertListEqual(report.core_developers_experience,[])
+        self.assertListEqual(report.peripheral_developers_experience,[])
+        self.assertAlmostEqual(report.experience, 0.8)
+        self.assertEqual(report.ownership, 0.8)
+        self.assertEqual(report.major, 3)
+        self.assertEqual(report.minor, 1)

@@ -1,4 +1,5 @@
 import re
+import warnings
 
 from django.db import models
 import numpy as np
@@ -6,6 +7,7 @@ import numpy as np
 # Create your models here.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from pandocfilters import OrderedList
 from pydriller import GitRepository
 
 from common.utils import CommitUtils
@@ -24,6 +26,10 @@ class Project(models.Model):
 
     def __str__(self):
         return self.project_name
+
+    @property
+    def first_tag(self):
+        return self.tags.all().first()
 
 class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
@@ -275,9 +281,9 @@ class ProjectIndividualContribution(models.Model):
                 project_report__tag_id=self.project_report.tag.previous_tag.id, author_id=self.author.id)
             if previous_individual_contribution.count() > 0:
                 previous_individual_contribution = previous_individual_contribution[0]
-                self.ownership_commits_in_this_tag = self.ownership_commits-previous_individual_contribution.ownership_commits
-                self.ownership_files_in_this_tag = self.ownership_files-previous_individual_contribution.ownership_files
-                self.ownership_cloc_in_this_tag = self.ownership_cloc-previous_individual_contribution.ownership_cloc
+                self.ownership_commits_in_this_tag = abs(self.ownership_commits-previous_individual_contribution.ownership_commits)
+                self.ownership_files_in_this_tag = abs(self.ownership_files-previous_individual_contribution.ownership_files)
+                self.ownership_cloc_in_this_tag = abs(self.ownership_cloc-previous_individual_contribution.ownership_cloc)
 
         denominator=1
 
@@ -357,14 +363,16 @@ class ProjectReport(models.Model):
         return "Project tag: " + self.tag.description
 
     def calculate_statistical_metrics(self):
-        experiences = [c.experience for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))]
+        experiences = [c.experience_bf for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))]
         interval = np.array(experiences)
-        if interval.any():
-            self.experience_threshold = np.percentile(interval, 80)
-        self.standard_deviation = np.std(experiences, ddof=1)
-        self.mean = np.mean(experiences)
-        self.median = np.median(experiences)
-        self.save()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            if interval.any():
+                self.experience_threshold = np.percentile(interval, 80)
+            self.standard_deviation = np.std(experiences, ddof=1)
+            self.mean = np.mean(experiences)
+            self.median = np.median(experiences)
+            self.save()
 
     @property
     def core_developers_experience(self):
@@ -382,28 +390,31 @@ class ProjectReport(models.Model):
     def peripheral_developers_experience(self):
         peripheral_developers = []
         contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+        if len(contributions) == 1:
+            return  peripheral_developers
         for contributor in contributions:
             if contributor.experience <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
         return peripheral_developers
 
+    # Experience with boosting factor
     @property
     def experience(self):
         higher_value = -1.0
         contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
         for contributor in contributions:
-            if contributor.experience >= higher_value:
-                higher_value = contributor.experience
+            if contributor.experience_bf >= higher_value:
+                higher_value = contributor.experience_bf
         return higher_value
 
-    @property
-    def abs_experience(self):
-        higher_value = -1.0
-        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
-        for contributor in contributions:
-            if contributor.abs_experience >= higher_value:
-                higher_value = contributor.abs_experience
-        return higher_value
+    # @property
+    # def abs_experience(self):
+    #     higher_value = -1.0
+    #     contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
+    #     for contributor in contributions:
+    #         if contributor.abs_experience >= higher_value:
+    #             higher_value = contributor.abs_experience
+    #     return higher_value
 
     @property
     def ownership(self):
@@ -435,21 +446,18 @@ class ProjectReport(models.Model):
 class IndividualContribution(models.Model):
     author = models.ForeignKey(Developer, on_delete=models.DO_NOTHING)
     directory_report = models.ForeignKey('DirectoryReport', on_delete=models.DO_NOTHING)
+    previous_individual_contribution = models.ForeignKey('IndividualContribution', on_delete=models.DO_NOTHING, null=True, default=None)
     cloc = models.IntegerField(null=True, default=0)
     files = models.IntegerField(null=True, default=0)
     commits = models.IntegerField(null=True, default=0)
     ownership_cloc = models.FloatField(null=True, default=0.0)
-    ownership_cloc_in_this_tag = models.FloatField(null=True, default=0.0)
     cloc_exp = models.FloatField(null=True, default=0.0)
     ownership_files = models.FloatField(null=True, default=0.0)
-    ownership_files_in_this_tag = models.FloatField(null=True, default=0.0)
     file_exp = models.FloatField(null=True, default=0.0)
     ownership_commits = models.FloatField(null=True, default=0.0)
-    ownership_commits_in_this_tag = models.FloatField(null=True, default=0.0)
     commit_exp = models.FloatField(null=True, default=0.0)
     experience = models.FloatField(null=True, default=0.0)
     experience_bf = models.FloatField(null=True, default=0.0)
-    abs_experience = models.FloatField(null=True, default=0.0)
     bf_commit = models.FloatField(null=True, default=0.0)
     bf_file = models.FloatField(null=True, default=0.0)
     bf_cloc = models.FloatField(null=True, default=0.0)
@@ -458,6 +466,67 @@ class IndividualContribution(models.Model):
         return "Author: " + self.author.name + " - Directory: " + \
                self.directory_report.directory.name + " - Experience: " + \
                str(self.experience) + " - Tag: " + self.directory_report.tag.description
+
+    def ownership_in_this_tag(self, metric):
+        try:
+            if self.previous_individual_contribution:
+                total_metric = "total_" + metric
+                commit_in_this_tag = getattr(self, metric) - getattr(self.previous_individual_contribution, metric)
+                total_commit_in_this_tag = getattr(self.directory_report, total_metric) - getattr(self.previous_individual_contribution.directory_report, total_metric)
+                return commit_in_this_tag/total_commit_in_this_tag
+        except ZeroDivisionError:
+            return 0.0
+        return getattr(self, 'ownership_'+metric)
+
+    @property
+    def ownership_commits_in_this_tag(self):
+        return self.ownership_in_this_tag("commits")
+
+    @property
+    def ownership_files_in_this_tag(self):
+        return self.ownership_in_this_tag("files")
+
+    @property
+    def ownership_cloc_in_this_tag(self):
+        return self.ownership_in_this_tag("cloc")
+
+    def __all_previous_contributions__(self):
+        contributions = []
+        previous_contribution = self.previous_individual_contribution
+        while previous_contribution is not None:
+            contributions.append(previous_contribution)
+            previous_contribution = previous_contribution.previous_individual_contribution
+        if len(contributions) > 0:
+            contributions.sort(key=lambda x: x.id, reverse=False)
+        return contributions
+
+    def metric_activity(self, metric):
+        attribute_ = 'ownership_'+metric+'_in_this_tag'
+        contributions = self.__all_previous_contributions__()
+        extra_values = []
+        # whether there is any contribution in this directory from other authors
+        # It means that is not a new directory, so we have to count all period
+        if len(contributions) > 0:
+            right_length = self.directory_report.tag.id - contributions[0].directory_report.tag.id + 1
+            right_length -= len(contributions)
+            for i in range(1, right_length):
+                extra_values.append(0.0)
+        metric_actitivy_array = [getattr(i, attribute_) for i in contributions]
+        metric_actitivy_array = metric_actitivy_array + extra_values
+        metric_actitivy_array.append(getattr(self, attribute_))
+        return metric_actitivy_array
+
+    @property
+    def commit_activity(self):
+        return self.metric_activity('commits')
+
+    @property
+    def file_activity(self):
+        return self.metric_activity('files')
+
+    @property
+    def cloc_activity(self):
+        return self.metric_activity('cloc')
 
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:
@@ -476,47 +545,18 @@ class IndividualContribution(models.Model):
             return 0.0
 
     def save(self, *args, **kwargs):
-        self.ownership_commits_in_this_tag = self.ownership_commits
-        self.ownership_files_in_this_tag = self.ownership_files
-        self.ownership_cloc_in_this_tag = self.ownership_cloc
-        total_commits = 0
-        total_files = 0
-        total_cloc = 0
         if self.directory_report.tag.previous_tag:
-            previous_individual_contribution = IndividualContribution.objects.filter(directory_report__directory_id=self.directory_report.directory.id, directory_report__tag_id=self.directory_report.tag.previous_tag.id, author_id=self.author.id)
-            commits_in_this_tag = self.commits
-            files_in_this_tag = self.files
-            cloc_in_this_tag = self.cloc
+            previous_individual_contribution = IndividualContribution.objects.filter(
+                directory_report__directory_id=self.directory_report.directory.id,
+                directory_report__tag_id__lte=self.directory_report.tag.previous_tag.id,
+                author_id=self.author.id).order_by("-directory_report__tag_id")
             if previous_individual_contribution.count() > 0:
                 previous_individual_contribution = previous_individual_contribution[0]
-                commits_in_this_tag = commits_in_this_tag - previous_individual_contribution.commits
-                files_in_this_tag = files_in_this_tag - previous_individual_contribution.files
-                cloc_in_this_tag = cloc_in_this_tag - previous_individual_contribution.cloc
-                total_commits = previous_individual_contribution.directory_report.total_commits
-                total_files = previous_individual_contribution.directory_report.total_files
-                total_cloc = previous_individual_contribution.directory_report.total_cloc
-            else:
-                directory_report = DirectoryReport.objects.filter(directory_id=self.directory_report.directory.id,
-                                               tag_id=self.directory_report.tag.previous_tag.id)
-                if directory_report.count() > 0:
-                    directory_report = directory_report[0]
-                    total_commits = directory_report.total_commits
-                    total_files = directory_report.total_files
-                    total_cloc = directory_report.total_cloc
+                self.previous_individual_contribution=previous_individual_contribution
 
-            total_commits_in_this_tag = self.directory_report.total_commits - total_commits
-            total_files_in_this_tag = self.directory_report.total_files - total_files
-            total_cloc_in_this_tag = self.directory_report.total_cloc - total_cloc
-            try:
-                self.ownership_commits_in_this_tag = commits_in_this_tag/total_commits_in_this_tag
-                self.ownership_files_in_this_tag = files_in_this_tag/total_files_in_this_tag
-                self.ownership_cloc_in_this_tag = cloc_in_this_tag/total_cloc_in_this_tag
-            except ZeroDivisionError:
-                self.ownership_commits_in_this_tag = 0.0
-                self.ownership_files_in_this_tag = 0.0
-                self.ownership_cloc_in_this_tag = 0.0
-
-        first_tag_id = Tag.objects.filter(project_id=self.directory_report.directory.project.id).first().id
+        # Verify
+        # ProjectReport.objects.filter(tag__project_id=self.project_report.tag.project.id).first().tag.id
+        first_tag_id = Tag.objects.filter(project_id=self.directory_report.tag.project.id).first().id
         current_tag_id = self.directory_report.tag.id
         if current_tag_id == first_tag_id:
             self.commit_exp = self.ownership_commits
@@ -525,36 +565,9 @@ class IndividualContribution(models.Model):
             self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
             self.experience = self.experience_bf
         else:
-            tag_ids = list(range(first_tag_id,current_tag_id))
-
-            contributions = IndividualContribution.objects.filter(directory_report__directory_id=self.directory_report.directory.id, directory_report__tag_id__in=tag_ids, author_id=self.author.id)
-
-            first_tag__in_contributions_id = contributions.first().directory_report.tag.id if contributions else current_tag_id
-
-            extra_values = []
-            # whether there is any contribution in this directory from other authors
-            # It means that is not a new directory, so we have to count all period
-            first_report = DirectoryReport.objects.filter(tag_id__lt=current_tag_id, directory_id=self.directory_report.directory.id).order_by("tag_id").first()
-            if first_report:
-                i=len(contributions)
-                if current_tag_id-i>1:
-                    for i in range(0,current_tag_id-(first_report.tag.id+len(contributions))):
-                        extra_values.append(0.0)
-
-            contributions = list(contributions)
-            contributions.append(self)
-
-            commit_activity = [i.ownership_commits_in_this_tag for i in contributions]
-            commit_activity = commit_activity + extra_values
-
-            file_activity = [i.ownership_files_in_this_tag for i in contributions]
-            file_activity = file_activity + extra_values
-            # file_activity.append(self.ownership_files)
-            #
-            cloc_activity = [i.ownership_cloc_in_this_tag for i in contributions]
-            cloc_activity = cloc_activity + extra_values
-            # cloc_activity.append(self.ownership_cloc)
-
+            commit_activity = self.metric_activity("commits")
+            file_activity = self.metric_activity("files")
+            cloc_activity = self.metric_activity("cloc")
 
             # commit activity
             self.bf_commit = self.calculate_boosting_factor(commit_activity)
@@ -562,19 +575,16 @@ class IndividualContribution(models.Model):
             self.bf_file = self.calculate_boosting_factor(file_activity)
             # cloc_activity
             self.bf_cloc = self.calculate_boosting_factor(cloc_activity)
-            # denominator = len(contributions)+1 if len(contributions) != 0 else 1
 
-            # denominator = current_tag_id-first_tag__in_contributions_id
-            # denominator = denominator + 1
-            denominator = len(contributions) + len(extra_values)
-            # self.commit_exp = (self.bf_commit + 1)*(sum(commit_activity)/denominator)
-            self.commit_exp = (self.bf_commit + 1) * self.ownership_commits
-            self.file_exp = (self.bf_file + 1)*self.ownership_files
-            self.cloc_exp = (self.bf_cloc + 1)*self.ownership_cloc
+            denominator = len(commit_activity)
+            self.commit_exp = (self.bf_commit + 1)*(sum(commit_activity)/denominator)
+            # self.commit_exp = (self.bf_commit + 1) * self.ownership_commits/denominator
+            self.file_exp = (self.bf_file + 1)*(sum(file_activity)/denominator)
+            self.cloc_exp = (self.bf_cloc + 1)*(sum(cloc_activity)/denominator)
             self.experience_bf = 0.4*self.commit_exp + 0.4*self.file_exp + 0.2*self.cloc_exp
-            self.experience = 0.4*self.ownership_commits + 0.4*self.ownership_files + 0.2*self.ownership_cloc
+            self.experience = 0.4*(sum(commit_activity)/denominator) + 0.4*(sum(file_activity)/denominator) + 0.2*(sum(cloc_activity)/denominator)
 
-            # self.directory_report.experience_threshold
+        # self.directory_report.experience_threshold
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class DirectoryReport(models.Model):
@@ -596,14 +606,16 @@ class DirectoryReport(models.Model):
         return "Tag: " + self.tag.description + " - Directory: " + self.directory.name
 
     def calculate_statistical_metrics(self):
-        experiences = [c.experience for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]
+        experiences = [c.experience_bf for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]
         interval = np.array(experiences)
-        if interval.any():
-            self.experience_threshold = np.percentile(interval, 80)
-        self.standard_deviation = np.std(experiences, ddof=1)
-        self.mean = np.mean(experiences)
-        self.median = np.median(experiences)
-        self.save()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            if interval.any():
+                self.experience_threshold = np.percentile(interval, 80)
+            self.standard_deviation = np.std(experiences, ddof=1)
+            self.mean = np.mean(experiences)
+            self.median = np.median(experiences)
+            self.save()
 
     @property
     def core_developers_experience(self):
@@ -621,6 +633,8 @@ class DirectoryReport(models.Model):
     def peripheral_developers_experience(self):
         peripheral_developers = []
         contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+        if len(contributions) == 1:
+            return  peripheral_developers
         for contributor in contributions:
             if contributor.experience <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
@@ -635,14 +649,14 @@ class DirectoryReport(models.Model):
                 higher_value = contributor.experience
         return higher_value
 
-    @property
-    def abs_experience(self):
-        higher_value = -1.0
-        contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
-        for contributor in contributions:
-            if contributor.abs_experience >= higher_value:
-                higher_value = contributor.abs_experience
-        return higher_value
+    # @property
+    # def abs_experience(self):
+    #     higher_value = -1.0
+    #     contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
+    #     for contributor in contributions:
+    #         if contributor.abs_experience >= higher_value:
+    #             higher_value = contributor.abs_experience
+    #     return higher_value
 
     @property
     def ownership(self):
@@ -674,7 +688,7 @@ class DirectoryReport(models.Model):
 
 
 
-
+# FIXME: Test technical debt
 class TransientModel(models.Model):
     """Inherit from this class to use django constructors and serialization but no database management"""
     def save(*args, **kwargs):
@@ -742,6 +756,7 @@ class Contributor(TransientModel):
         except ZeroDivisionError:
             return 0.0
 
+# FIXME: Test technical debt
 class ContributionByAuthorReport(TransientModel):
     abstract = True  # no table for this class
     managed = False  # no database management
@@ -942,7 +957,7 @@ class ContributionByAuthorReport(TransientModel):
     def previous_total_cloc(self):
         return self.previous_total_cloc
 
-
+# FIXME: Test technical debt
 class MetricsReport(TransientModel):
     abstract = True  # no table for this class
     managed = False  # no database management
@@ -977,6 +992,7 @@ class MetricsReport(TransientModel):
     def empty(self, empty):
         self._empty = empty
 
+# FIXME: Test technical debt
 # method for updating
 @receiver(post_save, sender=Commit, dispatch_uid="update_commit")
 def update_commit(sender, instance, **kwargs):
@@ -988,7 +1004,7 @@ def update_commit(sender, instance, **kwargs):
             parent.children_commit = instance
             parent.save()
 
-
+# FIXME: Test technical debt
 def count_uncommented_lines(code):
     total_lines = code.count('\n')
     commented_lines = 0
@@ -1021,6 +1037,7 @@ def count_uncommented_lines(code):
         uncommented_lines -= blank_lines
     return 0 if uncommented_lines < 0 else uncommented_lines
 
+# FIXME: Test technical debt
 def count_blank_lines(code):
     blank_lines = 0
     lines = code.split('\n')
