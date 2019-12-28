@@ -617,6 +617,7 @@ class DirectoryReport(models.Model):
             self.median = np.median(experiences)
             self.save()
 
+    # FIXME: experience_bf ? fix tests
     @property
     def core_developers_experience(self):
         core_developers = []
@@ -629,6 +630,7 @@ class DirectoryReport(models.Model):
                 core_developers.append(contributor.author)
         return core_developers
 
+    # FIXME: experience_bf ? fix tests
     @property
     def peripheral_developers_experience(self):
         peripheral_developers = []
@@ -640,6 +642,7 @@ class DirectoryReport(models.Model):
                 peripheral_developers.append(contributor.author)
         return peripheral_developers
 
+    # FIXME: experience_bf ? fix tests
     @property
     def experience(self):
         higher_value = -1.0
@@ -648,15 +651,6 @@ class DirectoryReport(models.Model):
             if contributor.experience >= higher_value:
                 higher_value = contributor.experience
         return higher_value
-
-    # @property
-    # def abs_experience(self):
-    #     higher_value = -1.0
-    #     contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id))
-    #     for contributor in contributions:
-    #         if contributor.abs_experience >= higher_value:
-    #             higher_value = contributor.abs_experience
-    #     return higher_value
 
     @property
     def ownership(self):
