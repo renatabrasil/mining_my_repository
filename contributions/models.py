@@ -272,14 +272,22 @@ class ProjectIndividualContribution(models.Model):
 
     def ownership_in_this_tag(self, metric):
         try:
+            first_project_report = ProjectReport.objects.filter(tag__project=self.project_report.tag.project).order_by(
+                "pk").first()
+            total_metric = "total_" + metric
+            commit_in_this_tag = getattr(self, metric)
+            total_commit_in_this_tag = 0
             if self.previous_individual_contribution:
-                total_metric = "total_" + metric
-                commit_in_this_tag = getattr(self, metric) - getattr(self.previous_individual_contribution, metric)
+                commit_in_this_tag -= getattr(self.previous_individual_contribution, metric)
                 total_commit_in_this_tag = getattr(self.project_report, total_metric) - getattr(self.previous_individual_contribution.project_report, total_metric)
-                return commit_in_this_tag/total_commit_in_this_tag
+            elif self.project_report.tag.id > first_project_report.tag.id:
+                total_commit_in_this_tag = getattr(self.project_report, total_metric) - getattr(first_project_report, total_metric)
+            else:
+                return getattr(self, 'ownership_' + metric)
+            return commit_in_this_tag / total_commit_in_this_tag
         except ZeroDivisionError:
             return 0.0
-        return getattr(self, 'ownership_'+metric)
+
 
     @property
     def ownership_commits_in_this_tag(self):
@@ -309,11 +317,11 @@ class ProjectIndividualContribution(models.Model):
         extra_values = []
         # whether there is any contribution in this directory from other authors
         # It means that is not a new directory, so we have to count all period
-        if len(contributions) > 0:
-            right_length = self.project_report.tag.id - contributions[0].project_report.tag.id + 1
-            right_length -= len(contributions)
-            for i in range(1, right_length):
-                extra_values.append(0.0)
+        # if len(contributions) > 0:
+        first_tag_in_this_project = ProjectReport.objects.filter(tag__project_id=self.project_report.tag.project.id).order_by("pk").first().tag.id
+        right_length = self.project_report.tag.id - first_tag_in_this_project + 1 - len(contributions)
+        for i in range(1, right_length):
+            extra_values.append(0.0)
         metric_actitivy_array = [getattr(i, attribute_) for i in contributions]
         metric_actitivy_array = metric_actitivy_array + extra_values
         metric_actitivy_array.append(getattr(self, attribute_))
@@ -405,6 +413,10 @@ class ProjectReport(models.Model):
 
     def __str__(self):
         return "Project tag: " + self.tag.description
+
+    @classmethod
+    def first_project_report(cls):
+        return ProjectReport.objects.filter(tag__project_id=cls.tag.project.id).order_by("id").first()
 
     def calculate_statistical_metrics(self):
         experiences = [c.experience_bf for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))]
@@ -501,14 +513,23 @@ class IndividualContribution(models.Model):
 
     def ownership_in_this_tag(self, metric):
         try:
+            first_directory_report = DirectoryReport.objects.filter(tag__project=self.directory_report.tag.project,
+                                                                    directory=self.directory_report.directory).\
+                                                                    order_by("pk").first()
+            total_metric = "total_" + metric
+            commit_in_this_tag = getattr(self, metric)
+            total_commit_in_this_tag = 0
             if self.previous_individual_contribution:
-                total_metric = "total_" + metric
-                commit_in_this_tag = getattr(self, metric) - getattr(self.previous_individual_contribution, metric)
+                commit_in_this_tag -= getattr(self.previous_individual_contribution, metric)
                 total_commit_in_this_tag = getattr(self.directory_report, total_metric) - getattr(self.previous_individual_contribution.directory_report, total_metric)
-                return commit_in_this_tag/total_commit_in_this_tag
+            elif self.directory_report.tag.id > first_directory_report.tag.id:
+                total_commit_in_this_tag = getattr(self.directory_report, total_metric) - getattr(first_directory_report,
+                                                                                                total_metric)
+            else:
+                return getattr(self, 'ownership_' + metric)
+            return commit_in_this_tag/total_commit_in_this_tag
         except ZeroDivisionError:
             return 0.0
-        return getattr(self, 'ownership_'+metric)
 
     @property
     def ownership_commits_in_this_tag(self):
@@ -538,11 +559,11 @@ class IndividualContribution(models.Model):
         extra_values = []
         # whether there is any contribution in this directory from other authors
         # It means that is not a new directory, so we have to count all period
-        if len(contributions) > 0:
-            right_length = self.directory_report.tag.id - contributions[0].directory_report.tag.id + 1
-            right_length -= len(contributions)
-            for i in range(1, right_length):
-                extra_values.append(0.0)
+        first_tag_in_this_project = DirectoryReport.objects.filter(tag__project_id=self.directory_report.tag.project.id,
+                                                                   directory=self.directory_report.directory).order_by("pk").first().tag.id
+        right_length = self.directory_report.tag.id - first_tag_in_this_project + 1 - len(contributions)
+        for i in range(1, right_length):
+            extra_values.append(0.0)
         metric_actitivy_array = [getattr(i, attribute_) for i in contributions]
         metric_actitivy_array = metric_actitivy_array + extra_values
         metric_actitivy_array.append(getattr(self, attribute_))
@@ -636,6 +657,11 @@ class DirectoryReport(models.Model):
 
     def __str__(self):
         return "Tag: " + self.tag.description + " - Directory: " + self.directory.name
+
+    @classmethod
+    def first_directory_report(cls):
+        return DirectoryReport.objects.filter(tag__project_id=cls.tag.project.id,
+                                              directory=cls.directory).order_by("id").first()
 
     def calculate_statistical_metrics(self):
         experiences = [c.experience_bf for c in list(IndividualContribution.objects.filter(directory_report_id=self.id))]

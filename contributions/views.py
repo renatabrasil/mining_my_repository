@@ -606,10 +606,7 @@ def process_commits_by_project(request, commits):
            if not contribution_repo:
                contribution_repo = ProjectIndividualContribution(author=author, project_report=project_report,
                                                                  cloc=author_report.loc_count, files=author_report.file_count,
-                                                                 commits=author_report.commit_count,
-                                                                 ownership_cloc=author_report.loc_percentage,
-                                                                 ownership_files=author_report.file_percentage,
-                                                                 ownership_commits=author_report.commit_percentage)
+                                                                 commits=author_report.commit_count)
                contribution_repo.save()
            else:
                contribution_repo = contribution_repo[0]
@@ -641,8 +638,8 @@ def process_commits_by_author(developer_id):
                     answer[directory_report.directory].setdefault(Tag.objects.get(pk=i), metrics)
                     i = i + 1
 
-        metrics = MetricsReport(contribution.ownership_commits, contribution.ownership_files,
-                                                                    contribution.ownership_cloc,
+        metrics = MetricsReport(contribution.ownership_commits_in_this_tag, contribution.ownership_files_in_this_tag,
+                                                                    contribution.ownership_cloc_in_this_tag,
                                                                     contribution.bf_commit, contribution.bf_file,
                                                                     contribution.bf_cloc,
                                                                     contribution.commit_exp, contribution.file_exp,

@@ -81,8 +81,8 @@ class ArchitectureQualityMetricsModelTests(TestCase):
         # met.save()
         #
         # self.assertEqual(mm.metrics.all()[2], '')
-        self.assertEqual(kid.architectural_metrics.all(), '')
-        self.assertEqual(commit.modifications.all(), '')
+        # self.assertEqual(kid.architectural_metrics.all(), '')
+        # self.assertEqual(commit.modifications.all(), '')
         # self.assertEqual(len(modification.commit.modifications.all()), 1)
         # self.assertEqual(len(modification2.commit.modifications.all()),1)
         # self.assertEqual(commit.cloc_uncommented(directory),0)
