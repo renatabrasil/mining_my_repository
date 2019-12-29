@@ -1,5 +1,6 @@
 import re
 import warnings
+from datetime import date
 
 from django.db import models
 import numpy as np
@@ -7,7 +8,6 @@ import numpy as np
 # Create your models here.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from pandocfilters import OrderedList
 from pydriller import GitRepository
 
 from common.utils import CommitUtils
@@ -50,13 +50,13 @@ class Directory(models.Model):
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
-    hash = models.CharField(max_length=180)
-    msg = models.CharField(max_length=300)
+    hash = models.CharField(max_length=180,default="")
+    msg = models.CharField(max_length=300,default="")
+    parents_str = models.CharField(max_length=180)
     author = models.ForeignKey(Developer, related_name='author_id', on_delete=models.CASCADE)
-    author_date = models.DateField()
+    author_date = models.DateField(default=date.today)
     committer = models.ForeignKey(Developer, related_name='committer_id', on_delete=models.CASCADE)
-    committer_date = models.DateField()
-    parents_str = models.CharField(max_length=300)
+    committer_date = models.DateField(default=date.today)
     _parents = []
 
     def __str__(self):
@@ -82,9 +82,6 @@ class Commit(models.Model):
     @parents.setter
     def parents(self,list):
         self._parents=list
-
-    # def __eq__(self, other):
-    # 	return isinstance(other, self.__class__) and self.hash == other.hash
 
     @property
     def number_of_java_files(self):
@@ -239,11 +236,8 @@ class ProjectIndividualContribution(models.Model):
     cloc = models.IntegerField(null=True, default=0)
     files = models.IntegerField(null=True, default=0)
     commits = models.IntegerField(null=True, default=0)
-    ownership_cloc = models.FloatField(null=True, default=0.0)
     cloc_exp = models.FloatField(null=True, default=0.0)
-    ownership_files = models.FloatField(null=True, default=0.0)
     file_exp = models.FloatField(null=True, default=0.0)
-    ownership_commits = models.FloatField(null=True, default=0.0)
     commit_exp = models.FloatField(null=True, default=0.0)
     experience = models.FloatField(null=True, default=0.0)
     experience_bf = models.FloatField(null=True, default=0.0)
@@ -256,6 +250,26 @@ class ProjectIndividualContribution(models.Model):
 
     # Duplicated code
     ####
+    def ownership(self, metric):
+        try:
+            total_metric = getattr(self.project_report,"total_" + metric)
+            count = getattr(self, metric)
+            return count / total_metric
+        except ZeroDivisionError:
+            return 0.0
+
+    @property
+    def ownership_commits(self):
+        return self.ownership('commits')
+
+    @property
+    def ownership_files(self):
+        return self.ownership('files')
+
+    @property
+    def ownership_cloc(self):
+        return self.ownership('cloc')
+
     def ownership_in_this_tag(self, metric):
         try:
             if self.previous_individual_contribution:
@@ -393,7 +407,7 @@ class ProjectReport(models.Model):
         return "Project tag: " + self.tag.description
 
     def calculate_statistical_metrics(self):
-        experiences = [c.experience_bf for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))]
+        experiences = [c.experience_bf for c in list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))]
         interval = np.array(experiences)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -421,7 +435,7 @@ class ProjectReport(models.Model):
         peripheral_developers = []
         contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))
         if len(contributions) == 1:
-            return  peripheral_developers
+            return peripheral_developers
         for contributor in contributions:
             if contributor.experience <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
@@ -430,13 +444,8 @@ class ProjectReport(models.Model):
     # Experience with boosting factor
     @property
     def experience(self):
-        higher_value = -1.0
-        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id))
-        for contributor in contributions:
-            if contributor.experience_bf >= higher_value:
-                higher_value = contributor.experience_bf
-        return higher_value
-
+        contributions = list(ProjectIndividualContribution.objects.filter(project_report_id=self.id).order_by("-experience_bf"))
+        return contributions[0].experience_bf if len(contributions) > 0 else 0
 
     @property
     def ownership(self):
@@ -465,6 +474,7 @@ class ProjectReport(models.Model):
                 major = major + 1
         return major
 
+# FIXME Tests and model removing ownership. Similar to ProjectIndividualContribution
 class IndividualContribution(models.Model):
     author = models.ForeignKey(Developer, on_delete=models.CASCADE)
     directory_report = models.ForeignKey('DirectoryReport', on_delete=models.CASCADE)
@@ -667,12 +677,8 @@ class DirectoryReport(models.Model):
     # FIXME: experience_bf ? fix tests
     @property
     def experience(self):
-        higher_value = -1.0
         contributions = list(IndividualContribution.objects.filter(directory_report_id=self.id).order_by("-experience_bf"))
-        for contributor in contributions:
-            if contributor.experience >= higher_value:
-                higher_value = contributor.experience
-        return higher_value
+        return contributions[0].experience_bf if len(contributions) > 0 else 0
 
     @property
     def ownership(self):
