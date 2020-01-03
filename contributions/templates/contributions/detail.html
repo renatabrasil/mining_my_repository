@@ -7,8 +7,12 @@
 <div class="table-responsive">
     <table class="table table-striped table-sm">
         <tr>
+            <th style="text-align: right">Tag:</th>
+            <td colspan="2">{{commit.tag.description}}</td>
+        </tr>
+        <tr>
             <th style="text-align: right">Autor:</th>
-            <td colspan="2">{{commit.author.name}}</td>
+            <td colspan="2">{{commit.author.name}} - Moment Experience: {{commit.author_experience|floatformat:2}}</td>
         </tr>
         <tr>
             <th style="text-align: right">Committer:</th>

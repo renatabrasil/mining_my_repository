@@ -54,13 +54,49 @@ class Commit(models.Model):
     msg = models.CharField(max_length=300,default="")
     parents_str = models.CharField(max_length=180)
     author = models.ForeignKey(Developer, related_name='author_id', on_delete=models.CASCADE)
+    author_experience = models.FloatField(null=True, default=0.0)
     author_date = models.DateField(default=date.today)
     committer = models.ForeignKey(Developer, related_name='committer_id', on_delete=models.CASCADE)
     committer_date = models.DateField(default=date.today)
     _parents = []
+    # author many to many file -> u.cloc
+
 
     def __str__(self):
         return self.hash + " - Author: " + self.author.name
+
+    def calculate_boosting_factor(self,activity_array):
+        if not activity_array or len(activity_array) == 1:
+            return 0.0
+        mean_value = np.mean(activity_array)
+        min_value = np.min(activity_array)
+        max_value = np.max(activity_array)
+
+        numerator = (mean_value - min_value)
+
+        if numerator == 0.0:
+            return 0.0
+        try:
+            return numerator / (max_value - min_value)
+        except ZeroDivisionError:
+            return 0.0
+
+    # def author_experience(self):
+        # experience = 0.0
+        # commits = Commit.objects.filter(pk__lt=self.pk, author=self.author)
+        # files = 0
+        # cloc = 0
+        # files_edited = set([])
+        # cloc_activity = [c.u_cloc for c in commits]
+        # cloc = sum(cloc_activity)
+        # bf_cloc = self.calculate_boosting_factor(cloc_activity)
+        # for commit in commits:
+        #     # cloc += commit.u_cloc
+        #     mod_file = set([mod.file for mod in commit.modifications.all()])
+        #     files += (len(mod_file) - len(files_edited.intersection(mod_file)))
+        #     files_edited.update(mod_file)
+        # experience = 0.2*len(commits) + 0.4*files + 0.4*((1+bf_cloc)*(cloc/len(cloc_activity)))
+        # return experience
 
     def has_files_in_this_directory(self, directory):
         for mod in self.modifications.all():
@@ -111,6 +147,25 @@ class Commit(models.Model):
             if mod.directory == directory:
                 cloc += mod.u_cloc
         return cloc
+
+    def save(self, *args, **kwargs):
+        self.author_experience= 0.0
+        commits = Commit.objects.filter(author=self.author)
+        files = 0
+        cloc = 0
+        files_edited = set([])
+        cloc_activity = [c.u_cloc for c in commits]
+        cloc = sum(cloc_activity)
+        bf_cloc = self.calculate_boosting_factor(cloc_activity)
+        for commit in commits:
+            # cloc += commit.u_cloc
+            mod_file = set([mod.file for mod in commit.modifications.all()])
+            files += (len(mod_file) - len(files_edited.intersection(mod_file)))
+            files_edited.update(mod_file)
+
+        self.author_experience = 0.2 * len(commits) + 0.4 * files + 0.4 * ((1 + bf_cloc) * (cloc / len(cloc_activity)))
+
+        super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class Modification(models.Model):
