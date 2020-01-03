@@ -455,9 +455,8 @@ def process_commits_by_directories(request,commits):
            directories_report.append(directory_report[0])
 
    if forced_refresh or report:
-
+       files = []
        for commit in commits:
-           number_of_files = 0
            if commit.u_cloc > 0:
                for modification in commit.modifications.all():
                    if modification.u_cloc > 0 and modification.is_java_file:
@@ -472,9 +471,14 @@ def process_commits_by_directories(request,commits):
                                report[modification.directory].commits_by_author[commit.author].total_commit += 1
                            # to avoid duplicate (should be fixed soon)
                            if modification not in review_modification:
-                               report[modification.directory].commits_by_author[commit.author].file_count += 1
-                               report[modification.directory].commits_by_author[commit.author].total_file += 1
-                               report[modification.directory].commits_by_author[commit.author].files.append(modification)
+                               if modification.file not in report[modification.directory].commits_by_author[commit.author].files:
+                                   report[modification.directory].commits_by_author[commit.author].file_count += 1
+                                   report[modification.directory].commits_by_author[commit.author].files.append(
+                                       modification.file)
+                                   report[modification.directory].commits_by_author[commit.author].total_file += 1
+                               if modification.file not in files:
+                                   # report[modification.directory].commits_by_author[commit.author].total_file += 1
+                                   files.append(modification.file)
                                report[modification.directory].commits_by_author[commit.author].loc_count += modification.u_cloc
                                report[modification.directory].commits_by_author[commit.author].total_loc += modification.u_cloc
 
@@ -556,10 +560,8 @@ def process_commits_by_project(request, commits):
            project_report__in=ProjectReport.objects.filter(tag_id=tag.id)).delete()
        ProjectReport.objects.filter(tag_id=tag.id).delete()
 
-   developers = set(Commit.objects.filter(tag_id=tag.pk).values_list("committer", flat=True))
    project_report = ProjectReport.objects.filter(tag_id=tag.pk)
    contributions = ProjectIndividualContribution.objects.filter(project_report__in=ProjectReport.objects.filter(tag_id=tag.id))
-   individual_contributions = set(contributions.values_list("author", flat=True))
 
    for developer in contributions:
        report.commits_by_author.setdefault(developer.author, None)
@@ -568,7 +570,7 @@ def process_commits_by_project(request, commits):
    total_java_files = 0
    total_loc = 0
    for commit in commits:
-       if commit.u_cloc > 0:
+       if commit.u_cloc > 0 and commit.number_of_java_files > 0:
            if not __author_is_in_project_report__(report, commit.author):
                if commit.author not in report.commits_by_author:
                    report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
@@ -576,8 +578,10 @@ def process_commits_by_project(request, commits):
                for modification in commit.modifications.all():
                    if modification.u_cloc > 0:
                        if modification.is_java_file:
-                           report.commits_by_author[commit.author].file_count += 1
-                           total_java_files += 1
+                           if modification.file not in report.commits_by_author[commit.author].files:
+                               report.commits_by_author[commit.author].file_count += 1
+                               total_java_files += 1
+                               report.commits_by_author[commit.author].files.append(modification.file)
                            report.commits_by_author[commit.author].loc_count += modification.u_cloc
                            total_loc += modification.u_cloc
                total_commits += 1

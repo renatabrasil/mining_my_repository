@@ -196,18 +196,18 @@ class ProjectIndividualContributionModelTests(TestCase):
 
 
         # FIXME: create tests where first tag is not id=1 and there some gaps between tags
-        self.assertAlmostEqual(project_report2.experience, 0.111363636, 5)
-        self.assertAlmostEqual(project_report2.experience_bf, 0.147045455, 5)
-        self.assertAlmostEqual(project_report3.experience, 0.147575758, 5)
-        self.assertAlmostEqual(project_report3.experience_bf, 0.207526548, 5)
+        self.assertAlmostEqual(project_report2.experience, 0.128181818, 5)
+        self.assertAlmostEqual(project_report2.experience_bf, 0.172272727, 5)
+        self.assertAlmostEqual(project_report3.experience, 0.158787879, 5)
+        self.assertAlmostEqual(project_report3.experience_bf, 0.229318829, 5)
 
         # Test when a developer starts to contribute later
         # self.assertListEqual(project_report3.commit_activity, [])
         self.assertAlmostEqual(project_report2_1.ownership_commits_in_this_tag, 0.018181818,5)
         self.assertAlmostEqual(project_report2_1.bf_commit, 0.5, 5)
         self.assertAlmostEqual(project_report2_1.commit_exp, 0.013636364, 5)
-        self.assertAlmostEqual(project_report2_1.experience, 0.146969697, 5)
-        self.assertAlmostEqual(project_report2_1.experience_bf, 0.220454545, 5)
+        self.assertAlmostEqual(project_report2_1.experience, 0.228484848, 5)
+        self.assertAlmostEqual(project_report2_1.experience_bf, 0.342727273, 5)
 
 class ProjectReportModelTests(TestCase):
     def test_project_report_name(self):

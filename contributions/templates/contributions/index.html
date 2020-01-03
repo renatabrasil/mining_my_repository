@@ -42,6 +42,7 @@
                     <th>hash</th>
                     <th style="text-align: center;">Tag</th>
                     <th style="text-align: center;" width="12%">files count</th>
+                    <th style="text-align: center;" width="12%">CLOC (no blank and commented lines)</th>
                     <th width="15%">Committer</th>
                     <th>Autor</th>
                 </tr>
@@ -56,7 +57,8 @@
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
                         <td style="text-align: center;">{{commit.tag.description}}</td>
                         <td style="text-align: center;">{{commit.number_of_java_files}}</td>
-                        <td nowrap>{{ commit.committer.name}} {{commit.nloc}}</td>
+                        <td style="text-align: center;">{{commit.u_cloc}}</td>
+                        <td nowrap>{{ commit.committer.name}} </td>
                         <td nowrap>{{ commit.author.name}}</td>
                     </tr>
                     <tr>

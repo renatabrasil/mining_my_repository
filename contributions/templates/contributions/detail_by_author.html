@@ -73,7 +73,7 @@
                 </td>
                 <td  style="text-align:center;border-right: 1px dashed #333;">
 
-                    {{infos|get:tag|get_field:'commit_exp'|percentage}}
+                    {{infos|get:tag|get_field:'commit_exp'|floatformat:3}}
 
                 </td>
                 {% elif infos|get:tag and infos|get:tag|get_field:'empty' %}
@@ -85,7 +85,7 @@
                 {% endif %}
                 {% endfor %}
         </tr>
-        <tr style="font-size: 0.9em;background-color: rgba(23,162,184, 0.2)">
+        <tr style="font-size: 0.9em;">
             <th>CFA</th>
             {% for tag in tags %}
                 {% if infos|get:tag and not infos|get:tag|get_field:'empty' %}
@@ -96,7 +96,7 @@
                     {{infos|get:tag|get_field:'bf_file'|floatformat:2}}
                 </td>
                 <td style="text-align:center;border-right: 1px dashed #333;">
-                    {{infos|get:tag|get_field:'file_exp'|percentage}}
+                    {{infos|get:tag|get_field:'file_exp'|floatformat:3}}
                 </td>
                 {% elif infos|get:tag and infos|get:tag|get_field:'empty' %}
                     <td colspan="3" style="text-align:center;border-right: 1px dashed #333;">-</td>
@@ -118,7 +118,7 @@
                     {{infos|get:tag|get_field:'bf_cloc'|floatformat:2}}
                 </td>
                 <td style="text-align:center;border-right: 1px dashed #333;">
-                    {{infos|get:tag|get_field:'cloc_exp'|percentage}}
+                    {{infos|get:tag|get_field:'cloc_exp'|floatformat:3}}
                 </td>
                 {% elif infos|get:tag and infos|get:tag|get_field:'empty' %}
                     <td colspan="3" style="text-align:center;border-right: 1px dashed #333;">-</td>
@@ -130,7 +130,7 @@
                 {% endfor %}
         </tr>
 
-        <tr class="bg-transparent" style="font-size: 0.9em">
+        <tr  style="font-size: 0.9em; background-color: rgba(23,162,184, 0.2)">
             <th>Exp</th>
             {% for tag in tags %}
                 {% if infos|get:tag and not infos|get:tag|get_field:'empty' %}

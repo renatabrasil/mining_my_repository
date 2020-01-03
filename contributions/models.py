@@ -372,7 +372,7 @@ class ProjectIndividualContribution(models.Model):
             self.commit_exp = self.ownership_commits
             self.file_exp = self.ownership_files
             self.cloc_exp = self.ownership_cloc
-            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
+            self.experience_bf = 0.2 * self.commit_exp + 0.4 * self.file_exp + 0.4 * self.cloc_exp
             self.experience = self.experience_bf
         else:
             commit_activity = self.metric_activity("commits")
@@ -391,9 +391,9 @@ class ProjectIndividualContribution(models.Model):
             # self.commit_exp = (self.bf_commit + 1) * self.ownership_commits/denominator
             self.file_exp = (self.bf_file + 1) * (sum(file_activity) / denominator)
             self.cloc_exp = (self.bf_cloc + 1) * (sum(cloc_activity) / denominator)
-            self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
-            self.experience = 0.4 * (sum(commit_activity) / denominator) + 0.4 * (
-                        sum(file_activity) / denominator) + 0.2 * (sum(cloc_activity) / denominator)
+            self.experience_bf = 0.2 * self.commit_exp + 0.4 * self.file_exp + 0.4 * self.cloc_exp
+            self.experience = 0.2 * (sum(commit_activity) / denominator) + 0.4 * (
+                        sum(file_activity) / denominator) + 0.4 * (sum(cloc_activity) / denominator)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -438,7 +438,7 @@ class ProjectReport(models.Model):
         #     # TODO: check if it makes sense
             if len(contributions) == 1:
                 return [contributor.author]
-            if contributor.experience > self.experience_threshold:
+            if contributor.experience_bf > self.experience_threshold:
                 core_developers.append(contributor.author)
         return core_developers
 
@@ -449,7 +449,7 @@ class ProjectReport(models.Model):
         if len(contributions) == 1:
             return peripheral_developers
         for contributor in contributions:
-            if contributor.experience <= self.experience_threshold:
+            if contributor.experience_bf <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
         return peripheral_developers
 
@@ -560,7 +560,7 @@ class IndividualContribution(models.Model):
         # whether there is any contribution in this directory from other authors
         # It means that is not a new directory, so we have to count all period
         first_tag_in_this_project = DirectoryReport.objects.filter(tag__project_id=self.directory_report.tag.project.id,
-                                                                   directory=self.directory_report.directory).order_by("pk").first().tag.id
+                                                                   directory_id=self.directory_report.directory.id).order_by("pk").first().tag.id
         right_length = self.directory_report.tag.id - first_tag_in_this_project + 1 - len(contributions)
         for i in range(1, right_length):
             extra_values.append(0.0)
@@ -684,7 +684,7 @@ class DirectoryReport(models.Model):
         #     # TODO: check if it makes sense
             if len(contributions) == 1:
                 return [contributor.author]
-            if contributor.experience > self.experience_threshold:
+            if contributor.experience_bf > self.experience_threshold:
                 core_developers.append(contributor.author)
         return core_developers
 
@@ -696,7 +696,7 @@ class DirectoryReport(models.Model):
         if len(contributions) == 1:
             return  peripheral_developers
         for contributor in contributions:
-            if contributor.experience <= self.experience_threshold:
+            if contributor.experience_bf <= self.experience_threshold:
                 peripheral_developers.append(contributor.author)
         return peripheral_developers
 
