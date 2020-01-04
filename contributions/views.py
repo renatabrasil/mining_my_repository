@@ -58,66 +58,67 @@ def index(request):
             # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
-                with transaction.atomic():
-                    author = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.author.name))
-                    if author.count() == 0:
-                        author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
-                        author.save()
+                # with transaction.atomic():
+                author = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.author.name))
+                if author.count() == 0:
+                    author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
+                    # author.save()
+                else:
+                    author = author[0]
+                if commit_repository.author.name == commit_repository.committer.name:
+                    committer = author
+                else:
+                    committer = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.committer.name))
+                    if committer.count() == 0:
+                        committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
+                                              email=commit_repository.committer.email)
+                        # committer.save()
                     else:
-                        author = author[0]
-                    if commit_repository.author.name == commit_repository.committer.name:
-                        committer = author
-                    else:
-                        committer = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.committer.name))
-                        if committer.count() == 0:
-                            committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
-                                                  email=commit_repository.committer.email)
-                            committer.save()
+                        committer = committer[0]
+                commit = Commit(hash=commit_repository.hash, tag=tag,
+                                                parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
+                                               msg=commit_repository.msg,
+                                               author=author, author_date=commit_repository.author_date,
+                                               committer=committer,
+                                               committer_date=commit_repository.committer_date)
+                total_modification = 0
+                for modification_repo in commit_repository.modifications:
+                    path = CommitUtils.true_path(modification_repo)
+                    directory_str = CommitUtils.directory_to_str(path)
+                    # Save only commits with java file and not in test directory
+                    if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1:
+                        total_modification = total_modification + 1
+                        directory = Directory.objects.filter(name=directory_str)
+                        if directory.count() == 0:
+                            directory = Directory(name=directory_str, visible=True, project=project)
+                            directory.save()
                         else:
-                            committer = committer[0]
-                    commit = Commit(hash=commit_repository.hash, tag=tag,
-                                                    parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
-                                                   msg=commit_repository.msg,
-                                                   author=author, author_date=commit_repository.author_date,
-                                                   committer=committer,
-                                                   committer_date=commit_repository.committer_date)
-                    total_modification = 0
-                    for modification_repo in commit_repository.modifications:
-                        path = CommitUtils.true_path(modification_repo)
-                        if CommitUtils.modification_is_java_file(path):
-                            total_modification = total_modification + 1
-                            directory_str = CommitUtils.directory_to_str(path)
-                            directory = Directory.objects.filter(name=directory_str)
-                            if directory.count() == 0:
-                                directory = Directory(name=directory_str, visible=True, project=project)
-                                directory.save()
-                            else:
-                                directory = directory[0]
+                            directory = directory[0]
 
-                            if hasattr(modification_repo, 'nloc'):
-                                nloc = modification_repo.nloc
-                            else:
-                                nloc = None
-                            # diff = GitRepository.parse_diff(modification.diff)
-                            try:
-                                if total_modification == 1:
-                                    commit.save()
-                                modification = Modification(commit=commit, old_path=modification_repo.old_path,
-                                                            new_path=modification_repo.new_path,
-                                                            change_type=modification_repo.change_type,
-                                                            diff=modification_repo.diff,
-                                                            directory=directory,
-                                                            source_code=modification_repo.source_code,
-                                                            source_code_before=modification_repo.source_code_before,
-                                                            added=modification_repo.added,
-                                                            removed=modification_repo.removed,
-                                                            nloc=nloc,
-                                                            complexity=modification_repo.complexity)
+                        if hasattr(modification_repo, 'nloc'):
+                            nloc = modification_repo.nloc
+                        else:
+                            nloc = None
+                        # diff = GitRepository.parse_diff(modification.diff)
+                        try:
+                            # if total_modification == 1:
+                            #     commit.save()
+                            modification = Modification(commit=commit, old_path=modification_repo.old_path,
+                                                        new_path=modification_repo.new_path,
+                                                        change_type=modification_repo.change_type,
+                                                        diff=modification_repo.diff,
+                                                        directory=directory,
+                                                        source_code=modification_repo.source_code,
+                                                        source_code_before=modification_repo.source_code_before,
+                                                        added=modification_repo.added,
+                                                        removed=modification_repo.removed,
+                                                        nloc=nloc,
+                                                        complexity=modification_repo.complexity)
 
-                                modification.save()
-                            except Exception as e:
-                                # raise  # reraises the exceptio
-                                print(str(e))
+                            modification.save()
+                        except Exception as e:
+                            # raise  # reraises the exceptio
+                            print(str(e))
 
     url_path = 'contributions/index.html'
     current_developer = None

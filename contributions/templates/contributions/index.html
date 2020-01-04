@@ -45,6 +45,7 @@
                     <th style="text-align: center;" width="12%">CLOC (no blank and commented lines)</th>
                     <th width="15%">Committer</th>
                     <th>Autor</th>
+                    <th style="text-align: center;" width="12%">Author Exp</th>
                 </tr>
             </thead>
             <tbody>
@@ -60,17 +61,19 @@
                         <td style="text-align: center;">{{commit.u_cloc}}</td>
                         <td nowrap>{{ commit.committer.name}} </td>
                         <td nowrap>{{ commit.author.name}}</td>
+                        <td style="text-align: center;">{{commit.author_experience|floatformat:2}}</td>
+
                     </tr>
                     <tr>
-                        <td colspan="6">Filho: {{commit.children_commit.hash}}</td>
+                        <td colspan="7">Filho: {{commit.children_commit.hash}}</td>
                     </tr>
                         {% for parent_commit in commit.parents %}
-                        <tr><td colspan="6">1: {{parent_commit.hash}}</td></tr>
+                        <tr><td colspan="7">1: {{parent_commit.hash}}</td></tr>
                         {% endfor %}
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="7" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
+                        <td colspan="8" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
                     </tr>
                 {% endif %}
             </tbody>

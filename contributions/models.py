@@ -149,30 +149,56 @@ class Commit(models.Model):
         return cloc
 
     def save(self, *args, **kwargs):
-        self.author_experience= 0.0
-        commits = Commit.objects.filter(author=self.author)
-        files = 0
-        cloc = 0
-        files_edited = set([])
-        cloc_activity = [c.u_cloc for c in commits]
-        cloc = sum(cloc_activity)
-        bf_cloc = self.calculate_boosting_factor(cloc_activity)
-        for commit in commits:
-            # cloc += commit.u_cloc
-            mod_file = set([mod.file for mod in commit.modifications.all()])
-            files += (len(mod_file) - len(files_edited.intersection(mod_file)))
-            files_edited.update(mod_file)
+        self.author.save()
+        self.committer.save()
+        if self.pk is None:
+            self.author_experience = 0.0
+            commits = Commit.objects.filter(author=self.author)
+            commits = [c for c in commits if c.u_cloc > 0]
 
-        self.author_experience = 0.2 * len(commits) + 0.4 * files + 0.4 * ((1 + bf_cloc) * (cloc / len(cloc_activity)))
+            file_by_authors = FileByAuthor.objects.none()
+            if len(commits) > 0:
+                file_by_authors = FileByAuthor.objects.filter(author=self.author)
+                # file_by_authors = FileByAuthor.objects.filter(author=self.author,
+                #                                               modifications__in=Modification.objects.filter(commit_id__lte=commits[-1].id)).distinct()
+
+            cloc_activity = [c.u_cloc for c in file_by_authors if c.u_cloc > 0]
+            cloc = sum(cloc_activity)
+            bf_cloc = self.calculate_boosting_factor(cloc_activity)
+            # for commit in commits:
+            #     # cloc += commit.u_cloc
+            #     mod_file = set([mod.file for mod in commit.modifications.all()])
+            #     files += (len(mod_file) - len(files_edited.intersection(mod_file)))
+            #     files_edited.update(mod_file)
+
+            files = file_by_authors.values("file").distinct().count()
+
+            denominator = len(cloc_activity) if len(cloc_activity) > 0 else 1
+            self.author_experience = 0.2 * len(commits) + 0.4 * files + 0.4 * ((1 + bf_cloc) * (cloc / denominator))
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
+class FileByAuthor(models.Model):
+    author = models.ForeignKey(Developer, on_delete=models.CASCADE)
+    file = models.ForeignKey('File', on_delete=models.CASCADE)
+
+    @property
+    def u_cloc(self):
+        cloc = 0
+        for mod in self.modifications.all():
+            cloc += mod.u_cloc
+        return cloc
+
+class File(models.Model):
+    authors = models.ManyToManyField(Developer, through=FileByAuthor)
+    name = models.CharField(max_length=180, default="")
 
 class Modification(models.Model):
     old_path = models.CharField(max_length=200, null=True)
     new_path = models.CharField(max_length=200, null=True)
     path = models.CharField(max_length=200, null=True, default="")
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
+    file_by_author = models.ForeignKey(FileByAuthor, related_name='modifications', on_delete=models.CASCADE)
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
     ADDED = 'ADD'
     DELETED = 'DEL'
@@ -260,27 +286,50 @@ class Modification(models.Model):
         return CommitUtils.modification_is_java_file(self.path)
 
     def save(self, *args, **kwargs):
+
         self.path = CommitUtils.true_path(self)
 
         if self.is_java_file:
-            index = self.path.rfind("/")
-            directory_str = ""
-            if index > -1:
-                directory_str = self.path[:index]
-            else:
-                directory_str = "/"
-
-            directory = Directory.objects.filter(name=directory_str)
-            if directory.count() == 0:
-                directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project)
-                directory.save()
-            else:
-                self.directory = directory[0]
-
-            self.cloc = self.added + self.removed
-
             self.u_cloc = self.__cloc_uncommented__()
-            super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
+
+            # If cloc = 0 do not save file neither commit
+            if self.u_cloc > 0:
+
+                if self.commit.pk is None:
+                    self.commit.save()
+
+                index = self.path.rfind("/")
+                directory_str = ""
+                if index > -1:
+                    directory_str = self.path[:index]
+                else:
+                    directory_str = "/"
+
+                directory = Directory.objects.filter(name=directory_str)
+                if directory.count() == 0:
+                    directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project)
+                    directory.save()
+                else:
+                    self.directory = directory[0]
+
+                file = File.objects.filter(name=self.path)
+                if file.count() > 0:
+                    file = file[0]
+                else:
+                    file = File(name=self.path)
+                    file.save()
+                file_by_author = FileByAuthor.objects.filter(author=self.commit.author, file=file)
+                if file_by_author.count() > 0:
+                    self.file_by_author = file_by_author[0]
+                else:
+                    file_by_author = FileByAuthor(file=file, author=self.commit.author)
+                    file_by_author.save()
+                    self.file_by_author = file_by_author
+
+                self.cloc = self.added + self.removed
+
+
+                super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
 class ProjectIndividualContribution(models.Model):
