@@ -161,8 +161,7 @@ def index(request):
         elif tag:
             latest_commit_list = load_commits_from_tags(tag)
         else:
-            latest_commit_list = Commit.objects.all().order_by("author__name", "committer_date").order_by("author__name",
-                                                                                                      "committer_date")
+            latest_commit_list = Commit.objects.all().order_by("id","author__name", "committer_date")
         paginator = Paginator(latest_commit_list, 100)
 
         page = request.GET.get('page')
@@ -408,12 +407,12 @@ def export_to_csv_commit_by_author(request):
 param: current tag
 return all commits up to current tag """
 def load_commits_from_tags(tag):
-   commits = Commit.objects.filter(tag__description=tag.description).distinct()
+   commits = Commit.objects.filter(tag__description=tag.description).distinct().order_by("id")
    if len(commits) == 0:
        return commits
    tag = tag.previous_tag
    while tag:
-       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
+       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct().order_by("id"))
        # (Commit.objects.filter(tag__description=tag.description, modifications__in=
        # Modification.objects.filter(
        #     path__contains=".java")).distinct())

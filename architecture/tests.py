@@ -92,27 +92,27 @@ class ArchitectureQualityMetricsModelTests(TestCase):
 
         # self.assertEqual(metrics.commit.parents[0], previous_metrics.commit)
 
-class ArchitectureQualityByDeveloperModelTests(TestCase):
-    def test_commit_activity_in_this_tag(self):
-        project = Project.objects.create(project_name="Ant")
-        developer = Developer.objects.create(name="Jack",email="jack@gmail.com")
-        developer2 = Developer.objects.create(name="Rose", email="rose@gmail.com")
-        directory = Directory.objects.create(name="src/main/org/apache/ant", project=project)
-        tag = Tag.objects.create(description="rel/1.1",project=project)
-        tag2 = Tag.objects.create(description="rel/1.2",project=project)
-        commit = Commit.objects.create(hash="oioioi", tag=tag, author=developer, committer=developer2,
-                        author_date=datetime.datetime.now().date(), committer_date=datetime.datetime.now().date())
-        commit2 = Commit.objects.create(hash="Assoioioi", tag=tag, author=developer, committer=developer,
-                                        author_date=datetime.datetime.now().date(),
-                                        committer_date=datetime.datetime.now().date())
-        commit3 = Commit.objects.create(hash="commit3", tag=tag2, author=developer, committer=developer,
-                         author_date=datetime.datetime.now().date(), committer_date=datetime.datetime.now().date())
-        commit4 = Commit.objects.create(hash="commit4", tag=tag, author=developer, committer=developer,
-                                        author_date=datetime.datetime.now().date(),
-                                        committer_date=datetime.datetime.now().date())
-        commit5 = Commit.objects.create(hash="commit5", tag=tag, author=developer, committer=developer2,
-                                        author_date=datetime.datetime.now().date(),
-                                        committer_date=datetime.datetime.now().date())
+# class ArchitectureQualityByDeveloperModelTests(TestCase):
+#     def test_commit_activity_in_this_tag(self):
+        # project = Project.objects.create(project_name="Ant")
+        # developer = Developer.objects.create(name="Jack",email="jack@gmail.com")
+        # developer2 = Developer.objects.create(name="Rose", email="rose@gmail.com")
+        # directory = Directory.objects.create(name="src/main/org/apache/ant", project=project)
+        # tag = Tag.objects.create(description="rel/1.1",project=project)
+        # tag2 = Tag.objects.create(description="rel/1.2",project=project)
+        # commit = Commit.objects.create(hash="oioioi", tag=tag, author=developer, committer=developer2,
+        #                 author_date=datetime.datetime.now().date(), committer_date=datetime.datetime.now().date())
+        # commit2 = Commit.objects.create(hash="Assoioioi", tag=tag, author=developer, committer=developer,
+        #                                 author_date=datetime.datetime.now().date(),
+        #                                 committer_date=datetime.datetime.now().date())
+        # commit3 = Commit.objects.create(hash="commit3", tag=tag2, author=developer, committer=developer,
+        #                  author_date=datetime.datetime.now().date(), committer_date=datetime.datetime.now().date())
+        # commit4 = Commit.objects.create(hash="commit4", tag=tag, author=developer, committer=developer,
+        #                                 author_date=datetime.datetime.now().date(),
+        #                                 committer_date=datetime.datetime.now().date())
+        # commit5 = Commit.objects.create(hash="commit5", tag=tag, author=developer, committer=developer2,
+        #                                 author_date=datetime.datetime.now().date(),
+        #                                 committer_date=datetime.datetime.now().date())
         # modification
         # metrics_by_developer = ArchitectureQualityByDeveloper.objects.create(developer=developer, tag=tag, directory=directory)
         #
