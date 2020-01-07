@@ -115,7 +115,7 @@ def compileds(request, file_id):
                         # Check whether created jar is valid
                         os.chdir(current_project_path)
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
-                        if os.path.getsize(jar) < 1080:
+                        if os.path.getsize(jar) < 3080:
                             os.chdir(current_project_path + '/' + compiled_directory)
                             folder = 'version-' + commit.replace("/","").replace(".","-")
                             commit_with_errors.append(commit.replace("/","").replace(".","-"))
@@ -125,19 +125,17 @@ def compileds(request, file_id):
 
                             os.chdir(file.local_repository)
 
-                        build_path_repository = build_path
-                        if build_path.count('\\')==0 and build_path.count('/')==0:
-                            build_path_repository = file.local_repository+"/"+build_path
-                        if os.path.exists(build_path_repository):
-                            shutil.rmtree(build_path_repository)
-
-
                 except OSError as e:
                     print("Error: %s - %s." % (e.filename, e.strerror))
                 except Exception as er:
                     print(er)
                     messages.error(request, 'Erro: '+er)
                 finally:
+                    build_path_repository = build_path
+                    if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
+                        build_path_repository = file.local_repository + "/" + build_path
+                    if os.path.exists(build_path_repository):
+                        shutil.rmtree(build_path_repository)
                     os.chdir(file.local_repository)
             i+=1
     except Exception as e:
