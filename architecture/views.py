@@ -17,7 +17,7 @@ from django.template import loader
 from django.urls import reverse
 
 from architecture.forms import FilesCompiledForm
-from architecture.models import FileCommits, ArchitectureQualityMetrics, ArchitectureQualityByDeveloper
+from architecture.models import FileCommits, ArchitecturalMetricsByCommit
 from common.utils import ViewUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
     Directory
@@ -166,6 +166,22 @@ def compileds(request, file_id):
 
     return HttpResponseRedirect(reverse('architecture:index',))
 
+def impactful_commits(request):
+    template = loader.get_template('architecture/impactful_commits.html')
+
+    commits = []
+
+    commits = [c.commit for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
+
+
+    context = {
+
+        'commits': commits,
+
+    }
+
+    return HttpResponse(template.render(context, request))
+
 def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
@@ -207,17 +223,17 @@ def metrics_by_commits(request):
         # directories_filter = Directory.objects.get(pk=directories_filter)
         if request.POST.get('developer_id'):
             developer_id = int(request.POST.get('developer_id'))
-            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=directories_filter,
-                                                                                       project_individual_contribution__author_id=developer_id,
-                                                                                       tag_id=tag)
+            architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(directory_id=directories_filter,
+                                                                                       commit__author_id=developer_id,
+                                                                                       commit__tag_id=tag)
         else:
-            architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(directory_id=int(directories_filter),tag_id=tag)
+            architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(directory_id=int(directories_filter),commit__tag_id=tag)
 
     results = OrderedDict()
     for metric in architectural_metrics_list:
         if metric.directory not in results:
             results.setdefault(metric.directory, list())
-        results[metric.directory] += metric.metrics.all()
+        results[metric.directory].append(metric)
     context = {
         'tag': tag,
         'results': results,
@@ -236,8 +252,8 @@ def metrics_by_developer(request):
     if request.POST.get('developer_id'):
         developer_id = int(request.POST.get('developer_id'))
         developer = Developer.objects.get(pk=developer_id)
-        architectural_metrics_list = ArchitectureQualityByDeveloper.objects.filter(project_individual_contribution__author_id=developer_id,
-                                                                                   tag_id=tag.id)
+        architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(commit__author_id=developer_id,
+                                                                                   commit__tag_id=tag.id)
     context = {
         'tag': tag,
         'results': architectural_metrics_list,
@@ -288,7 +304,7 @@ def quality_between_versions(request):
 # values: [degradation, impactful commits, loc, degrad/loc]
 def metrics_by_developer_csv(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
-    developers_metrics = ArchitectureQualityByDeveloper.objects.filter(tag_id=file.tag.id)
+    developers_metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=file.tag.id)
     metrics = {}
     for info_developer in developers_metrics:
         if info_developer.project_individual_contribution.author not in metrics:
@@ -351,31 +367,11 @@ def __read_PM_file__(folder):
 
                     print(line.replace("\n",""))
 
-                    architecture_metrics = ArchitectureQualityMetrics.objects.filter(
-                        architecture_quality_by_developer_and_directory__directory__name__exact='src/main/' + row[0], commit_id=commit.id)
+                    architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
+                        directory__name__exact='src/main/' + row[0], commit_id=commit.id)
                     if architecture_metrics.count() == 0:
-
-                        try:
-                            project_individual_contribution = ProjectIndividualContribution.objects.filter(
-                                author_id=commit.committer.id, project_report__tag_id=commit.tag.id)
-                            project_individual_contribution = project_individual_contribution[0]
-                        except ProjectIndividualContribution.DoesNotExist:
-                            print("it is necessary to generate the contributions by project")
-                            break
-
-                        architecture_quality_by_developer = ArchitectureQualityByDeveloper.objects.filter(tag_id=commit.tag.id, directory_id=directory.id,
-                                                                      project_individual_contribution__author_id=commit.committer.id)
-                        if architecture_quality_by_developer.count() > 0:
-                            architecture_quality_by_developer=architecture_quality_by_developer[0]
-                        else:
-                            architecture_quality_by_developer = ArchitectureQualityByDeveloper(project_individual_contribution=project_individual_contribution,
-                                                                                               directory=directory,
-                                                                                               tag=commit.tag)
-                            architecture_quality_by_developer.save()
-
                         # TODO: use delta
-                        architecture_metrics = ArchitectureQualityMetrics(commit=commit,
-                                                                          architecture_quality_by_developer_and_directory=architecture_quality_by_developer,
+                        architecture_metrics = ArchitecturalMetricsByCommit(commit=commit, directory=directory,
                                                                           rmd=float(row[5]), rma=float(row[4]),
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
@@ -383,7 +379,7 @@ def __read_PM_file__(folder):
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
                         if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
-                            previous_architecture_quality_metrics = ArchitectureQualityMetrics.objects.filter(architecture_quality_by_developer_and_directory__directory_id=directory.id, commit_id=previous_commit.id)
+                            previous_architecture_quality_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
                             if previous_architecture_quality_metrics.count() > 0:
                                 architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
                         delta = float(row[5]) - float(metrics[row[0]][previous_commit][0])
@@ -438,7 +434,7 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
     else:
         return None
 
-    metrics_by_developer = ArchitectureQualityByDeveloper.objects.filter(project_individual_contribution=global_contributor, tag=tag, directory=directory)
+    metrics_by_developer = ArchitecturalMetricsByCommit.objects.filter(commit__author=global_contributor, commit__tag=tag, directory=directory)
     if metrics_by_developer.count() == 0:
         return None
 

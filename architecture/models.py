@@ -16,56 +16,10 @@ class FileCommits(models.Model):
     def __str__(self):
         return self.directory+"/"+self.name
 
-class ArchitectureQualityByDeveloper(models.Model):
-    project_individual_contribution = models.ForeignKey(ProjectIndividualContribution, related_name='project_individual_contribution_id', on_delete=models.CASCADE)
-    directory = models.ForeignKey(Directory, on_delete=models.CASCADE)
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
-
-    @property
-    def architectural_impactful_loc(self):
-        number = 0
-        for metric in self.metrics.all():
-            for mod in metric.commit.modifications.all():
-                if mod.directory == self.directory:
-                    if metric.delta_rmd != 0:
-                        number += mod.u_cloc
-        return number
-
-    @property
-    def commit_activity_in_this_tag(self):
-        return Commit.objects.filter(tag_id=self.tag.id, author_id=self.project_individual_contribution.author.id).count()
-
-    @property
-    def architecturally_impactful_commits(self):
-        number = 0
-        for metric in self.metrics.all():
-            if metric.delta_rmd != 0:
-                number += 1
-        return number
-
-    @property
-    def exposition(self):
-        return self.architecturally_impactful_commits/self.commit_activity_in_this_tag
-
-    @property
-    def delta_rmd(self):
-        delta_rmd = 0.0
-        for metric in self.metrics.all():
-            delta_rmd += metric.delta_rmd
-        return delta_rmd
-
-    @property
-    def ratio_degrad_loc(self):
-        try:
-            ratio_degrad_loc = (self.delta_rmd / self.architectural_impactful_loc)
-        except ZeroDivisionError:
-            ratio_degrad_loc = 0.0
-        return ratio_degrad_loc
-
-class ArchitectureQualityMetrics(models.Model):
-    previous_architecture_quality_metrics = models.ForeignKey('ArchitectureQualityMetrics', on_delete=models.SET_NULL, null=True, default=None)
-    architecture_quality_by_developer_and_directory = models.ForeignKey(ArchitectureQualityByDeveloper, on_delete=models.CASCADE, related_name="metrics")
+class ArchitecturalMetricsByCommit(models.Model):
+    previous_architecture_quality_metrics = models.ForeignKey('ArchitecturalMetricsByCommit', on_delete=models.SET_NULL, null=True, default=None)
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics')
+    directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='architectural_metrics')
     rmd = models.FloatField(null=True, default=0.0)
     rma = models.FloatField(null=True, default=0.0)
     rmi = models.FloatField(null=True, default=0.0)
@@ -76,9 +30,9 @@ class ArchitectureQualityMetrics(models.Model):
         previous_metric_value = 0.0
         try:
             if self.previous_architecture_quality_metrics is None:
-                return previous_metric_value/self.commit.cloc_uncommented(self.architecture_quality_by_developer_and_directory.directory)
+                return previous_metric_value/self.commit.cloc_uncommented(self.directory)
             previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
-            return (value - previous_metric_value)/self.commit.cloc_uncommented(self.architecture_quality_by_developer_and_directory.directory)
+            return (value - previous_metric_value)/self.commit.cloc_uncommented(self.directory)
         except ZeroDivisionError:
             return 0.0
 
@@ -101,6 +55,19 @@ class ArchitectureQualityMetrics(models.Model):
     @property
     def delta_ce(self):
         return self.delta_metrics("ce", self.ce)
+
+    @property
+    def architectural_impactful_loc(self):
+        number = 0
+        for mod in self.commit.modifications.all():
+            if mod.directory == self.directory:
+                if self.delta_rmd != 0:
+                    number += mod.u_cloc
+        return number
+
+    # @property
+    # def exposition(self):
+    #     return self.architectural_impactful_loc / self.commit_activity_in_this_tag
 
 
 # method for updating

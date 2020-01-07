@@ -57,6 +57,7 @@
         <div id="commit-{{forloop.counter}}" class="collapse" aria-labelledby="headingOne" data-parent="#metrics">
         <tr>
             <th>Commit (autor)</th>
+            <th>Exp</th>
             <th>CA</th>
             <th>CE</th>
             <th>RMI</th>
@@ -68,13 +69,23 @@
         {% for metric in metrics_by_developer %}
         <tr class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}">
             <td>
-                {{metric.commit.hash}} ({{metric.commit.committer.name}})</td>
+                {{metric.commit.hash}}<br>
+                pai:
+                {% for parent_commit in metric.commit.parents %}
+                <strong>{{parent_commit.hash}}</strong>
+                {% endfor %}
+                <br>
+                ({{metric.commit.committer.name}})
+                <br>
+                commit filho: {{metric.commit.children_commit.hash}}
+            </td>
+            <td>{{metric.commit.author_experience|floatformat:2}}</td>
             <td>{{metric.ca}}</td>
             <td>{{metric.ce}}</td>
             <td>{{metric.rmi|floatformat:4}}</td>
             <td>{{metric.rma|floatformat:4}}</td>
             <td>{{metric.rmd|floatformat:4}}</td>
-            <td>{{metric.delta_rmd|floatformat:4}}</td>
+            <td>{{metric.delta_rmd|floatformat:7}}</td>
         </tr>
         {% endfor %}
             </div>

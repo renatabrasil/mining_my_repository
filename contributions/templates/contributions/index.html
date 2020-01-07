@@ -52,7 +52,7 @@
                 {% if latest_commit_list %}
                     {% for commit in latest_commit_list %}
                     <tr>
-                        <th style="text-align: center; r" rowspan="{{commit.parents|length|add:2}}">
+                        <th style="text-align: center; r" rowspan="{{commit.parents|length|add:1}}">
                             {{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}
                         </th>
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
@@ -64,11 +64,11 @@
                         <td style="text-align: center;">{{commit.author_experience|floatformat:2}}</td>
 
                     </tr>
-                    <tr>
-                        <td colspan="7">Filho: {{commit.children_commit.hash}}</td>
-                    </tr>
+<!--                    <tr>-->
+<!--                        <td colspan="7">Filho: {{commit.children_commit.hash}}</td>-->
+<!--                    </tr>-->
                         {% for parent_commit in commit.parents %}
-                        <tr><td colspan="7">1: {{parent_commit.hash}}</td></tr>
+                        <tr><td colspan="7">pai: {{parent_commit.hash}}</td></tr>
                         {% endfor %}
                     {% endfor %}
                 {% else %}
