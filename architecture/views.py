@@ -125,17 +125,19 @@ def compileds(request, file_id):
 
                             os.chdir(file.local_repository)
 
+                        build_path_repository = build_path
+                        if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
+                            build_path_repository = file.local_repository + "/" + build_path
+                        if os.path.exists(build_path_repository):
+                            shutil.rmtree(build_path_repository)
+
                 except OSError as e:
                     print("Error: %s - %s." % (e.filename, e.strerror))
                 except Exception as er:
                     print(er)
                     messages.error(request, 'Erro: '+er)
                 finally:
-                    build_path_repository = build_path
-                    if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
-                        build_path_repository = file.local_repository + "/" + build_path
-                    if os.path.exists(build_path_repository):
-                        shutil.rmtree(build_path_repository)
+
                     os.chdir(file.local_repository)
             i+=1
     except Exception as e:
