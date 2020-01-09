@@ -5,6 +5,50 @@
 
 {% block content %}
 
+
+<form action="{{request_path}}" method="post">{% csrf_token %}
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <label for="directory_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-6" id="directory_selector" placeholder="Selecione a tag" name="directory_id" >
+              <option selected value="{{developer.id}}">Selecione o componente</option>
+              {% for directory in directories %} {{current_directory}}
+                <option value="{{directory.id}}"
+                   {% if directory.id == current_directory_id %}selected="selected"{% endif %}>
+                   {{directory.name}}
+                </option>
+                {% endfor %}
+              </select>
+        </div>
+        <div class="form-row align-items-center">
+        <div class="col-auto">
+            <label for="tag_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-6" id="tag_selector" placeholder="Selecione a tag" name="tag_id" >
+              <option selected value="{{tag.id}}">Selecione a versão</option>
+              {% for tag in tags %} {{current_tag}}
+                <option value="{{tag.id}}"
+                   {% if tag.id == current_tag_id %}selected="selected"{% endif %}>
+                   {{tag.description}}
+                </option>
+                {% endfor %}
+              </select>
+        </div>
+    <div class="form-row">
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
+        </div>
+    </div>
+</form>
+<hr>
+<div class="float-right">
+    <form action="{{request_path}}" method="post">{% csrf_token %}
+        <input type="hidden" name="export_csv" value="True">
+        <input type="hidden" name="directory_id" value="{{directory.id}}">
+        <input type="hidden" name="tag_id" value="{{tag.id}}">
+        <a class="btn btn-primary" href="{{request.path}}"><i class="fas sm fa-arrow-alt-circle-down"></i> CSV</a>
+    </form>
+
+</div>
 <div class="table-responsive" id="metrics">
     <table class="table table-sm" id="headingOne" style="font-size: small;">
         <tr>

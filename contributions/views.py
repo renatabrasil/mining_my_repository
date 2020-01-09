@@ -338,7 +338,6 @@ def export_to_csv(request):
 
     return response
 
-
 def export_to_csv_commit_by_author(request):
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(content_type='text/csv')

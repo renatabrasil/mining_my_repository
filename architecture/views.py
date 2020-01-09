@@ -169,20 +169,60 @@ def compileds(request, file_id):
     return HttpResponseRedirect(reverse('architecture:index',))
 
 def impactful_commits(request):
-    template = loader.get_template('architecture/impactful_commits.html')
+    export_csv = request.POST.get("export_csv") if request.POST.get("export_csv") else False
 
+    directories = Directory.objects.filter(visible=True).order_by("name")
     metrics = []
 
-    metrics = [c for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
 
+    directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else 0
+    tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else 0
+    if directory_filter > 0:
+        metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory_filter)
+    if tag_filter > 0:
+        metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_filter)
 
+    # directories_filter = Directory.objects.get(pk=directories_filter)
+
+    metrics = [c for c in metrics if c.delta_rmd > 0]
+    # metrics = [c for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
+
+    if export_csv:
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=' + str(directory_filter) + '"-metrics.csv"'
+
+        metrics_dict = {x.commit.author_experience:x.delta_rmd for x in metrics}
+
+        my_df = pd.DataFrame(metrics_dict)
+        my_df.to_csv('oi.csv', index=False, header=False)
+
+        return response
+
+    template = loader.get_template('architecture/impactful_commits.html')
     context = {
 
         'metrics': metrics,
-
+        'current_directory_id': directory_filter,
+        'current_tag_id': tag_filter,
+        'directories': directories,
     }
 
     return HttpResponse(template.render(context, request))
+
+# def export_to_csv_metrics(request):
+#     project = Project.objects.get(project_name="Apache Ant")
+#     tag = ViewUtils.load_tag(request)
+#
+#     response = HttpResponse(content_type='text/csv')
+#     response['Content-Disposition'] = 'attachment; filename='+ project.project_name +'"-metrics.csv"'
+#     # writer = csv.writer(response)
+#     pd.DataFrame(contributions)
+#
+#
+#     writer.writerow(["Classificacao de desenvolvedores por experiencia"])
+#     writer.writerow([""])
+#
+#     return response
 
 def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
