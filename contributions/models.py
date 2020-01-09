@@ -50,7 +50,7 @@ class Directory(models.Model):
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
-    children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, null=True, default=None)
+    children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='parent_rel', null=True, default=None)
     hash = models.CharField(max_length=180,default="")
     msg = models.CharField(max_length=300,default="")
     parents_str = models.CharField(max_length=180)
@@ -139,6 +139,10 @@ class Commit(models.Model):
     def save(self, *args, **kwargs):
         self.author.save()
         self.committer.save()
+        for hash in self.parents:
+            parent = Commit.objects.filter(hash=hash)
+            if parent.count() > 0:
+                self.parent = parent[0]
         if self.pk is None:
             self.author_experience = 0.0
             total_commits_by_author = Commit.objects.filter(author=self.author).count()
@@ -1124,7 +1128,10 @@ def update_commit(sender, instance, **kwargs):
         if parent.count() > 0:
             parent = parent[0]
             parent.children_commit = instance
-            parent.save()
+            instance.parent = parent
+            parent.save(update_fields = ['children_commit'])
+
+
 
 # FIXME: Test technical debt
 def count_uncommented_lines(code):

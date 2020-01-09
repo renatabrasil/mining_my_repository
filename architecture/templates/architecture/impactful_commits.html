@@ -16,8 +16,9 @@
 {% if metrics %}
 
     {% for metric in metrics %}
-        <tr>
-        <td colspan="4" style="background-color: rgba(0,123,255, 0.15)">{{metric.directory.name}}</td>
+        <tr style="background-color: rgba(0,123,255, 0.15)">
+        <td colspan="3">{{metric.directory.name}}</td>
+            <td style="text-align: right">{{metric.commit.tag.description}}</td>
         </tr>
 
         <tr>

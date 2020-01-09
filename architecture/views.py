@@ -364,8 +364,8 @@ def __read_PM_file__(folder):
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
-                    if not commit.has_files_in_this_directory(directory):
-                        continue
+                    # if not commit.has_files_in_this_directory(directory):
+                    #     continue
 
                     print(line.replace("\n",""))
 
