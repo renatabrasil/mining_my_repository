@@ -142,7 +142,7 @@ def compileds(request, file_id):
             i+=1
     except Exception as e:
         print(e)
-        shutil.rmtree(compiled_directory, ignore_errors=True)
+        # shutil.rmtree(compiled_directory, ignore_errors=True)
         messages.error(request, 'Could not create compiled.')
     finally:
         os.chdir(current_project_path)
@@ -171,14 +171,14 @@ def compileds(request, file_id):
 def impactful_commits(request):
     template = loader.get_template('architecture/impactful_commits.html')
 
-    commits = []
+    metrics = []
 
-    commits = [c.commit for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
+    metrics = [c for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
 
 
     context = {
 
-        'commits': commits,
+        'metrics': metrics,
 
     }
 

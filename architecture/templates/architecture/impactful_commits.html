@@ -5,6 +5,46 @@
 
 {% block content %}
 
-{{commits}}
+<div class="table-responsive" id="metrics">
+    <table class="table table-sm" id="headingOne" style="font-size: small;">
+        <tr>
+            <th>Commit (autor)</th>
+            <th>Author</th>
+            <th width="13%" style="text-align:right">Author Experience</th>
+            <th style="text-align:right">Delta RMD</th>
+        </tr>
+{% if metrics %}
+
+    {% for metric in metrics %}
+        <tr>
+        <td colspan="4" style="background-color: rgba(0,123,255, 0.15)">{{metric.directory.name}}</td>
+        </tr>
+
+        <tr>
+            <td><span class="text-muted">Pai:</span> {{metric.previous_architecture_quality_metrics.commit.hash}}</td>
+            <td>{{metric.previous_architecture_quality_metrics.commit.author.name}}</td>
+            <td style="text-align:right">{{metric.previous_architecture_quality_metrics.commit.author_experience|floatformat:4}}</td>
+            <td style="text-align:right">{{metric.previous_architecture_quality_metrics.rmd|floatformat:8}}</td>
+        </tr>
+        <tr style="border-bottom: solid 2px">
+            <td><span class="text-muted">Commit:</span> {{metric.commit.hash}} - <strong>CLOC: {{metric.commit_loc}}</strong></td>
+            <td>{{metric.commit.author.name}}</td>
+            <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
+            <td style="text-align:right;">{{metric.rmd|floatformat:8}}</td>
+        </tr>
+    <tr style="font-weight: bold">
+        <td></td>
+        <td>{{metric.commit.author.name}}</td>
+        <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
+        <td style="text-align:right" class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}"  >{{metric.delta_rmd|floatformat:8}}</td>
+    </tr>
+    {% endfor %}
+{% else %}
+        <tr>
+            <td colspan="4" style="text-align: center">No impactful commits were found.</td>
+        </tr>
+{% endif %}
+    </table>
+</div>
 
 {% endblock %}

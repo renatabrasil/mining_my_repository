@@ -26,6 +26,10 @@ class ArchitecturalMetricsByCommit(models.Model):
     ca = models.IntegerField(null=True, default=0)
     ce = models.IntegerField(null=True, default=0)
 
+    @property
+    def commit_loc(self):
+        return self.commit.cloc_uncommented(self.directory)
+
     def delta_metrics(self, metric, value):
         previous_metric_value = 0.0
         try:
