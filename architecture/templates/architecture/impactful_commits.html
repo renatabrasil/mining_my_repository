@@ -42,10 +42,9 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <input type="hidden" name="export_csv" value="True">
-        <input type="hidden" name="directory_id" value="{{directory.id}}">
-        <input type="hidden" name="tag_id" value="{{tag.id}}">
-        <a class="btn btn-primary" href="{{request.path}}"><i class="fas sm fa-arrow-alt-circle-down"></i> CSV</a>
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}">
+            <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
+        </a>
     </form>
 
 </div>
@@ -72,13 +71,13 @@
             <td style="text-align:right">{{metric.previous_architecture_quality_metrics.rmd|floatformat:8}}</td>
         </tr>
         <tr style="border-bottom: solid 2px">
-            <td><span class="text-muted">Commit:</span> {{metric.commit.hash}} - <strong>CLOC: {{metric.commit_loc}}</strong></td>
+            <td><span class="text-muted">Commit:</span> {{metric.commit.hash}} - <strong>CLOC (in this directory): {{metric.commit_loc}}</strong></td>
             <td>{{metric.commit.author.name}}</td>
             <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
             <td style="text-align:right;">{{metric.rmd|floatformat:8}}</td>
         </tr>
     <tr style="font-weight: bold">
-        <td></td>
+        <td><strong>CLOC (commit): {{metric.commit.u_cloc}}</strong></td>
         <td>{{metric.commit.author.name}}</td>
         <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
         <td style="text-align:right" class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}"  >{{metric.delta_rmd|floatformat:8}}</td>

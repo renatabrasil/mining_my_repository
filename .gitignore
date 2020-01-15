@@ -14,3 +14,6 @@ Arcan-1.2.1-SNAPSHOT
 Arcan-1.2.1-SNAPSHOT.jar
 shell.txt
 .coverage
+*.csv
+*.xls
+*.xlsx

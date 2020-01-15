@@ -1,12 +1,14 @@
-import json
+import numpy as np
 import os
 import shutil
 import subprocess
 import re
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+import seaborn as sb
 
 import pandas as pd
+import scipy
 from django.contrib import messages
 from django.core.files import File
 from django.http import HttpResponse, HttpResponseRedirect
@@ -115,7 +117,8 @@ def compileds(request, file_id):
                         # Check whether created jar is valid
                         os.chdir(current_project_path)
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
-                        if os.path.getsize(jar) < 3080:
+                        # 100 KB
+                        if os.path.getsize(jar) < 102400:
                             os.chdir(current_project_path + '/' + compiled_directory)
                             folder = 'version-' + commit.replace("/","").replace(".","-")
                             commit_with_errors.append(commit.replace("/","").replace(".","-"))
@@ -169,34 +172,62 @@ def compileds(request, file_id):
     return HttpResponseRedirect(reverse('architecture:index',))
 
 def impactful_commits(request):
-    export_csv = request.POST.get("export_csv") if request.POST.get("export_csv") else False
+    export_csv = (request.GET.get("export_csv") and request.GET.get("export_csv") == "true") if True else False
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     metrics = []
 
+    if request.POST.get('directory_id'):
+        directory_filter = int(request.POST.get('directory_id'))
+    elif request.GET.get('directory_id'):
+        directory_filter = int(request.GET.get('directory_id'))
+    else:
+        directory_filter = 0
 
-    directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else 0
-    tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else 0
+    if request.POST.get('tag_id'):
+        tag_filter = int(request.POST.get('tag_id'))
+    elif request.GET.get('tag_id'):
+        tag_filter = int(request.GET.get('tag_id'))
+    else:
+        tag_filter = 0
+
     if directory_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory_filter)
+        metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory_filter, delta_rmd__gt=0)
     if tag_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_filter)
+        metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_filter, delta_rmd__gt=0)
 
     # directories_filter = Directory.objects.get(pk=directories_filter)
 
-    metrics = [c for c in metrics if c.delta_rmd > 0]
+    # metrics = [c for c in metrics if c.delta_rmd > 0]
     # metrics = [c for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
 
     if export_csv:
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=' + str(directory_filter) + '"-metrics.csv"'
+        # response = HttpResponse(content_type='text/csv')
+        # response['Content-Disposition'] = 'attachment; filename=' + str(directory_filter) + '"-metrics.csv"'
 
-        metrics_dict = {x.commit.author_experience:x.delta_rmd for x in metrics}
+        metrics_dict = [[x.commit.author_experience,x.delta_rmd] for x in metrics]
 
         my_df = pd.DataFrame(metrics_dict)
+
         my_df.to_csv('oi.csv', index=False, header=False)
 
-        return response
+        rho = my_df.corr(method='spearman')
+
+        s = sb.heatmap(rho,
+                   xticklabels=rho.columns,
+                   yticklabels=rho.columns,
+                   cmap='RdBu_r',
+                   annot=True,
+                   linewidth=0.5)
+
+        x=my_df.iloc[:,0]
+        y = my_df.iloc[:,1]
+        # slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
+
+        # my_df.corr("spearman",)
+
+        # if len(metrics_dict) > 0:
+        #     return response
 
     template = loader.get_template('architecture/impactful_commits.html')
     context = {

@@ -1,8 +1,6 @@
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
-from contributions.models import Project, Commit, Directory, Tag, Developer, ProjectIndividualContribution
+from contributions.models import Commit, Directory, Tag
 
 
 class FileCommits(models.Model):
@@ -21,6 +19,7 @@ class ArchitecturalMetricsByCommit(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics')
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='architectural_metrics')
     rmd = models.FloatField(null=True, default=0.0)
+    delta_rmd = models.FloatField(null=True, default=0.0)
     rma = models.FloatField(null=True, default=0.0)
     rmi = models.FloatField(null=True, default=0.0)
     ca = models.IntegerField(null=True, default=0)
@@ -34,15 +33,15 @@ class ArchitecturalMetricsByCommit(models.Model):
         previous_metric_value = 0.0
         try:
             if self.previous_architecture_quality_metrics is None:
-                return previous_metric_value/self.commit.cloc_uncommented(self.directory)
+                return previous_metric_value/self.commit.u_cloc
             previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
-            return (value - previous_metric_value)/self.commit.cloc_uncommented(self.directory)
+            return (value - previous_metric_value)/self.commit.u_cloc
         except ZeroDivisionError:
             return 0.0
 
-    @property
-    def delta_rmd(self):
-        return self.delta_metrics("rmd",self.rmd)
+    # @property
+    # def delta_rmd(self):
+    #     return self.delta_metrics("rmd",self.rmd)
 
     @property
     def delta_rma(self):
@@ -68,6 +67,11 @@ class ArchitecturalMetricsByCommit(models.Model):
                 if self.delta_rmd != 0:
                     number += mod.u_cloc
         return number
+
+    def save(self, *args, **kwargs):
+        self.delta_rmd = self.delta_metrics("rmd",self.rmd)
+
+        super(ArchitecturalMetricsByCommit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
     # @property
     # def exposition(self):
