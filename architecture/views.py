@@ -200,7 +200,10 @@ def impactful_commits(request):
         metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
         tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/','_')
 
+    metrics = sorted(metrics, key=lambda x: x.commit.author_experience, reverse=False)
+
     if export_csv:
+
         metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
 
         if len(metrics_dict) > 0:
