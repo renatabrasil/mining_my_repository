@@ -207,7 +207,8 @@ def impactful_commits(request):
         metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
 
         if len(metrics_dict) > 0:
-            my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
+            # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
+            my_df = pd.DataFrame(metrics_dict)
 
             my_df.to_csv(directory_name+'_'+tag_name+'.csv', index=False, header=False)
 
