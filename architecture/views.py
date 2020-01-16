@@ -197,7 +197,7 @@ def impactful_commits(request):
         metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(directory_id=directory_filter).order_by('directory_id')
         directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
     if tag_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter, delta_rmd__gt=0).order_by('commit__tag_id')
+        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
         tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/','_')
 
     if export_csv:
