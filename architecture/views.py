@@ -204,11 +204,19 @@ def impactful_commits(request):
         metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
 
         if len(metrics_dict) > 0:
-            my_df = pd.DataFrame(metrics_dict)
+            my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
 
             my_df.to_csv(directory_name+'_'+tag_name+'.csv', index=False, header=False)
 
             rho = my_df.corr(method='spearman')
+            # hist = my_df.hist(bins=3)
+            # ax = my_df.hist(column='x', bins=10, grid=False, figsize=(12, 8), color='#86bf91',
+            #              zorder=2, rwidth=0.9)
+            # my_df.boxplot(by='y', column=['x'], grid=False)
+
+            # sb.heatmap(rho,
+            #             xticklabels=rho.columns,
+            #             yticklabels=rho.columns)
 
             # s = sb.heatmap(rho,
             #            xticklabels=rho.columns,
@@ -217,8 +225,8 @@ def impactful_commits(request):
             #            annot=True,
             #            linewidth=0.5)
 
-            x=my_df.iloc[:,0]
-            y = my_df.iloc[:,1]
+            # x=my_df.iloc[:,0]
+            # y = my_df.iloc[:,1]
             # slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
 
     template = loader.get_template('architecture/impactful_commits.html')
@@ -260,7 +268,7 @@ def calculate_metrics(request, file_id):
         contributions = __pre_correlation__(metrics, directory)
         if contributions:
             my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Global XP", "Specific XP", "XP (8/2)", "Degrad Delta", "Impactful commits", "Loc"]
+            my_df.columns = ["Developer", "Specific XP", "Global XP", "Degrad Delta"]
             my_df.to_csv(metrics_directory+'/'+directory.replace('/','_')+'.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -499,18 +507,17 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
     else:
         return None
 
-    metrics_by_developer = ArchitecturalMetricsByCommit.objects.filter(commit__author=global_contributor, commit__tag=tag, directory=directory)
+    metrics_by_developer = ArchitecturalMetricsByCommit.objects.filter(commit__author=global_contributor.author, commit__tag=tag, directory=directory)
     if metrics_by_developer.count() == 0:
         return None
 
     metrics_by_developer = metrics_by_developer[0]
     # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
-    xp = (8*global_contributor.experience_bf + 2*contributor.experience_bf)/10
+    # xp = (8*global_contributor.experience_bf + 2*contributor.experience_bf)/10
+    xp = global_contributor.experience_bf
 
-    return [metrics_by_developer.project_individual_contribution.author.name,
-            metrics_by_developer.project_individual_contribution.experience_bf, contributor.experience_bf, xp,
-            metrics_by_developer.delta_rmd, metrics_by_developer.architecturally_impactful_commits,
-            metrics_by_developer.architectural_impactful_loc]
+    return [contributor.author.name, contributor.experience_bf, xp,
+            metrics_by_developer.delta_rmd]
 
 def list_commits(project,form):
     # Restricting to commits which has children
