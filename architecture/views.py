@@ -22,7 +22,7 @@ from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits, ArchitecturalMetricsByCommit
 from common.utils import ViewUtils
 from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
-    Directory
+    Directory, Tag
 
 
 def index(request):
@@ -176,6 +176,8 @@ def impactful_commits(request):
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     metrics = []
+    directory_name = 'all'
+    tag_name = 'tag-all-versions'
 
     if request.POST.get('directory_id'):
         directory_filter = int(request.POST.get('directory_id'))
@@ -192,42 +194,32 @@ def impactful_commits(request):
         tag_filter = 0
 
     if directory_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory_filter, delta_rmd__gt=0)
+        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(directory_id=directory_filter).order_by('directory_id')
+        directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
     if tag_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_filter, delta_rmd__gt=0)
-
-    # directories_filter = Directory.objects.get(pk=directories_filter)
-
-    # metrics = [c for c in metrics if c.delta_rmd > 0]
-    # metrics = [c for c in ArchitecturalMetricsByCommit.objects.all() if c.delta_rmd > 0]
+        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter, delta_rmd__gt=0).order_by('commit__tag_id')
+        tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/','_')
 
     if export_csv:
-        # response = HttpResponse(content_type='text/csv')
-        # response['Content-Disposition'] = 'attachment; filename=' + str(directory_filter) + '"-metrics.csv"'
+        metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
 
-        metrics_dict = [[x.commit.author_experience,x.delta_rmd] for x in metrics]
+        if len(metrics_dict) > 0:
+            my_df = pd.DataFrame(metrics_dict)
 
-        my_df = pd.DataFrame(metrics_dict)
+            my_df.to_csv(directory_name+'_'+tag_name+'.csv', index=False, header=False)
 
-        my_df.to_csv('oi.csv', index=False, header=False)
+            rho = my_df.corr(method='spearman')
 
-        rho = my_df.corr(method='spearman')
+            # s = sb.heatmap(rho,
+            #            xticklabels=rho.columns,
+            #            yticklabels=rho.columns,
+            #            cmap='RdBu_r',
+            #            annot=True,
+            #            linewidth=0.5)
 
-        s = sb.heatmap(rho,
-                   xticklabels=rho.columns,
-                   yticklabels=rho.columns,
-                   cmap='RdBu_r',
-                   annot=True,
-                   linewidth=0.5)
-
-        x=my_df.iloc[:,0]
-        y = my_df.iloc[:,1]
-        # slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
-
-        # my_df.corr("spearman",)
-
-        # if len(metrics_dict) > 0:
-        #     return response
+            x=my_df.iloc[:,0]
+            y = my_df.iloc[:,1]
+            # slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
 
     template = loader.get_template('architecture/impactful_commits.html')
     context = {
