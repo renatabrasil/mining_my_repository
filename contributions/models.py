@@ -158,36 +158,13 @@ class Commit(models.Model):
 
             last_author_commit = Commit.objects.filter(author=self.author).last()
 
-            cloc_activity = []
-            cloc = 0
-            no_contributions = 0
-            if last_author_commit:
-                cloc_activity_dict ={}
-                if last_author_commit.cloc_activity_str:
-                    cloc_activity_dict = dict(ast.literal_eval(last_author_commit.cloc_activity_str))
-                    if self.tag.id not in cloc_activity_dict:
-                        cloc_activity_dict.setdefault(last_author_commit.tag.id, 0)
-                    cloc_activity_dict[last_author_commit.tag.id] += last_author_commit.u_cloc
-                else:
-                    cloc_activity_dict = {}
-                    cloc_activity_dict.setdefault(last_author_commit.tag.id, last_author_commit.u_cloc)
-
-                self.cloc_activity_str = str(cloc_activity_dict)
-                cloc_activity = list(cloc_activity_dict.values())
-
-                no_contributions = last_author_commit.tag.id - (self.tag.project.first_tag.id - 1)
-                no_contributions -= len(cloc_activity_dict.keys())
-                if no_contributions > 0 :
-                    for i in range(0, no_contributions):
-                        cloc_activity.append(0.0)
-                cloc = sum(cloc_activity)
-
-            bf_cloc = self.calculate_boosting_factor(cloc_activity)
+            cloc_activity = [c.u_cloc for c in file_by_authors]
+            cloc = sum(cloc_activity)
 
             files = file_by_authors.values("path").distinct().count()
 
             denominator = len(cloc_activity) if len(cloc_activity) > 0 else 1
-            self.author_experience = 0.2 * total_commits_by_author + 0.4 * files + 0.4 * ((1 + bf_cloc) * (cloc / denominator))
+            self.author_experience = 0.2 * total_commits_by_author + 0.4 * files + 0.4 * cloc
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 

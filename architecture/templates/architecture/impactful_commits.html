@@ -65,7 +65,9 @@
         </tr>
 
         <tr>
-            <td><span class="text-muted">Pai:</span> {{metric.previous_architecture_quality_metrics.commit.hash}}</td>
+            <td><span class="text-muted">Commit anterior:</span>
+                {{metric.previous_architecture_quality_metrics.commit.hash}} (Pai: {{metric.commit.parents_str}})
+            </td>
             <td>{{metric.previous_architecture_quality_metrics.commit.author.name}}</td>
             <td style="text-align:right">{{metric.previous_architecture_quality_metrics.commit.author_experience|floatformat:4}}</td>
             <td style="text-align:right">{{metric.previous_architecture_quality_metrics.rmd|floatformat:8}}</td>

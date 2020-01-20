@@ -45,6 +45,8 @@ class ArchitecturalMetricsByCommit(models.Model):
                     if previous_commit_metric.count() > 0:
                         previous_commit_metric = previous_commit_metric[0]
                         self.previous_architecture_quality_metrics = previous_commit_metric
+                    else:
+                        return 0.0
                 else:
                     return 0.0
             previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
