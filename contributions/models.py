@@ -156,14 +156,11 @@ class Commit(models.Model):
                 # file_by_authors = FileByAuthor.objects.filter(author=self.author,
                 #                                               modifications__in=Modification.objects.filter(commit_id__lte=commits[-1].id)).distinct()
 
-            last_author_commit = Commit.objects.filter(author=self.author).last()
-
             cloc_activity = [c.u_cloc for c in file_by_authors]
             cloc = sum(cloc_activity)
 
             files = file_by_authors.values("path").distinct().count()
 
-            denominator = len(cloc_activity) if len(cloc_activity) > 0 else 1
             self.author_experience = 0.2 * total_commits_by_author + 0.4 * files + 0.4 * cloc
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
