@@ -93,6 +93,7 @@ def compileds(request, file_id):
                     if not __has_jar_file__(jar_folder):
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
+                        object_commit = Commit.objects.filter(hash=hash_commit)[0]
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
                         checkout.wait()
                         print(os.environ.get('JAVA_HOME'))
@@ -125,8 +126,13 @@ def compileds(request, file_id):
                             shutil.rmtree(folder, ignore_errors=True)
                             print("BUILD FAILED or Jar creation failed\n")
                             print(jar+" DELETED\n")
+                            object_commit.compilable = False
 
                             os.chdir(file.local_repository)
+                        else:
+                            object_commit.compilable = True
+
+                        object_commit.save()
 
                         build_path_repository = build_path
                         if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
@@ -455,10 +461,9 @@ def __read_PM_file__(folder):
                     if row[0] not in metrics:
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
-                        if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
-                            previous_architecture_quality_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
-                            if previous_architecture_quality_metrics.count() > 0:
-                                architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
+                        previous_architecture_quality_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
+                        if previous_architecture_quality_metrics.count() > 0:
+                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
                         delta = float(row[5]) - float(metrics[row[0]][previous_commit][0])
                     elif not previous_commit:
                         delta = 0.0
