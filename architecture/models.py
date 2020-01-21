@@ -32,16 +32,15 @@ class ArchitecturalMetricsByCommit(models.Model):
     def delta_metrics(self, metric, value):
         previous_metric_value = 0.0
         try:
-            if self.previous_architecture_quality_metrics is None and len(self.commit.parents) == 0:
+            if len(self.commit.parents) == 0:
                 return 0.0
 
-            if self.previous_architecture_quality_metrics is None and len(self.commit.parents) > 0:
-                parent_commit = self.commit.parents[0]
-                if ArchitecturalMetricsByCommit.objects.filter(commit=parent_commit).count() > 0:
-                    self.previous_architecture_quality_metrics = ArchitecturalMetricsByCommit.objects.filter(commit=parent_commit)[0]
-                elif parent_commit.author == self.commit.author and len(parent_commit.parents) > 0:
+            parent_commit = self.commit.parents[0]
+            if self.previous_architecture_quality_metrics is None:
+                if not parent_commit.compilable and (parent_commit.author == self.commit.author and len(parent_commit.parents) > 0):
                     previous_commit_parent = parent_commit.parents[0]
-                    previous_commit_metric = ArchitecturalMetricsByCommit.objects.filter(commit=previous_commit_parent)
+                    previous_commit_metric = ArchitecturalMetricsByCommit.objects.filter(
+                        commit=previous_commit_parent, directory=self.directory)
                     if previous_commit_metric.count() > 0:
                         previous_commit_metric = previous_commit_metric[0]
                         self.previous_architecture_quality_metrics = previous_commit_metric
@@ -49,6 +48,7 @@ class ArchitecturalMetricsByCommit(models.Model):
                         return 0.0
                 else:
                     return 0.0
+
             previous_metric_value = getattr(self.previous_architecture_quality_metrics,metric)
             return (value - previous_metric_value)/self.commit.u_cloc
         except ZeroDivisionError:

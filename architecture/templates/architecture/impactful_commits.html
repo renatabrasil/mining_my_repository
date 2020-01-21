@@ -9,7 +9,7 @@
 <form action="{{request_path}}" method="post">{% csrf_token %}
     <div class="form-row align-items-center">
         <div class="col-auto">
-            <label for="directory_selector" class="sr-only">Tag</label>
+            <label for="directory_selector" class="sr-only">Component</label>
             <select class="form-control mb-6" id="directory_selector" placeholder="Selecione a tag" name="directory_id" >
               <option selected value="{{developer.id}}">Selecione o componente</option>
               {% for directory in directories %} {{current_directory}}
@@ -20,7 +20,8 @@
                 {% endfor %}
               </select>
         </div>
-        <div class="form-row align-items-center">
+    </div>
+    <div class="form-row align-items-center">
         <div class="col-auto">
             <label for="tag_selector" class="sr-only">Tag</label>
             <select class="form-control mb-6" id="tag_selector" placeholder="Selecione a tag" name="tag_id" >
@@ -33,6 +34,21 @@
                 {% endfor %}
               </select>
         </div>
+    </div>
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <label for="developer_selector" class="sr-only"></label>
+            <select class="form-control mb-6" id="developer_selector" placeholder="Selecione o desenvolvedor" name="developer_id" >
+              <option selected value="{{developer.id}}">Selecione o desenvolvedor</option>
+              {% for developer in developers %} {{current_developer}}
+                <option value="{{developer.id}}"
+                   {% if developer.id == current_developer_id %}selected="selected"{% endif %}>
+                   {{developer.name}}
+                </option>
+                {% endfor %}
+              </select>
+        </div>
+    </div>
     <div class="form-row">
         <div class="col-auto">
             <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
@@ -42,7 +58,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>

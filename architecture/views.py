@@ -181,9 +181,11 @@ def impactful_commits(request):
     export_csv = (request.GET.get("export_csv") and request.GET.get("export_csv") == "true") if True else False
 
     directories = Directory.objects.filter(visible=True).order_by("name")
+    developers = Developer.objects.all().order_by("name")
     metrics = []
     directory_name = 'all'
-    tag_name = 'tag-all-versions'
+    tag_name = 'tag-all'
+    dev_name = 'dev-all'
 
     if request.POST.get('directory_id'):
         directory_filter = int(request.POST.get('directory_id'))
@@ -199,12 +201,31 @@ def impactful_commits(request):
     else:
         tag_filter = 0
 
+
+    if request.POST.get('developer_id'):
+        developer_filter = int(request.POST.get('developer_id'))
+    elif request.GET.get('developer_id'):
+        developer_filter = int(request.GET.get('developer_id'))
+    else:
+        developer_filter = 0
+
     if directory_filter > 0:
         metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(directory_id=directory_filter).order_by('directory_id')
         directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
     if tag_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
+        if len(metrics) > 0:
+            metrics = metrics.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
+        else:
+            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
         tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/','_')
+    if developer_filter > 0:
+        if len(metrics) > 0:
+            metrics = metrics.exclude(delta_rmd=0).filter(commit__author_id=developer_filter).order_by(
+            'commit__author_id')
+        else:
+            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__author_id=developer_filter).order_by(
+                'commit__author_id')
+        # dev_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/', '_')
 
     metrics = sorted(metrics, key=lambda x: x.commit.author_experience, reverse=False)
 
@@ -245,7 +266,9 @@ def impactful_commits(request):
         'metrics': metrics,
         'current_directory_id': directory_filter,
         'current_tag_id': tag_filter,
+        'current_developer_id': developer_filter,
         'directories': directories,
+        'developers': developers,
     }
 
     return HttpResponse(template.render(context, request))
