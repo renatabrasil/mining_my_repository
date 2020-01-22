@@ -1,3 +1,5 @@
+from itertools import groupby
+
 import numpy as np
 import os
 import shutil
@@ -186,58 +188,52 @@ def impactful_commits(request):
     directory_name = 'all'
     tag_name = 'tag-all'
     dev_name = 'dev-all'
+    directory_filter = 0
+    tag_filter = 0
+    developer_filter = 0
 
-    if request.POST.get('directory_id'):
-        directory_filter = int(request.POST.get('directory_id'))
-    elif request.GET.get('directory_id'):
-        directory_filter = int(request.GET.get('directory_id'))
-    else:
-        directory_filter = 0
+    query = {}
 
-    if request.POST.get('tag_id'):
-        tag_filter = int(request.POST.get('tag_id'))
-    elif request.GET.get('tag_id'):
-        tag_filter = int(request.GET.get('tag_id'))
-    else:
-        tag_filter = 0
+    if request.POST.get('directory_id') or request.GET.get('directory_id'):
+        directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else int(request.GET.get('directory_id'))
+        if directory_filter > 0:
+            query.setdefault('directory_id', directory_filter)
+            directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
 
+    if request.POST.get('tag_id') or request.GET.get('tag_id'):
+        tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(request.GET.get('tag_id'))
+        if tag_filter > 0:
+            query.setdefault('commit__tag_id', tag_filter)
+            tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/', '_')
 
-    if request.POST.get('developer_id'):
-        developer_filter = int(request.POST.get('developer_id'))
-    elif request.GET.get('developer_id'):
-        developer_filter = int(request.GET.get('developer_id'))
-    else:
-        developer_filter = 0
+    if request.POST.get('developer_id') or request.GET.get('developer_id'):
+        developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(request.GET.get('developer_id'))
+        if developer_filter > 0:
+            query.setdefault('commit__author_id', developer_filter)
+            dev_name = Developer.objects.get(pk=developer_filter).name.split(' ')[0].lower()
 
-    if directory_filter > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(directory_id=directory_filter).order_by('directory_id')
-        directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
-    if tag_filter > 0:
-        if len(metrics) > 0:
-            metrics = metrics.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
-        else:
-            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__tag_id=tag_filter).order_by('commit__tag_id')
-        tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/','_')
-    if developer_filter > 0:
-        if len(metrics) > 0:
-            metrics = metrics.exclude(delta_rmd=0).filter(commit__author_id=developer_filter).order_by(
-            'commit__author_id')
-        else:
-            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(commit__author_id=developer_filter).order_by(
-                'commit__author_id')
-        # dev_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/', '_')
+    if len(query) > 0:
+        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(**query)
 
     metrics = sorted(metrics, key=lambda x: x.commit.author_experience, reverse=False)
 
     if export_csv:
 
-        metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
+        if directory_filter > 0:
+            metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
+        else:
+            metrics_aux = [[x.commit.author_experience, x.delta_rmd, x.commit.tag.description] for x
+                            in metrics]
+
+            metrics_dict = []
+            for i, g in groupby(sorted(metrics_aux), key=lambda x: x[0]):
+                metrics_dict.append([i, sum(v[1] for v in g)])
 
         if len(metrics_dict) > 0:
             # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
             my_df = pd.DataFrame(metrics_dict)
 
-            my_df.to_csv(directory_name+'_'+tag_name+'.csv', index=False, header=False)
+            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'.csv', index=False, header=False)
 
             rho = my_df.corr(method='spearman')
             # hist = my_df.hist(bins=3)
@@ -288,14 +284,41 @@ def impactful_commits(request):
 #
 #     return response
 
+def update_compilable_commits(commits_with_errors):
+    try:
+        f = open(commits_with_errors, 'r')
+        myfile = File(f)
+        i = 0
+        for commit in myfile:
+            if i > 1:
+                commit = commit.replace('\n','')
+                try:
+                    # Go to version
+                    hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
+                    object_commit = Commit.objects.filter(hash=hash_commit)[0]
+                    object_commit.compilable = False
+                    object_commit.save()
+
+                except OSError as e:
+                    print("Error: %s - %s." % (e.filename, e.strerror))
+                except Exception as er:
+                    print(er)
+            i+=1
+    except Exception as e:
+        print(e)
+    finally:
+        f.close()
+
 def calculate_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
     metrics_directory = directory_name+"/metrics"
     if not os.path.exists(metrics_directory):
         os.makedirs(metrics_directory, exist_ok=True)
+    if os.path.exists(directory_name+"/log-compilation-errors.txt"):
+        update_compilable_commits(directory_name+"/log-compilation-errors.txt")
     directory_name = directory_name + "/jars"
-    metrics = __read_PM_file__(directory_name)
+    metrics = __read_PM_file__(directory_name,file.tag.id)
     directories = metrics.keys()
     for directory in directories:
         contributions = __pre_correlation__(metrics, directory)
@@ -434,10 +457,12 @@ def metrics_by_developer_csv(request, file_id):
 #   key: commit
 #   value: metrics (RMD)
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
-def __read_PM_file__(folder):
+def __read_PM_file__(folder,tag_id):
     metrics = {}
     collected_data = []
+
     previous_commit = None
+
     # To sort in natural order
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
