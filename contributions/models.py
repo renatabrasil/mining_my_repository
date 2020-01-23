@@ -61,7 +61,7 @@ class Commit(models.Model):
     committer_date = models.DateField(default=date.today)
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
     cloc_activity_str = models.CharField(max_length=220,default='')
-    compilable = models.BooleanField(default=False)
+    compilable = models.BooleanField(default=True)
     _parents = []
 
     # author many to many file -> u.cloc
