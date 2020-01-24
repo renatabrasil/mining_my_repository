@@ -11,6 +11,8 @@ from django.core.files import File
 from django.core.paginator import Paginator
 from django.db import transaction
 from collections import OrderedDict
+
+from django.db.models import Q
 from django.http import HttpResponse, Http404, StreamingHttpResponse, HttpResponseRedirect
 
 # Create your views here.
@@ -59,7 +61,14 @@ def index(request):
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 # with transaction.atomic():
-                author = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.author.name))
+                author_name = CommitUtils.strip_accents(commit_repository.author.name)
+                author_name_array = author_name.split(" ")
+                if len(author_name_array) > 1:
+                    last_name = author_name_array[len(author_name_array)-1]
+                    author = Developer.objects.filter(Q(name__contains=author_name_array[0]) |
+                                                        Q(name__contains=last_name))
+                else:
+                    author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
                     author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
                     # author.save()
@@ -68,7 +77,15 @@ def index(request):
                 if commit_repository.author.name == commit_repository.committer.name:
                     committer = author
                 else:
-                    committer = Developer.objects.filter(name__iexact=CommitUtils.strip_accents(commit_repository.committer.name))
+                    committer_name = CommitUtils.strip_accents(commit_repository.author.name)
+                    committer_name_array = committer_name.split(" ")
+                    if len(committer_name_array) > 1:
+                        last_name = committer_name_array[len(committer_name_array)-1]
+                        committer = Developer.objects.filter(Q(name__contains=committer_name_array[0]) |
+                                                          Q(name__contains=last_name))
+                    else:
+                        committer = Developer.objects.filter(name__iexact=committer_name)
+
                     if committer.count() == 0:
                         committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
                                               email=commit_repository.committer.email)
