@@ -49,6 +49,23 @@
               </select>
         </div>
     </div>
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioGeral" name="delta_rmd" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioGeral">Geral</label>
+            </div>
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioDegrada" name="delta_rmd" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioDegrada">Degrada</label>
+            </div>
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioMelhora" name="delta_rmd" value="negative" {% if delta_check == "negative" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioMelhora">Melhora</label>
+            </div>
+
+        </div>
+    </div>
     <div class="form-row">
         <div class="col-auto">
             <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
@@ -58,7 +75,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd={{delta_check}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>

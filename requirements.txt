@@ -3,3 +3,6 @@ PyDriller==1.9.2
 Django==3.0
 django-mathfilters==0.4.0
 whitenoise
+unidecode
+seaborn
+pyyaml

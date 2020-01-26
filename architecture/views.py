@@ -191,6 +191,7 @@ def impactful_commits(request):
     directory_filter = 0
     tag_filter = 0
     developer_filter = 0
+    delta_check = ''
 
     query = {}
 
@@ -213,7 +214,17 @@ def impactful_commits(request):
             dev_name = Developer.objects.get(pk=developer_filter).name.split(' ')[0].lower()
 
     if len(query) > 0:
-        metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(**query)
+        if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_positivo') == 'positive':
+            query.setdefault('delta_rmd__gt', 0)
+            delta_check = 'positive'
+        elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':
+            query.setdefault('delta_rmd__lt', 0)
+            delta_check = 'negative'
+
+        if 'delta_rmd__lt' in query or 'delta_rmd__gt' in query:
+            metrics = ArchitecturalMetricsByCommit.objects.filter(**query)
+        else:
+            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(**query)
 
     metrics = sorted(metrics, key=lambda x: x.commit.author_experience, reverse=False)
 
@@ -233,7 +244,7 @@ def impactful_commits(request):
             # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
             my_df = pd.DataFrame(metrics_dict)
 
-            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'.csv', index=False, header=False)
+            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=False)
 
             rho = my_df.corr(method='spearman')
             # hist = my_df.hist(bins=3)
@@ -265,6 +276,7 @@ def impactful_commits(request):
         'current_developer_id': developer_filter,
         'directories': directories,
         'developers': developers,
+        'delta_check': delta_check,
     }
 
     return HttpResponse(template.render(context, request))
