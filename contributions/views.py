@@ -60,38 +60,38 @@ def index(request):
             # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
-                # with transaction.atomic():
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
-                author_name_array = author_name.split(" ")
-                if len(author_name_array) > 1:
-                    last_name = author_name_array[len(author_name_array)-1]
-                    author = Developer.objects.filter(Q(name__contains=author_name_array[0]) |
-                                                        Q(name__contains=last_name))
-                else:
-                    author = Developer.objects.filter(name__iexact=author_name)
+                author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
-                    author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
-                    # author.save()
+                    author_name_array = author_name.split(" ")
+                    if len(author_name_array) > 1:
+                        last_name = author_name_array[len(author_name_array) - 1]
+                        author = Developer.objects.filter(name__contains=last_name)
+                    if author.count() > 0:
+                        author = author[0]
+                    else:
+                        author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
                 else:
                     author = author[0]
+
                 if commit_repository.author.name == commit_repository.committer.name:
                     committer = author
                 else:
                     committer_name = CommitUtils.strip_accents(commit_repository.author.name)
-                    committer_name_array = committer_name.split(" ")
-                    if len(committer_name_array) > 1:
-                        last_name = committer_name_array[len(committer_name_array)-1]
-                        committer = Developer.objects.filter(Q(name__contains=committer_name_array[0]) |
-                                                          Q(name__contains=last_name))
-                    else:
-                        committer = Developer.objects.filter(name__iexact=committer_name)
-
+                    committer = Developer.objects.filter(name__iexact=committer_name)
                     if committer.count() == 0:
-                        committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
+                        committer_name_array = committer_name.split(" ")
+                        if len(committer_name_array) > 1:
+                            last_name = committer_name_array[len(committer_name_array) - 1]
+                            committer = Developer.objects.filter(name__contains=last_name)
+                        if committer.count() > 0:
+                            committer = committer[0]
+                        else:
+                            committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
                                               email=commit_repository.committer.email)
-                        # committer.save()
                     else:
                         committer = committer[0]
+
                 commit = Commit(hash=commit_repository.hash, tag=tag,
                                                 parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
                                                msg=commit_repository.msg,
