@@ -214,7 +214,7 @@ def impactful_commits(request):
             dev_name = Developer.objects.get(pk=developer_filter).name.split(' ')[0].lower()
 
     if len(query) > 0:
-        if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_positivo') == 'positive':
+        if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
             query.setdefault('delta_rmd__gt', 0)
             delta_check = 'positive'
         elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':

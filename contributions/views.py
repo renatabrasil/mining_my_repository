@@ -63,10 +63,12 @@ def index(request):
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
                 author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
-                    author_name_array = author_name.split(" ")
-                    if len(author_name_array) > 1:
-                        last_name = author_name_array[len(author_name_array) - 1]
-                        author = Developer.objects.filter(name__contains=last_name)
+                    email = commit_repository.author.email.split("@")[0]
+                    author = Developer.objects.filter(email__contains=email + "@")
+                    # author_name_array = author_name.split(" ")
+                    # if len(author_name_array) > 1:
+                    #     last_name = author_name_array[len(author_name_array) - 1]
+                    #     author = Developer.objects.filter(name__contains=last_name)
                     if author.count() > 0:
                         author = author[0]
                     else:
@@ -80,10 +82,12 @@ def index(request):
                     committer_name = CommitUtils.strip_accents(commit_repository.author.name)
                     committer = Developer.objects.filter(name__iexact=committer_name)
                     if committer.count() == 0:
-                        committer_name_array = committer_name.split(" ")
-                        if len(committer_name_array) > 1:
-                            last_name = committer_name_array[len(committer_name_array) - 1]
-                            committer = Developer.objects.filter(name__contains=last_name)
+                        email = commit_repository.committer.email.split("@")[0]
+                        committer = Developer.objects.filter(email__contains=email + "@")
+                        # committer_name_array = committer_name.split(" ")
+                        # if len(committer_name_array) > 1:
+                        #     last_name = committer_name_array[len(committer_name_array) - 1]
+                        #     committer = Developer.objects.filter(name__contains=last_name)
                         if committer.count() > 0:
                             committer = committer[0]
                         else:
@@ -131,7 +135,8 @@ def index(request):
                                                         removed=modification_repo.removed,
                                                         nloc=nloc,
                                                         complexity=modification_repo.complexity)
-
+                            # To prevent redundat action
+                            time.sleep(.800)
                             modification.save()
                         except Exception as e:
                             # raise  # reraises the exceptio
