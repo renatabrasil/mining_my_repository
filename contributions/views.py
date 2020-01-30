@@ -109,13 +109,6 @@ def index(request):
                     # Save only commits with java file and not in test directory
                     if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1:
                         total_modification = total_modification + 1
-                        directory = Directory.objects.filter(name=directory_str)
-                        if directory.count() == 0:
-                            directory = Directory(name=directory_str, visible=True, project=project)
-                            directory.save()
-                        else:
-                            directory = directory[0]
-
                         if hasattr(modification_repo, 'nloc'):
                             nloc = modification_repo.nloc
                         else:
@@ -128,7 +121,6 @@ def index(request):
                                                         new_path=modification_repo.new_path,
                                                         change_type=modification_repo.change_type,
                                                         diff=modification_repo.diff,
-                                                        directory=directory,
                                                         source_code=modification_repo.source_code,
                                                         source_code_before=modification_repo.source_code_before,
                                                         added=modification_repo.added,

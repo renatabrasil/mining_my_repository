@@ -44,6 +44,7 @@ class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
     visible = models.BooleanField(default=True)
+    initial_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='starter_directories', null=True)
 
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
@@ -137,6 +138,12 @@ class Commit(models.Model):
             if mod.directory == directory:
                 cloc += mod.u_cloc
         return cloc
+
+    def is_initial_commit_in_component(self, directory):
+        for dir in self.starter_directories.all():
+            if dir == directory:
+                return True
+        return False
 
     def save(self, *args, **kwargs):
         self.author.save()
@@ -278,8 +285,9 @@ class Modification(models.Model):
 
                 directory = Directory.objects.filter(name=directory_str)
                 if directory.count() == 0:
-                    directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project)
+                    directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project, initial_commit=self.commit)
                     directory.save()
+                    self.directory = directory
                 else:
                     self.directory = directory[0]
 
