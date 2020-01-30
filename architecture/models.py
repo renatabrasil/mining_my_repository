@@ -33,7 +33,7 @@ class ArchitecturalMetricsByCommit(models.Model):
         previous_metric_value = 0.0
         try:
             if len(self.commit.parents) == 0:
-                return 0.0
+                return self.rmd/self.commit.u_cloc
 
             parent_commit = self.commit.parents[0]
             if self.previous_architecture_quality_metrics is None:
