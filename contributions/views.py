@@ -239,7 +239,10 @@ def detail_by_hash(request):
     if hash:
         request.session['hash'] = hash
     else:
-        hash = request.session['hash']
+        if request.session['hash']:
+            hash = request.session['hash']
+        else:
+            hash = None
 
     commit = Commit.objects.filter(hash=hash)
     if commit.count() > 0:
