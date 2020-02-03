@@ -234,7 +234,19 @@ def data_by_directory(request, directory_id):
         writer.writerow([report.tag.description, report.experience, report.mean, report.median, report.standard_deviation])
     return response
 
+def detail_by_hash(request):
+    hash = request.POST.get('hash')
+    if hash:
+        request.session['hash'] = hash
+    else:
+        hash = request.session['hash']
 
+    commit = Commit.objects.filter(hash=hash)
+    if commit.count() > 0:
+        commit = commit[0]
+    else:
+        commit = None
+    return render(request, 'contributions/detail.html', {'commit': commit, 'current_commit_hash': hash})
 
 def detail(request, commit_id):
     try:
