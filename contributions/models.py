@@ -132,6 +132,13 @@ class Commit(models.Model):
             u_cloc += mod.u_cloc
         return u_cloc
 
+    @property
+    def total_delta(self):
+        delta = 0.0
+        for metric in self.architectural_metrics.all():
+            delta += metric.delta_rmd
+        return delta
+
     def cloc_uncommented(self, directory):
         cloc = 0
         for mod in self.modifications.all():

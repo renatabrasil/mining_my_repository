@@ -3,9 +3,62 @@
 
 {% block content %}
 
-<h3>Detalhes do commit</h3>
+<h5>Buscar commit</h5>
+<form action="/contributions/commits/search/" method="post">{% csrf_token %}
+  <div class="form-row align-items-center">
+    <div class="col-sm-5 my-1">
+      <label class="sr-only" for="commit_hash">Name</label>
+      <input type="text" class="form-control" id="commit_hash" name="hash" placeholder="Inform commit hash" value="{% if current_commit_hash %}{{current_commit_hash}}{% endif %}">
+    </div>
+    <div class="col-auto my-1">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </div>
+</form>
+
+
+<hr/>
+{% if commit %}
+<h5>Detalhes do commit</h5>
+{{commit.hash}}
+
+<div class="container">
+  <div class="row">
+    <div class="col-4">
+      <div class="card border-light mb-5" style="max-width: 38rem;">
+          <div class="card-header">X</div>
+          <div class="card-body">
+            <h5 class="card-title">Experiência</h5>
+            <p class="card-text">{{commit.author_experience|floatformat:2}}</p>
+          </div>
+        </div>
+
+    </div>
+    <div class="col">
+        <div class="card border-light mb-5" style="max-width: 38rem;">
+          <div class="card-header">Y</div>
+          <div class="card-body">
+            <h5 class="card-title">Impacto na arquitetura <small>(em componentes de interesse)</small></h5>
+            <p class="card-text">
+                {% for metric in commit.architectural_metrics.all %}
+                    {% if metric.delta_rmd != 0.0 %}
+                        {{metric.delta_rmd|floatformat:6}} ({{metric.directory.name}}) <br/>
+                    {% endif %}
+                {% endfor %}
+                <hr style="border: 0.5px solid"/>
+              <p class="{% if commit.total_delta > 0 %} text-danger {% elif commit.total_delta < 0 %} text-success {% endif %}">
+                  <strong>{{commit.total_delta|floatformat:6}}</strong>
+              </p>
+            </p>
+          </div>
+        </div>
+
+    </div>
+  </div>
 <div class="table-responsive">
+
     <table class="table table-striped table-sm">
+
         <tr>
             <th style="text-align: right">Tag:</th>
             <td colspan="2">{{commit.tag.description}}</td>
@@ -134,5 +187,6 @@
     </table>
 </div>
 
+{% endif %}
 
 {% endblock %}
