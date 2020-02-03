@@ -239,7 +239,7 @@ def detail_by_hash(request):
     if hash:
         request.session['hash'] = hash
     else:
-        if request.session['hash']:
+        if 'hash' in request.session:
             hash = request.session['hash']
         else:
             hash = None
