@@ -42,12 +42,12 @@
             <p class="card-text">
                 {% for metric in commit.architectural_metrics.all %}
                     {% if metric.delta_rmd != 0.0 %}
-                        {{metric.delta_rmd|floatformat:6}} ({{metric.directory.name}}) <br/>
+                        {{metric.delta_rmd|floatformat:8}} ({{metric.directory.name}}) <br/>
                     {% endif %}
                 {% endfor %}
                 <hr style="border: 0.5px solid"/>
               <p class="{% if commit.total_delta > 0 %} text-danger {% elif commit.total_delta < 0 %} text-success {% endif %}">
-                  <strong>{{commit.total_delta|floatformat:6}}</strong>
+                  <strong>{{commit.total_delta|floatformat:8}}</strong>
               </p>
             </p>
           </div>
