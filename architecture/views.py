@@ -478,6 +478,7 @@ def __read_PM_file__(folder,tag_id):
     # To sort in natural order
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
+    last_commit = None
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
         print("\n"+os.path.join(folder, subdirectory)+"\n----------------------\n")
@@ -490,7 +491,7 @@ def __read_PM_file__(folder,tag_id):
                     commit = Commit.objects.filter(hash=hash)[0]
                 else:
                     continue
-
+                commit_rmds = []
                 if commit.parents and commit.parents[0] is not None:
                     previous_commit = commit.parents[0]
                 else:
@@ -532,11 +533,38 @@ def __read_PM_file__(folder,tag_id):
                     if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
                         architecture_metrics.save()
 
+                    # commit_rmds.append(architecture_metrics.rmd)
+                    commit_rmds.append([architecture_metrics.rmd, True if directory.initial_commit == commit else False])
+
                     metrics[row[0]].setdefault(commit, [row[5], delta])
 
                     collected_data.append([commit.committer.id, delta])
             finally:
                 f.close()
+                # commit_rmds = ArchitecturalMetricsByCommit.objects.filter(commit=commit).distinct().values_list("rmd", flat=True)
+
+                # commit_rmds = [c.rmd for c in ]
+
+                commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
+                commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
+                commit.delta_rmd_components = commit.mean_rmd_components
+
+                # if previous_commit is None and directory.initial_commit == commit:
+                #     commit_rmds.append(architecture_metrics.rmd)
+                # else:
+                #     commit_rmds.append(0.0)
+                if previous_commit is not None and previous_commit.compilable:
+                    commit.delta_rmd_components -=previous_commit.mean_rmd_components
+                elif (previous_commit is not None and not previous_commit.compilable) and (last_commit is not None and last_commit.author == commit.author):
+                    commit.delta_rmd_components -= last_commit.mean_rmd_components
+                elif any(True == c[1] for c in commit_rmds):
+                    commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
+                else:
+                    commit.delta_rmd_components = 0.0
+
+                commit.delta_rmd_components/=commit.u_cloc
+                commit.save()
+                last_commit = commit
     return metrics
 
 def __create_files__(form, project_id):

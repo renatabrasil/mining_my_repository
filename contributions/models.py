@@ -44,7 +44,7 @@ class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
     visible = models.BooleanField(default=True)
-    initial_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='starter_directories', null=True)
+    initial_commit = models.ForeignKey('Commit', on_delete=models.CASCADE, related_name='starter_directories', null=True)
 
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
@@ -64,9 +64,12 @@ class Commit(models.Model):
     cloc_activity_str = models.CharField(max_length=220,default='')
     compilable = models.BooleanField(default=True)
     _parents = []
-
-    # author many to many file -> u.cloc
-
+    # mean rmd
+    mean_rmd_components = models.FloatField(null=True, default=0.0)
+    # standard deviation rmd
+    std_rmd_components = models.FloatField(null=True, default=0.0)
+    # delta
+    delta_rmd_components = models.FloatField(null=True, default=0.0)
 
     def __str__(self):
         return self.hash + " - Author: " + self.author.name
