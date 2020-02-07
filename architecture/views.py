@@ -281,10 +281,12 @@ def impactful_commits(request):
             my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
 
             rho = my_df.corr(method='spearman')
-            # hist = my_df.hist(bins=3)
             # ax = my_df.hist(column='x', bins=10, grid=False, figsize=(12, 8), color='#86bf91',
             #              zorder=2, rwidth=0.9)
             # my_df.boxplot(by='y', column=['x'], grid=False)
+            # boxplot = my_df.boxplot(column=['x', 'y'])
+            boxplot = my_df.boxplot(column=['x'])
+            boxplot = my_df.boxplot(column=['y'])
 
             # sb.heatmap(rho,
             #             xticklabels=rho.columns,
