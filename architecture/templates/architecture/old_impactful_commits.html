@@ -52,15 +52,15 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioGeral" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
+              <input type="radio" id="radioGeral" name="delta_rmd" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
               <label class="custom-control-label" for="radioGeral">Geral</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
+              <input type="radio" id="radioDegrada" name="delta_rmd" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
               <label class="custom-control-label" for="radioDegrada">Degrada</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioMelhora" name="delta_rmd_components" value="negative" {% if delta_check == "negative" %}checked="checked"{% endif %} class="custom-control-input">
+              <input type="radio" id="radioMelhora" name="delta_rmd" value="negative" {% if delta_check == "negative" %}checked="checked"{% endif %} class="custom-control-input">
               <label class="custom-control-label" for="radioMelhora">Melhora</label>
             </div>
 
@@ -75,7 +75,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd={{delta_check}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>
@@ -93,29 +93,29 @@
 
     {% for metric in metrics %}
         <tr style="background-color: rgba(0,123,255, 0.15)">
-        <td colspan="3">{{metric.tag.description}}</td>
-            <td style="text-align: right"></td>
+        <td colspan="3">{{metric.directory.name}}</td>
+            <td style="text-align: right">{{metric.commit.tag.description}}</td>
         </tr>
 
         <tr>
             <td><span class="text-muted">Commit anterior:</span>
-                {{metric.parents.0.hash}} (Pai: {{metric.parents_str}})
+                {{metric.previous_architecture_quality_metrics.commit.hash}} (Pai: {{metric.commit.parents_str}})
             </td>
-            <td>{{metric.parents.0.author.name}}</td>
-            <td style="text-align:right">{{metric.parents.0.author_experience|floatformat:4}}</td>
-            <td style="text-align:right">{{metric.parents.0.mean_rmd_components|floatformat:8}}</td>
+            <td>{{metric.previous_architecture_quality_metrics.commit.author.name}}</td>
+            <td style="text-align:right">{{metric.previous_architecture_quality_metrics.commit.author_experience|floatformat:4}}</td>
+            <td style="text-align:right">{{metric.previous_architecture_quality_metrics.rmd|floatformat:8}}</td>
         </tr>
         <tr style="border-bottom: solid 2px">
-            <td><span class="text-muted">Commit:</span> {{metric.hash}} </td>
-            <td>{{metric.author.name}}</td>
-            <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-            <td style="text-align:right;">{{metric.mean_rmd_components|floatformat:8}}</td>
+            <td><span class="text-muted">Commit:</span> {{metric.commit.hash}} - <strong>CLOC (in this directory): {{metric.commit_loc}}</strong></td>
+            <td>{{metric.commit.author.name}}</td>
+            <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
+            <td style="text-align:right;">{{metric.rmd|floatformat:8}}</td>
         </tr>
     <tr style="font-weight: bold">
-        <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
-        <td>{{metric.author.name}}</td>
-        <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|floatformat:8}}</td>
+        <td><strong>CLOC (commit): {{metric.commit.u_cloc}}</strong></td>
+        <td>{{metric.commit.author.name}}</td>
+        <td style="text-align:right">{{metric.commit.author_experience|floatformat:4}}</td>
+        <td style="text-align:right" class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}"  >{{metric.delta_rmd|floatformat:8}}</td>
     </tr>
     {% endfor %}
 {% else %}

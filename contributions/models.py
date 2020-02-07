@@ -155,6 +155,10 @@ class Commit(models.Model):
                 return True
         return False
 
+    @property
+    def delta_rmd(self):
+        return self.delta_rmd_components
+
     def save(self, *args, **kwargs):
         self.author.save()
         self.committer.save()

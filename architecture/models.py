@@ -1,3 +1,5 @@
+from abc import abstractmethod, ABC
+
 from django.db import models
 
 from contributions.models import Commit, Directory, Tag
