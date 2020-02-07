@@ -181,7 +181,7 @@ def compileds(request, file_id):
 
 # Using overall design evaluation
 def impactful_commits(request):
-    export_csv = (request.GET.get("export_csv") and request.POST.get("export_csv") == "true") if True else False
+    export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
     # full_tag = (request.GET.get("until_tag") and request.POST.get("until_tag") == "true") if True else False
 
     full_tag = request.POST.get('until_tag')
@@ -273,10 +273,12 @@ def impactful_commits(request):
             #     metrics_dict.append([i, sum(v[1] for v in g)])
 
         if len(metrics_dict) > 0:
-            # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
-            my_df = pd.DataFrame(metrics_dict)
+            if directory_filter > 0:
+                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
+            else:
+                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag'])
 
-            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=False)
+            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
 
             rho = my_df.corr(method='spearman')
             # hist = my_df.hist(bins=3)
