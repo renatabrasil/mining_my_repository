@@ -229,7 +229,7 @@ def impactful_commits(request):
                 query.setdefault('commit__author_id', developer_filter)
             else:
                 query.setdefault('author_id', developer_filter)
-            dev_name = Developer.objects.get(pk=developer_filter).name.split(' ')[0].lower()
+            dev_name = Developer.objects.get(pk=developer_filter).name.replace(" ", "_").lower()
 
     if len(query) > 0:
         if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
