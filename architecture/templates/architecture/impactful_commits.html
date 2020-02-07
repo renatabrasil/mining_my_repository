@@ -34,6 +34,14 @@
                 {% endfor %}
               </select>
         </div>
+        <div class="col-auto">
+            <div class="custom-control custom-checkbox form-check mb-2">
+                <input class="custom-control-input" type="checkbox" name="until_tag" {% if until_tag_state %}checked {% endif%} id="until_tag_id">
+                <label class="custom-control-label" for="until_tag_id">
+                    Somente esta versão
+                </label>
+            </div>
+        </div>
     </div>
     <div class="form-row align-items-center">
         <div class="col-auto">
@@ -106,7 +114,7 @@
             <td style="text-align:right">{{metric.parents.0.mean_rmd_components|floatformat:8}}</td>
         </tr>
         <tr style="border-bottom: solid 2px">
-            <td><span class="text-muted">Commit:</span> {{metric.hash}} </td>
+            <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> </td>
             <td>{{metric.author.name}}</td>
             <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
             <td style="text-align:right;">{{metric.mean_rmd_components|floatformat:8}}</td>

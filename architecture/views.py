@@ -181,7 +181,14 @@ def compileds(request, file_id):
 
 # Using overall design evaluation
 def impactful_commits(request):
-    export_csv = (request.GET.get("export_csv") and request.GET.get("export_csv") == "true") if True else False
+    export_csv = (request.GET.get("export_csv") and request.POST.get("export_csv") == "true") if True else False
+    # full_tag = (request.GET.get("until_tag") and request.POST.get("until_tag") == "true") if True else False
+
+    full_tag = request.POST.get('until_tag')
+    if not full_tag:
+        if request.GET.get('until_tag') and request.GET.get('until_tag') == 'true':
+            full_tag = True
+        until_tag_state = ''
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     developers = Developer.objects.all().order_by("name")
@@ -205,10 +212,14 @@ def impactful_commits(request):
     if request.POST.get('tag_id') or request.GET.get('tag_id'):
         tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(request.GET.get('tag_id'))
         if tag_filter > 0:
-            if directory_filter > 0:
-                query.setdefault('commit__tag_id', tag_filter)
+            if full_tag:
+                tag_query_str = 'tag_id'
             else:
-                query.setdefault('tag_id', tag_filter)
+                tag_query_str = 'tag_id__lte'
+            if directory_filter > 0:
+                query.setdefault('commit__'+tag_query_str, tag_filter)
+            else:
+                query.setdefault(tag_query_str, tag_filter)
             tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/', '_')
 
     if request.POST.get('developer_id') or request.GET.get('developer_id'):
@@ -248,8 +259,6 @@ def impactful_commits(request):
             else:
                 commits = Commit.objects.exclude(delta_rmd_components=0).filter(**query)
             commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
-
-
 
     if export_csv:
 
@@ -304,6 +313,7 @@ def impactful_commits(request):
         'directories': directories,
         'developers': developers,
         'delta_check': delta_check,
+        'until_tag_state': full_tag,
     }
 
     return HttpResponse(template.render(context, request))
