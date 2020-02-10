@@ -1,6 +1,7 @@
 # standard library
 import csv
 import json
+import re
 import time
 from collections import OrderedDict
 
@@ -58,9 +59,29 @@ def index(request):
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
+                email = commit_repository.author.email.split("@")[0]
+                m = re.search(r'\Submitted by:* ', commit_repository.msg)
+                found = ''
+                if m:
+                    found = m.group(0)
+                    if found:
+                        author_and_email = re.sub(r'\Submitted by:* ', '',commit_repository.msg)
+                        # author_and_email.replace(' ', '', 1)
+                # if commit_repository.msg.lower().find("submitted by"):
+                #     author_and_email = commit_repository.msg.split("Submitted by ")[1]
+                    m = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email)
+                    found = ''
+                    if m:
+                        found = m.group(0)
+                        if found:
+                            email = found
+                            author_name = author_and_email.replace(email, "")
+
+
+                    # if len(author_and_email.split("\"")) > 0:
+                    #     email = author_and_email.split("\"")[2].replace("<","").replace(">","").replace(" ","")
                 author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
-                    email = commit_repository.author.email.split("@")[0]
                     author = Developer.objects.filter(email__contains=email + "@")
                     # author_name_array = author_name.split(" ")
                     # if len(author_name_array) > 1:
@@ -69,7 +90,7 @@ def index(request):
                     if author.count() > 0:
                         author = author[0]
                     else:
-                        author = Developer(name=CommitUtils.strip_accents(commit_repository.author.name), email=commit_repository.author.email)
+                        author = Developer(name=author_name, email=email)
                 else:
                     author = author[0]
 
