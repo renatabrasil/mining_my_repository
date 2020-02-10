@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Análise dos Dados{% endblock %}
+
+{% block content %}
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="" method="post" enctype="multipart/form-data">
+{% csrf_token %}
+    <div class="form-row">
+        <div class="col-md-4 mb-3">
+          <div class="custom-file">
+              <input type="file" class="custom-file-input" id="customFile">
+              <label class="custom-file-label" for="customFile">Selecione o CSV</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label>Tipo de gráfico: </label>
+        <div class="col-md-4 mb-3">
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioBox" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioBox">Box plot</label>
+            </div>
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioScatter" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioScatter">Scatter plot</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label>Dado: </label>
+        <div class="col-md-4 mb-3">
+          <div class="custom-control custom-radio custom-control-inline">
+
+              <input type="radio" id="radioExp" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioExp">Experiência (X)</label>
+            </div>
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioDegrada">Degradação - delta (Y)</label>
+            </div>
+        </div>
+    </div>
+    <input type="submit" class="btn btn-primary mb-2" value="Gerar Gráficos">
+
+
+
+
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+
+        </div>
+    </div>
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+
+        </div>
+    </div>
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+
+
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="col-auto">
+
+        </div>
+    </div>
+
+</form>
+
+{% endblock %}
