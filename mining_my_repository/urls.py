@@ -20,6 +20,6 @@ urlpatterns = [
     # path('', 'todo.html'),
 	path('contributions/', include('contributions.urls')),
     path('architecture/', include('architecture.urls')),
-    # path('contributions/developer/', include('contributions.developers.urls')),
+    path('data_analysis/', include('dataanalysis.urls')),
     path('admin/', admin.site.urls),
 ]

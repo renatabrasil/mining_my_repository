@@ -1,30 +1,27 @@
+# standard library
 import csv
 import json
 import time
-from io import StringIO
-from zipfile import ZipFile
-
-import matplotlib.pyplot as plt
-
-import pandas as pd
-from django.core.files import File
-from django.core.paginator import Paginator
-from django.db import transaction
 from collections import OrderedDict
 
-from django.db.models import Q
-from django.http import HttpResponse, Http404, StreamingHttpResponse, HttpResponseRedirect
-
-# Create your views here.
-from django.shortcuts import render, get_object_or_404
-from django.template import loader, RequestContext
-from django.template.loader import render_to_string
+# third-party
+import pandas as pd
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
+# Django
+from django.core.paginator import Paginator
+from django.http import (Http404, HttpResponse)
+from django.shortcuts import render
+from django.template import loader
+from django.template.loader import render_to_string
+
+# local Django
 from common.utils import CommitUtils, ViewUtils
-from contributions.models import Commit, Project, Developer, Modification, ContributionByAuthorReport, Contributor, Tag, \
-    Directory, DirectoryReport, IndividualContribution, MetricsReport, ProjectIndividualContribution, ProjectReport
+from contributions.models import (
+    Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
+    DirectoryReport, IndividualContribution, MetricsReport, Modification,
+    Project, ProjectIndividualContribution, ProjectReport, Tag)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None

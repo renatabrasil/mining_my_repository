@@ -1,5 +1,8 @@
+# Django
 from django.contrib import admin
-from .models import Developer, Project, Tag, Directory
+
+# local Django
+from .models import Developer, Directory, Project, Tag
 
 # Register your models here.
 

@@ -1,4 +1,5 @@
-from contributions.models import Tag, Project, Developer
+# local Django
+from contributions.models import Developer, Project, Tag
 
 
 def tags_processor(request):

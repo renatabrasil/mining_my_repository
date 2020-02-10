@@ -1,18 +1,19 @@
-import ast
+# standard library
 import re
 import warnings
 from datetime import date
 
-from django.db import models
+# third-party
 import numpy as np
 
-# Create your models here.
+# Django
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from pydriller import GitRepository
 
+# local Django
 from common.utils import CommitUtils
-
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)

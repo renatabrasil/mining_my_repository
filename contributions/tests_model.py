@@ -1,13 +1,19 @@
+# standard library
 import datetime
 import math
 
-from django.test import TestCase
-
-# Create your tests here.
+# third-party
 from model_mommy import mommy
 
-from contributions.models import Project, Developer, Tag, Directory, Commit, Modification, \
-    ProjectIndividualContribution, ProjectReport, IndividualContribution, DirectoryReport
+# Django
+from django.test import TestCase
+
+# local Django
+from contributions.models import (
+    Commit, Developer, Directory, DirectoryReport, IndividualContribution,
+    Modification, Project, ProjectIndividualContribution, ProjectReport, Tag)
+
+
 
 
 class DeveloperModelTests(TestCase):

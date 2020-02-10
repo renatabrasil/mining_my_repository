@@ -1,9 +1,9 @@
-import re
-
+# # third-party
+import unicodedata
 import unidecode
 
+# local Django
 from contributions import models
-import unicodedata
 
 class CommitUtils(object):
 

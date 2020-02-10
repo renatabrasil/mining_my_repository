@@ -1,33 +1,34 @@
-from itertools import groupby
-
-import numpy as np
+# standard library
 import os
+import re
 import shutil
 import subprocess
-import re
-import matplotlib.pyplot as plt
 from collections import OrderedDict
-import seaborn as sb
+from itertools import groupby
 
+# third-party
+import numpy as np
 import pandas as pd
-import scipy
+
+# Django
 from django.contrib import messages
 from django.core.files import File
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-
-# Create your views here.
 from django.template import loader
 from django.urls import reverse
 
+# local Django
 from architecture.forms import FilesCompiledForm
-from architecture.models import FileCommits, ArchitecturalMetricsByCommit
+from architecture.models import ArchitecturalMetricsByCommit, FileCommits
 from common.utils import ViewUtils
-from contributions.models import Project, Commit, Developer, IndividualContribution, ProjectIndividualContribution, \
-    Directory, Tag
+from contributions.models import (Commit, Developer, Directory,
+                                  IndividualContribution, Project,
+                                  ProjectIndividualContribution, Tag)
 
 
 def index(request):
+    """"Architecture Configuration"""
     tag = ViewUtils.load_tag(request)
     template = loader.get_template('architecture/index.html')
     files = []
@@ -128,7 +129,11 @@ def compileds(request, file_id):
                             shutil.rmtree(folder, ignore_errors=True)
                             print("BUILD FAILED or Jar creation failed\n")
                             print(jar+" DELETED\n")
+                            # TODO: extract method
                             object_commit.compilable = False
+                            object_commit.mean_rmd_components = 0.0
+                            object_commit.std_rmd_components = 0.0
+                            object_commit.delta_rmd_components = 0.0
 
                             os.chdir(file.local_repository)
                         else:
@@ -285,8 +290,8 @@ def impactful_commits(request):
             #              zorder=2, rwidth=0.9)
             # my_df.boxplot(by='y', column=['x'], grid=False)
             # boxplot = my_df.boxplot(column=['x', 'y'])
-            boxplot = my_df.boxplot(column=['x'])
-            boxplot = my_df.boxplot(column=['y'])
+            # boxplot = my_df.boxplot(column=['x'])
+            # boxplot = my_df.boxplot(column=['y'])
 
             # sb.heatmap(rho,
             #             xticklabels=rho.columns,
@@ -454,6 +459,9 @@ def update_compilable_commits(commits_with_errors):
                     hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
                     object_commit = Commit.objects.filter(hash=hash_commit)[0]
                     object_commit.compilable = False
+                    object_commit.mean_rmd_components = 0.0
+                    object_commit.std_rmd_components = 0.0
+                    object_commit.delta_rmd_components = 0.0
                     object_commit.save()
 
                 except OSError as e:
@@ -637,6 +645,7 @@ def __read_PM_file__(folder,tag_id):
                 else:
                     continue
                 commit_rmds = []
+                new_metric = True
                 if commit.parents and commit.parents[0] is not None:
                     previous_commit = commit.parents[0]
                 else:
@@ -664,6 +673,9 @@ def __read_PM_file__(folder,tag_id):
                                                                           rmd=float(row[5]), rma=float(row[4]),
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
+                    else:
+                        architecture_metrics = architecture_metrics[0]
+                        new_metric = False
                     if row[0] not in metrics:
                         metrics.setdefault(row[0],{})
                     if previous_commit and previous_commit in metrics[row[0]]:
@@ -690,26 +702,28 @@ def __read_PM_file__(folder,tag_id):
 
                 # commit_rmds = [c.rmd for c in ]
 
-                commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
-                commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
-                commit.delta_rmd_components = commit.mean_rmd_components
+                if new_metric:
 
-                # if previous_commit is None and directory.initial_commit == commit:
-                #     commit_rmds.append(architecture_metrics.rmd)
-                # else:
-                #     commit_rmds.append(0.0)
-                if previous_commit is not None and previous_commit.compilable:
-                    commit.delta_rmd_components -=previous_commit.mean_rmd_components
-                elif (previous_commit is not None and not previous_commit.compilable) and (last_commit is not None and last_commit.author == commit.author):
-                    commit.delta_rmd_components -= last_commit.mean_rmd_components
-                elif any(True == c[1] for c in commit_rmds):
-                    commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
-                else:
-                    commit.delta_rmd_components = 0.0
+                    commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
+                    commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
+                    commit.delta_rmd_components = commit.mean_rmd_components
 
-                commit.delta_rmd_components/=commit.u_cloc
+                    # if previous_commit is None and directory.initial_commit == commit:
+                    #     commit_rmds.append(architecture_metrics.rmd)
+                    # else:
+                    #     commit_rmds.append(0.0)
+                    if previous_commit is not None and previous_commit.compilable:
+                        commit.delta_rmd_components -=previous_commit.mean_rmd_components
+                    elif (previous_commit is not None and not previous_commit.compilable) and (last_commit is not None and last_commit.author == commit.author):
+                        commit.delta_rmd_components -= last_commit.mean_rmd_components
+                    elif any(True == c[1] for c in commit_rmds):
+                        commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
+                    else:
+                        commit.delta_rmd_components = 0.0
 
-                commit.save()
+                    commit.delta_rmd_components/=commit.u_cloc
+
+                    commit.save()
                 last_commit = commit
     return metrics
 

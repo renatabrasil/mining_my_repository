@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'contributions.apps.ContributionsConfig',
     'architecture.apps.ArchitectureConfig',
+    'dataanalysis.apps.DataanalysisConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -2,12 +2,13 @@ import datetime
 
 from django.test import TestCase
 
+from architecture.models import (ArchitectureQualityByDeveloper,
+                                 ArchitectureQualityMetrics, FileCommits)
+from contributions.models import (Commit, Developer, Directory, Modification,
+                                  Project, ProjectIndividualContribution, Tag)
 # Create your tests here.
 from model_mommy import mommy
 from model_mommy.recipe import Recipe, foreign_key
-
-from architecture.models import ArchitectureQualityMetrics, ArchitectureQualityByDeveloper, FileCommits
-from contributions.models import Developer, Directory, Tag, Commit, Modification, Project, ProjectIndividualContribution
 
 
 class FileCommitsModelTests(TestCase):
