@@ -88,10 +88,10 @@ class ArchitecturalMetricsByCommit(models.Model):
                     number += mod.u_cloc
         return number
 
-    def save(self, *args, **kwargs):
-        self.delta_rmd = self.delta_metrics("rmd",self.rmd)
-
-        super(ArchitecturalMetricsByCommit, self).save(*args, **kwargs)  # Call the "real" save() method.
+    # def save(self, *args, **kwargs):
+    #     self.delta_rmd = self.delta_metrics("rmd",self.rmd)
+    #
+    #     super(ArchitecturalMetricsByCommit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
     # @property
     # def exposition(self):

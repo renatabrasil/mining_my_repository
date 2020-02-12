@@ -8,6 +8,24 @@ from contributions import models
 class CommitUtils(object):
 
     @staticmethod
+    def get_email(full_email):
+        """"In the form of: <john doe at gmail dot com>
+        Returns johndoe@gmail.com"""
+        array_email = full_email.split(" ")
+        # email = email[0]+"@"+email[2]+"."+email[4]
+        email = ''
+        for part in array_email:
+            if part == 'at':
+                email += '@'
+            elif part == 'dot':
+                email += '.'
+            else:
+                email += part
+
+        return email.lower()
+    # regex ([a-zA-Z0-9_.+-]+\s*at+\s*[a-zA-Z0-9-]+\s*dot\s*[a-zA-Z0-9-.]+)
+
+    @staticmethod
     def true_path(modification):
         old_path = ''
         new_path = ''

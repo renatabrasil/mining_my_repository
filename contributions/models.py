@@ -17,10 +17,11 @@ from common.utils import CommitUtils
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
+    login = models.CharField(max_length=60, default='')
     email = models.CharField(max_length=200)
 
     def __str__(self):
-        return self.name + ' ('+self.email+')'
+        return self.name + ' (login: '+self.login+', email: '+self.email+')'
 
 class Project(models.Model):
     project_name = models.CharField(max_length=200)

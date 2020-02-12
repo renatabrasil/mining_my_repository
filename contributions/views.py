@@ -59,58 +59,70 @@ def index(request):
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
-                email = commit_repository.author.email.split("@")[0]
-                m = re.search(r'\Submitted by:* ', commit_repository.msg)
+                email = commit_repository.author.email.lower()
+                login = commit_repository.author.email.split("@")[0].lower()
+                m = re.search(r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*at\s*|@)[a-zA-Z0-9-]+(\s*dot\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))', commit_repository.msg, re.IGNORECASE)
                 found = ''
                 if m:
                     found = m.group(0)
                     if found:
-                        author_and_email = re.sub(r'\Submitted by:* ', '',commit_repository.msg)
-                        # author_and_email.replace(' ', '', 1)
-                # if commit_repository.msg.lower().find("submitted by"):
-                #     author_and_email = commit_repository.msg.split("Submitted by ")[1]
-                    m = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email)
-                    found = ''
-                    if m:
-                        found = m.group(0)
-                        if found:
-                            email = found
-                            author_name = author_and_email.replace(email, "")
-
+                        author_and_email = re.sub(r'\Submitted\s*([bB][yY])[:]*\s*', '',found)
+                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*at\s*|@)[a-zA-Z0-9-]+((\s*dot\s*|\.)[a-zA-Z0-9-.]+)+|(\)|\>|\])', '',
+                                             author_and_email)
+                        author_name = author_name.replace("\"","")
+                        author_name = CommitUtils.strip_accents(author_name)
+                        author_name = author_name.strip()
+                        email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email, re.IGNORECASE)
+                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*at\s*)[a-zA-Z0-9-]+((\s*dot\s*)[a-zA-Z0-9-.]+)+', author_and_email, re.IGNORECASE)
+                        if email_pattern:
+                            email_found = email_pattern.group(0)
+                            if email_found:
+                                email = email_found.lower()
+                        elif full_email_pattern:
+                            # Full email
+                            email_found = full_email_pattern.group(0)
+                            if email_found:
+                                email = CommitUtils.get_email(email_found)
+                        login = email.split("@")[0].lower()
 
                     # if len(author_and_email.split("\"")) > 0:
                     #     email = author_and_email.split("\"")[2].replace("<","").replace(">","").replace(" ","")
+                author_name = author_name.strip()
                 author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
-                    author = Developer.objects.filter(email__contains=email + "@")
-                    # author_name_array = author_name.split(" ")
-                    # if len(author_name_array) > 1:
-                    #     last_name = author_name_array[len(author_name_array) - 1]
-                    #     author = Developer.objects.filter(name__contains=last_name)
+                    if login != 'dev-null' and login != 'ant-dev':
+                        author= Developer.objects.filter(login=login)
+                    # If it is find by login, update fields
                     if author.count() > 0:
                         author = author[0]
+                        author.email = email
+                        if author_name:
+                            author.name = author_name
                     else:
-                        author = Developer(name=author_name, email=email)
+                        if not author_name:
+                            author = Developer(name=login, email=email, login=login)
+                        else:
+                            author = Developer(name=author_name, email=email, login=login)
                 else:
+                    # If it is find by name, update fields
                     author = author[0]
+                    author.email = email
+                    author.login = login
 
-                if commit_repository.author.name == commit_repository.committer.name:
+                if author.name == commit_repository.committer.name:
                     committer = author
                 else:
-                    committer_name = CommitUtils.strip_accents(commit_repository.author.name)
+                    committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
                     committer = Developer.objects.filter(name__iexact=committer_name)
                     if committer.count() == 0:
-                        email = commit_repository.committer.email.split("@")[0]
-                        committer = Developer.objects.filter(email__contains=email + "@")
-                        # committer_name_array = committer_name.split(" ")
-                        # if len(committer_name_array) > 1:
-                        #     last_name = committer_name_array[len(committer_name_array) - 1]
-                        #     committer = Developer.objects.filter(name__contains=last_name)
+                        email = commit_repository.committer.email.lower()
+                        login = email.split("@")[0].lower()
+                        committer = Developer.objects.filter(login=login)
                         if committer.count() > 0:
                             committer = committer[0]
                         else:
                             committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
-                                              email=commit_repository.committer.email)
+                                              email=email, login=login)
                     else:
                         committer = committer[0]
 

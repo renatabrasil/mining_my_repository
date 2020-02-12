@@ -197,6 +197,7 @@ def impactful_commits(request):
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     developers = Developer.objects.all().order_by("name")
+    developers = [d for d in developers if d.commits.exclude(delta_rmd_components=0)]
     commits = []
     directory_name = 'all'
     tag_name = 'tag-all'
@@ -624,14 +625,13 @@ def metrics_by_developer_csv(request, file_id):
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def __read_PM_file__(folder,tag_id):
     metrics = {}
-    collected_data = []
 
     previous_commit = None
 
     # To sort in natural order
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
-    last_commit = None
+    last_architectural_metric = None
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
         print("\n"+os.path.join(folder, subdirectory)+"\n----------------------\n")
@@ -660,8 +660,6 @@ def __read_PM_file__(folder,tag_id):
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
-                    # if not commit.has_files_in_this_directory(directory):
-                    #     continue
 
                     print(line.replace("\n",""))
 
@@ -676,26 +674,25 @@ def __read_PM_file__(folder,tag_id):
                     else:
                         architecture_metrics = architecture_metrics[0]
                         new_metric = False
-                    if row[0] not in metrics:
-                        metrics.setdefault(row[0],{})
-                    if previous_commit and previous_commit in metrics[row[0]]:
-                        previous_architecture_quality_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
-                        if previous_architecture_quality_metrics.count() > 0:
-                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_quality_metrics[0]
-                        delta = float(row[5]) - float(metrics[row[0]][previous_commit][0])
-                    elif not previous_commit:
-                        delta = 0.0
+                    if previous_commit:
+                        previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
+                        if previous_architecture_metrics.count() > 0:
+                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[0]
+                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
+                    elif previous_commit and not previous_commit.compilable:
+                        if commit.author == last_architectural_metric.commit.author:
+                            architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
+                        else:
+                            architecture_metrics.delta_rmd = (architecture_metrics.rmd - last_architectural_metric.rmd)/2
                     else:
-                        delta = float(row[5])
-                    if hasattr(architecture_metrics, 'pk') and architecture_metrics.pk is None:
+                        architecture_metrics.delta_rmd = 0.0
+
+                    if new_metric:
+                        architecture_metrics.delta_rmd /= commit.u_cloc
                         architecture_metrics.save()
 
                     # commit_rmds.append(architecture_metrics.rmd)
                     commit_rmds.append([architecture_metrics.rmd, True if directory.initial_commit == commit else False])
-
-                    metrics[row[0]].setdefault(commit, [row[5], delta])
-
-                    collected_data.append([commit.committer.id, delta])
             finally:
                 f.close()
                 # commit_rmds = ArchitecturalMetricsByCommit.objects.filter(commit=commit).distinct().values_list("rmd", flat=True)
@@ -714,8 +711,8 @@ def __read_PM_file__(folder,tag_id):
                     #     commit_rmds.append(0.0)
                     if previous_commit is not None and previous_commit.compilable:
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
-                    elif (previous_commit is not None and not previous_commit.compilable) and (last_commit is not None and last_commit.author == commit.author):
-                        commit.delta_rmd_components -= last_commit.mean_rmd_components
+                    elif (previous_commit is not None and not previous_commit.compilable) and (last_architectural_metric.commit is not None and last_architectural_metric.commit.author == commit.author):
+                        commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
                     elif any(True == c[1] for c in commit_rmds):
                         commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
                     else:
@@ -724,7 +721,7 @@ def __read_PM_file__(folder,tag_id):
                     commit.delta_rmd_components/=commit.u_cloc
 
                     commit.save()
-                last_commit = commit
+                last_architectural_metric = architecture_metrics
     return metrics
 
 def __create_files__(form, project_id):
