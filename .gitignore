@@ -17,3 +17,5 @@ shell.txt
 *.csv
 *.xls
 *.xlsx
+data_analysis.ipynb
+/versoes-ant
