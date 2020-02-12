@@ -124,7 +124,7 @@ def compileds(request, file_id):
                         # 100 KB
                         if os.path.getsize(jar) < 102400:
                             os.chdir(current_project_path + '/' + compiled_directory)
-                            folder = 'version-' + commit.replace("/","").replace(".","-")
+                            folder = 'version-' + commit.replace("/" ,"").replace(".","-")
                             commit_with_errors.append(commit.replace("/","").replace(".","-"))
                             shutil.rmtree(folder, ignore_errors=True)
                             print("BUILD FAILED or Jar creation failed\n")
@@ -432,21 +432,6 @@ def old_impactful_commits(request):
 
     return HttpResponse(template.render(context, request))
 
-# def export_to_csv_metrics(request):
-#     project = Project.objects.get(project_name="Apache Ant")
-#     tag = ViewUtils.load_tag(request)
-#
-#     response = HttpResponse(content_type='text/csv')
-#     response['Content-Disposition'] = 'attachment; filename='+ project.project_name +'"-metrics.csv"'
-#     # writer = csv.writer(response)
-#     pd.DataFrame(contributions)
-#
-#
-#     writer.writerow(["Classificacao de desenvolvedores por experiencia"])
-#     writer.writerow([""])
-#
-#     return response
-
 def update_compilable_commits(commits_with_errors):
     try:
         f = open(commits_with_errors, 'r')
@@ -656,7 +641,7 @@ def __read_PM_file__(folder,tag_id):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
-                    directory = Directory.objects.filter(name__exact='src/main/' + row[0], visible=True)
+                    directory = Directory.objects.filter(name__exact='src/main/' + row[0])
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
@@ -690,6 +675,8 @@ def __read_PM_file__(folder,tag_id):
                     if new_metric:
                         architecture_metrics.delta_rmd /= commit.u_cloc
                         architecture_metrics.save()
+                        directory.visible = True
+                        directory.save()
 
                     # commit_rmds.append(architecture_metrics.rmd)
                     commit_rmds.append([architecture_metrics.rmd, True if directory.initial_commit == commit else False])
@@ -745,7 +732,7 @@ def __pre_correlation__(metrics, component):
 
 def __get_quality_contribution_by_developer__(component, developer, tag):
     # Developer experience in this component
-    full_component = 'src/main/'+component.replace(".","/")
+    full_component = 'src/main/'+component.replace(".", "/")
     directory = Directory.objects.filter(name__exact=full_component)
     if directory.count() == 0:
         return None

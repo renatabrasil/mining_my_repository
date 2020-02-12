@@ -33,7 +33,7 @@ class CommitUtils(object):
             old_path = modification.old_path.replace("\\", "/")
         if modification.new_path:
             new_path = modification.new_path.replace("\\", "/")
-        if modification.change_type == 'DELETE':
+        if modification.change_type.name == 'DELETE':
             path = old_path
         else:
             path = new_path

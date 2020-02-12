@@ -45,7 +45,7 @@ class Tag(models.Model):
 class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
-    visible = models.BooleanField(default=True)
+    visible = models.BooleanField(default=False)
     initial_commit = models.ForeignKey('Commit', on_delete=models.CASCADE, related_name='starter_directories', null=True)
 
     def __str__(self):
@@ -59,11 +59,12 @@ class Commit(models.Model):
     parents_str = models.CharField(max_length=180)
     author = models.ForeignKey(Developer, related_name='commits', on_delete=models.CASCADE)
     author_experience = models.FloatField(null=True, default=0.0)
-    author_date = models.DateField(default=date.today)
+    author_date = models.DateTimeField(default=date.today)
     committer = models.ForeignKey(Developer, related_name='committer_id', on_delete=models.CASCADE)
-    committer_date = models.DateField(default=date.today)
+    committer_date = models.DateTimeField(default=date.today)
+
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
-    cloc_activity_str = models.CharField(max_length=220,default='')
+    cloc_activity = models.IntegerField(default=0)
     compilable = models.BooleanField(default=True)
     _parents = []
     # mean rmd
@@ -168,23 +169,27 @@ class Commit(models.Model):
             parent = Commit.objects.filter(hash=hash)
             if parent.count() > 0:
                 self.parent = parent[0]
+
         if self.pk is None:
             self.author_experience = 0.0
             total_commits_by_author = Commit.objects.filter(author=self.author).count()
+            previous_commit = None
+            previous_commit = Commit.objects.filter(author=self.author).last()
 
             file_by_authors = Modification.objects.none()
             if total_commits_by_author > 0:
                 file_by_authors = Modification.objects.filter(commit__author=self.author)
-                # file_by_authors = FileByAuthor.objects.filter(author=self.author)
-                # file_by_authors = FileByAuthor.objects.filter(author=self.author,
-                #                                               modifications__in=Modification.objects.filter(commit_id__lte=commits[-1].id)).distinct()
 
-            cloc_activity = [c.u_cloc for c in file_by_authors]
-            cloc = sum(cloc_activity)
+            self.cloc_activity = 0
+            if previous_commit is not None:
+                self.cloc_activity = previous_commit.cloc_activity
+
+            # cloc_activity = [c.u_cloc for c in file_by_authors]
+            # cloc = sum(cloc_activity)
 
             files = file_by_authors.values("path").distinct().count()
 
-            self.author_experience = 0.2 * total_commits_by_author + 0.4 * files + 0.4 * cloc
+            self.author_experience = 0.2 * total_commits_by_author + 0.4 * files + 0.4 * self.cloc_activity
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -308,6 +313,8 @@ class Modification(models.Model):
                     self.directory = directory[0]
 
                 self.cloc = self.added + self.removed
+                self.commit.cloc_activity += self.u_cloc
+                self.commit.save()
 
                 super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
