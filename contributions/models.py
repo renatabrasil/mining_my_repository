@@ -10,6 +10,7 @@ import numpy as np
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.timezone import now
 from pydriller import GitRepository
 
 # local Django
@@ -59,9 +60,9 @@ class Commit(models.Model):
     parents_str = models.CharField(max_length=180)
     author = models.ForeignKey(Developer, related_name='commits', on_delete=models.CASCADE)
     author_experience = models.FloatField(null=True, default=0.0)
-    author_date = models.DateTimeField(default=date.today)
+    author_date = models.DateTimeField(default=now, editable=False)
     committer = models.ForeignKey(Developer, related_name='committer_id', on_delete=models.CASCADE)
-    committer_date = models.DateTimeField(default=date.today)
+    committer_date = models.DateTimeField(default=now, editable=False)
 
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
     cloc_activity = models.IntegerField(default=0)
@@ -306,7 +307,7 @@ class Modification(models.Model):
 
                 directory = Directory.objects.filter(name=directory_str)
                 if directory.count() == 0:
-                    directory = Directory(name=directory_str, visible=True, project=self.commit.tag.project, initial_commit=self.commit)
+                    directory = Directory(name=directory_str, project=self.commit.tag.project, initial_commit=self.commit)
                     directory.save()
                     self.directory = directory
                 else:

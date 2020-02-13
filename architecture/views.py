@@ -612,6 +612,7 @@ def __read_PM_file__(folder,tag_id):
     metrics = {}
 
     previous_commit = None
+    components = {}
 
     # To sort in natural order
     arr = os.listdir(folder)
@@ -641,10 +642,17 @@ def __read_PM_file__(folder,tag_id):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
-                    directory = Directory.objects.filter(name__exact='src/main/' + row[0])
-                    if directory.count() == 0:
-                        continue
-                    directory = directory[0]
+                    directory_str = name__exact='src/main/' + row[0]
+                    if directory_str in components:
+                        directory = components[directory_str]
+                    else:
+                        directory = Directory.objects.filter(name__exact=directory_str)
+                        if directory.count() == 0:
+                            continue
+                        directory = directory[0]
+                        # Change architecture
+                        components.setdefault(directory_str, directory)
+                        directory.visible = True
 
                     print(line.replace("\n",""))
 
@@ -675,7 +683,6 @@ def __read_PM_file__(folder,tag_id):
                     if new_metric:
                         architecture_metrics.delta_rmd /= commit.u_cloc
                         architecture_metrics.save()
-                        directory.visible = True
                         directory.save()
 
                     # commit_rmds.append(architecture_metrics.rmd)
