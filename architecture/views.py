@@ -716,9 +716,11 @@ def __read_PM_file__(folder,tag_id):
                     commit.delta_rmd_components/=commit.u_cloc
 
                     last_architectural_metric = architecture_metrics
-                    removed_components = [x for x in components.keys() if x not in components_db]
-                    if len(removed_components):
+                    removed_components = [x for x in components_db if x not in list(components.keys())]
+                    if len(removed_components) > 0:
                         commit.changed_architecture = True
+                        for component_str in components.keys():
+                            components[component_str].visible=False
                     commit.save()
     return metrics
 
