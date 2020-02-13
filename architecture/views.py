@@ -612,8 +612,8 @@ def __read_PM_file__(folder,tag_id):
     metrics = {}
     previous_commit = None
     first_commit_id = Commit.objects.all().first().pk
-    Directory.objects.all().update(visible=False)
-    Commit.objects.filter(changed_architecture=True).update(changed_architecture=False)
+    Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
+    Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
 
     # To sort in natural order
     arr = os.listdir(folder)
