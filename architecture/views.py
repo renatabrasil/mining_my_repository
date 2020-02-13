@@ -610,7 +610,7 @@ def metrics_by_developer_csv(request, file_id):
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def __read_PM_file__(folder,tag_id):
     metrics = {}
-
+    components_db = Directory.objects.filter(visible=True).values_list("name", flat=True)
     previous_commit = None
     components = {}
 
@@ -653,6 +653,7 @@ def __read_PM_file__(folder,tag_id):
                         # Change architecture
                         components.setdefault(directory_str, directory)
                         directory.visible = True
+                        commit.changed_architecture = True
 
                     print(line.replace("\n",""))
 
@@ -714,8 +715,11 @@ def __read_PM_file__(folder,tag_id):
 
                     commit.delta_rmd_components/=commit.u_cloc
 
+                    last_architectural_metric = architecture_metrics
+                    removed_components = [x for x in components.keys() if x not in components_db]
+                    if len(removed_components):
+                        commit.changed_architecture = True
                     commit.save()
-                last_architectural_metric = architecture_metrics
     return metrics
 
 def __create_files__(form, project_id):

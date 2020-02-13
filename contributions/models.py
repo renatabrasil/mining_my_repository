@@ -65,6 +65,7 @@ class Commit(models.Model):
     committer_date = models.DateTimeField(default=now, editable=False)
 
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
+    changed_architecture = models.BooleanField(default=False)
     cloc_activity = models.IntegerField(default=0)
     compilable = models.BooleanField(default=True)
     _parents = []
