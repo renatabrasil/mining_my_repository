@@ -610,9 +610,10 @@ def metrics_by_developer_csv(request, file_id):
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def __read_PM_file__(folder,tag_id):
     metrics = {}
-    components_db = Directory.objects.filter(visible=True).values_list("name", flat=True)
     previous_commit = None
-    components = {}
+    first_commit_id = Commit.objects.all().first().pk
+    Directory.objects.all().update(visible=False)
+    Commit.objects.filter(changed_architecture=True).update(changed_architecture=False)
 
     # To sort in natural order
     arr = os.listdir(folder)
@@ -620,6 +621,8 @@ def __read_PM_file__(folder,tag_id):
     last_architectural_metric = None
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
+        components_db = Directory.objects.filter(visible=True)
+        components = []
         print("\n"+os.path.join(folder, subdirectory)+"\n----------------------\n")
         for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
             try:
@@ -643,17 +646,12 @@ def __read_PM_file__(folder,tag_id):
                     row[0] = row[0].replace('.','/')
 
                     directory_str = name__exact='src/main/' + row[0]
-                    if directory_str in components:
-                        directory = components[directory_str]
-                    else:
-                        directory = Directory.objects.filter(name__exact=directory_str)
-                        if directory.count() == 0:
-                            continue
-                        directory = directory[0]
-                        # Change architecture
-                        components.setdefault(directory_str, directory)
-                        directory.visible = True
-                        commit.changed_architecture = True
+                    directory = Directory.objects.filter(name__exact=directory_str)
+                    if directory.count() == 0:
+                        continue
+                    directory = directory[0]
+                    # Change architecture
+                    components.append(directory)
 
                     print(line.replace("\n",""))
 
@@ -679,7 +677,10 @@ def __read_PM_file__(folder,tag_id):
                         else:
                             architecture_metrics.delta_rmd = (architecture_metrics.rmd - last_architectural_metric.rmd)/2
                     else:
-                        architecture_metrics.delta_rmd = 0.0
+                        if directory.initial_commit == commit:
+                            architecture_metrics.delta_rmd = architecture_metrics.rmd
+                        else:
+                            architecture_metrics.delta_rmd = 0.0
 
                     if new_metric:
                         architecture_metrics.delta_rmd /= commit.u_cloc
@@ -715,13 +716,23 @@ def __read_PM_file__(folder,tag_id):
 
                     commit.delta_rmd_components/=commit.u_cloc
 
-                    last_architectural_metric = architecture_metrics
-                    removed_components = [x for x in components_db if x not in list(components.keys())]
-                    if len(removed_components) > 0:
-                        commit.changed_architecture = True
-                        for component_str in components.keys():
-                            components[component_str].visible=False
+
+                    removed_components = [x for x in list(components_db) if x not in components]
+                    add_components = [x for x in components if x not in list(components_db)]
+                    diff_components = removed_components + add_components
+                    if len(diff_components) > 0:
+                        if commit.pk != first_commit_id:
+                            commit.changed_architecture = True
+                        for a_component in diff_components:
+                            if a_component.visible:
+                                a_component.visible = False
+                            else:
+                                a_component.visible = True
+                            a_component.save()
+
                     commit.save()
+
+                    last_architectural_metric = architecture_metrics
     return metrics
 
 def __create_files__(form, project_id):
