@@ -15,6 +15,8 @@ from pydriller import GitRepository
 
 # local Django
 from common.utils import CommitUtils
+from dataanalysis.models import AnalysisPeriod
+
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -66,6 +68,7 @@ class Commit(models.Model):
 
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
     changed_architecture = models.BooleanField(default=False)
+    analysis_period = models.ForeignKey(AnalysisPeriod, on_delete=models.DO_NOTHING, null=True)
     cloc_activity = models.IntegerField(default=0)
     compilable = models.BooleanField(default=True)
     _parents = []

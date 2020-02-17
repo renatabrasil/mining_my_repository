@@ -25,6 +25,7 @@ from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   IndividualContribution, Project,
                                   ProjectIndividualContribution, Tag)
+from dataanalysis.models import AnalysisPeriod
 
 
 def index(request):
@@ -269,9 +270,9 @@ def impactful_commits(request):
     if export_csv:
 
         if directory_filter > 0:
-            metrics_dict = [[x.commit.author_experience,x.commit.delta_rmd, x.commit.tag.description, x.commit.directory.name] for x in commits]
+            metrics_dict = [[x.commit.author_experience,x.commit.delta_rmd, x.commit.tag.description, x.commit.directory.name, x.commit.changed_architecture] for x in commits]
         else:
-            metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description] for x
+            metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
                             in commits]
 
             # metrics_dict = []
@@ -280,9 +281,9 @@ def impactful_commits(request):
 
         if len(metrics_dict) > 0:
             if directory_filter > 0:
-                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
+                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component', 'mudou'])
             else:
-                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag'])
+                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','mudou'])
 
             my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
 
@@ -611,9 +612,13 @@ def metrics_by_developer_csv(request, file_id):
 def __read_PM_file__(folder,tag_id):
     metrics = {}
     previous_commit = None
-    first_commit_id = Commit.objects.all().first().pk
+    start_commit_analysis_period = Commit.objects.all().first()
+    first_commit_id = start_commit_analysis_period.pk
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
+    analysis_period = None
+    components_evolution = []
+    n_commits = 0
 
     # To sort in natural order
     arr = os.listdir(folder)
@@ -721,8 +726,19 @@ def __read_PM_file__(folder,tag_id):
                     add_components = [x for x in components if x not in list(components_db)]
                     diff_components = removed_components + add_components
                     if len(diff_components) > 0:
+                        components_evolution.append([n_commits, len(diff_components)])
+
                         if commit.pk != first_commit_id:
+                            n_commits = 0
                             commit.changed_architecture = True
+                            if analysis_period is None:
+                                analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
+                            analysis_period.end_commit = last_architectural_metric.commit
+                            analysis_period.save()
+                            start_commit_analysis_period = commit
+                        analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
+                        analysis_period.save()
+                        commit.analysis_period = analysis_period
                         for a_component in diff_components:
                             if a_component.visible:
                                 a_component.visible = False
@@ -730,9 +746,15 @@ def __read_PM_file__(folder,tag_id):
                                 a_component.visible = True
                             a_component.save()
 
+                    n_commits += 1
                     commit.save()
-
                     last_architectural_metric = architecture_metrics
+
+    my_df = pd.DataFrame(components_evolution, columns=['commits', 'diff_components'])
+    my_df.to_csv('diff_components_' + str(tag_id)+ '.csv', index=False, header=True)
+
+    print(components_evolution)
+
     return metrics
 
 def __create_files__(form, project_id):
