@@ -725,15 +725,19 @@ def __read_PM_file__(folder,tag_id):
                     removed_components = [x for x in list(components_db) if x not in components]
                     add_components = [x for x in components if x not in list(components_db)]
                     diff_components = removed_components + add_components
+                    n_commits += 1
                     if len(diff_components) > 0:
                         components_evolution.append([n_commits, len(diff_components)])
 
                         if commit.pk != first_commit_id:
-                            n_commits = 0
+                            # n_commits = 0
                             commit.changed_architecture = True
                             if analysis_period is None:
                                 analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
-                            analysis_period.end_commit = last_architectural_metric.commit
+                            if last_architectural_metric is not None:
+                                analysis_period.end_commit = last_architectural_metric.commit
+                            else:
+                                analysis_period.end_commit = commit
                             analysis_period.save()
                             start_commit_analysis_period = commit
                         analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
@@ -745,8 +749,8 @@ def __read_PM_file__(folder,tag_id):
                             else:
                                 a_component.visible = True
                             a_component.save()
-
-                    n_commits += 1
+                    else:
+                        components_evolution.append([n_commits, len(diff_components)])
                     commit.save()
                     last_architectural_metric = architecture_metrics
 

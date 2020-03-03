@@ -20,3 +20,5 @@ shell.txt
 *.xlsx
 data_analysis.ipynb
 /versoes-ant
+*.png
+architectural_evolution.ipynb
