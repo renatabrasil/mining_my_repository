@@ -83,7 +83,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag_state={{until_tag_state}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>

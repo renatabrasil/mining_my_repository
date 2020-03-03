@@ -188,13 +188,13 @@ def compileds(request, file_id):
 # Using overall design evaluation
 def impactful_commits(request):
     export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
-    # full_tag = (request.GET.get("until_tag") and request.POST.get("until_tag") == "true") if True else False
+    # full_tag = (request.GET.get("until_tag_state") and request.POST.get("until_tag") == "true") if True else False
 
     full_tag = request.POST.get('until_tag')
     if not full_tag:
-        if request.GET.get('until_tag') and request.GET.get('until_tag') == 'true':
+        if request.GET.get('until_tag_state') is not None and request.GET.get('until_tag_state') == 'on':
             full_tag = True
-        until_tag_state = ''
+        # until_tag_state = ''
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     developers = Developer.objects.all().order_by("name")
@@ -547,6 +547,7 @@ def quality_between_versions(request):
     tag = ViewUtils.load_tag(request)
     directory = request.POST.get('directory')
     metrics_by_directories = OrderedDict()
+    metrics = []
     if directory:
         if os.path.exists(directory):
             arr = os.listdir(directory)
@@ -574,8 +575,20 @@ def quality_between_versions(request):
 
                     finally:
                         f.close()
+
+                components_mean = []
+                dict2 = list(metrics_by_directories.values())
+                for value in dict2:
+                    if version in value:
+                        components_mean.append(float(value[version]))
+
+                # components_mean = np.mean([float(c[version]) for c in list(metrics_by_directories.values())])
+                metrics.append([version, np.mean(components_mean)])
+        # my_df_metrics = pd.DataFrame.from_dict(metrics, orient='index', columns=['version', 'y'])
+        my_df_metrics = pd.DataFrame(metrics, columns=['version', 'y'])
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
+        my_df_metrics.to_csv('metrics_by_version.csv', index=False, header=True)
         my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
     context = {
         'tag': tag,
