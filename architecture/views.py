@@ -272,8 +272,9 @@ def impactful_commits(request):
         if directory_filter > 0:
             metrics_dict = [[x.commit.author_experience,x.commit.delta_rmd, x.commit.tag.description, x.commit.directory.name, x.commit.changed_architecture] for x in commits]
         else:
-            metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
-                            in commits]
+            # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
+            #                 in commits]
+            metrics_dict = [[x.author_experience, x.delta_rmd_components] for x in commits]
 
             # metrics_dict = []
             # for i, g in groupby(sorted(metrics_aux), key=lambda x: x[0]):
@@ -283,7 +284,8 @@ def impactful_commits(request):
             if directory_filter > 0:
                 my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component', 'mudou'])
             else:
-                my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','mudou'])
+                my_df = pd.DataFrame(metrics_dict, columns=['x', 'y'])
+                # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','mudou'])
 
             my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
 
