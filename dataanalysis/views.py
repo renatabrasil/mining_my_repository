@@ -1,3 +1,4 @@
+import math
 from itertools import groupby
 
 # third-party
@@ -13,6 +14,10 @@ from django.urls import reverse
 from architecture.models import ArchitecturalMetricsByCommit
 from contributions.models import Commit
 
+POPULATION_MEANS = 1
+CORRELATION_BY_VERSION = 2
+CORRELATION_BY_DEV = 3
+MEANS_BY_DEV_AND_VERSION = 4
 
 def index(request):
     template = loader.get_template('data_analysis/index.html')
@@ -26,34 +31,96 @@ def index(request):
     }
     return HttpResponse(template.render(context, request))
 
-def population_means(request):
+def descriptive_statistics(request, type):
+    metric_by_dev = __process_metrics__(type)
+    file_name = 'undefined'
+    try:
+        if type == POPULATION_MEANS:
+
+            file_name = 'population_means.csv'
+            population_means_list = []
+            for exp_arr, degrad_arr in metric_by_dev.values():
+                population_means_list.append([np.mean(exp_arr), np.mean(degrad_arr)])
+
+            my_df = pd.DataFrame(population_means_list, columns=['x', 'y'])
+            my_df.to_csv(file_name, index=False, header=True)
+        elif type == CORRELATION_BY_VERSION:
+
+            file_name = 'correlation_version.csv'
+            correlation_list = []
+            for tag in metric_by_dev:
+                my_df = pd.DataFrame(metric_by_dev[tag], columns=['x', 'y'])
+                r = my_df.corr(method='spearman').values[0][1]
+                correlation_list.append([tag.description, r])
+
+            my_df = pd.DataFrame(correlation_list, columns=['x', 'y'])
+            writer = pd.ExcelWriter('correlation_version.xlsx')
+            my_df.to_excel(writer, 'Sheet1', index=None, header=True)
+            my_df.to_csv(file_name, index=None, header=True)
+            # my_df.to_excel(writer, 'Sheet2')
+            writer.save()
+            print('Correlation by version')
+        elif type == CORRELATION_BY_DEV:
+
+            file_name = 'correlation_dev.csv'
+            correlation_list = []
+            for dev in metric_by_dev:
+                my_df = pd.DataFrame(metric_by_dev[dev], columns=['x', 'y'])
+                r = my_df.corr(method='spearman').values[0][1]
+                if not math.isnan(r):
+                    correlation_list.append([dev.name, r])
+
+            my_df = pd.DataFrame(correlation_list, columns=['x', 'y'])
+            my_df.to_csv(file_name, index=None, header=True)
+            # my_df.to_excel(file_name, sheet_name='correlacao', engine='xlsxwriter', index=None, header=True)
+            print('Correlation by dev')
+        elif type == MEANS_BY_DEV_AND_VERSION:
+            print('means')
+
+        my_df.to_csv(file_name, index=False, header=True)
+        messages.success(request, 'Files successfully created! File: '+file_name)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Could not create file! (motive: '+e.args[0]+')')
+
+    return HttpResponseRedirect(reverse('analysis:index', ))
+
+def __process_metrics__(type):
     commits = Commit.objects.exclude(delta_rmd_components=0)
     # values = set(map(lambda x: x.author, commits))
     metric_by_dev = {}
-    population_means_list = []
 
     try:
         for commit in commits:
-            if commit.author not in metric_by_dev:
-                metric_by_dev.setdefault(commit.author, [[], []])
-            metric_by_dev[commit.author][0].append(commit.author_experience)
-            metric_by_dev[commit.author][1].append(commit.delta_rmd_components)
 
-        for exp_arr, degrad_arr in metric_by_dev.values():
-            population_means_list.append([np.mean(exp_arr), np.mean(degrad_arr)])
+            if type == POPULATION_MEANS:
+                key = commit.author
 
-        my_df = pd.DataFrame(population_means_list, columns=['x', 'y'])
-        my_df.to_csv('population_means.csv', index=False,
-                     header=True)
+                if key not in metric_by_dev:
+                    metric_by_dev.setdefault(key, [[], []])
+                metric_by_dev[key][0].append(commit.author_experience)
+                metric_by_dev[key][1].append(commit.delta_rmd_components)
 
-        messages.success(request, 'Files successfully created!')
+            elif type == CORRELATION_BY_DEV:
+                key = commit.author
+                if key not in metric_by_dev:
+                    metric_by_dev.setdefault(key, [])
+
+                metric_by_dev[key].append([commit.author_experience, commit.delta_rmd_components])
+
+            elif type == CORRELATION_BY_VERSION:
+                key = commit.tag
+
+                if key not in metric_by_dev:
+                    metric_by_dev.setdefault(key, [])
+                metric_by_dev[key].append([commit.author_experience, commit.delta_rmd_components])
+
+            # if key not in metric_by_dev:
+            #     metric_by_dev.setdefault(key, [[], []])
+            # metric_by_dev[key][0].append(commit.author_experience)
+            # metric_by_dev[key][1].append(commit.delta_rmd_components)
+
     except Exception as e:
-        print(e)
-        messages.error(request, 'Could not create file! ('+e+')')
+        raise e
 
-    # for i, g in groupby(sorted(commits), key=lambda x: x):
-    #     metric_by_dev.append(0)
-
-
-
-    return HttpResponseRedirect(reverse('analysis:index', ))
+    return metric_by_dev

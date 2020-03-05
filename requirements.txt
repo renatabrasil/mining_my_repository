@@ -6,3 +6,6 @@ whitenoise
 unidecode
 seaborn
 pyyaml
+openpyxl
+xlwt
+xlsxwriter
