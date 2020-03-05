@@ -71,28 +71,28 @@
   pk: 11
   fields:
     project: 2
-    description: '4.0.0'
+    description: 'releases/lucene-solr/4.0.0'
 - model: contributions.tag
   pk: 12
   fields:
     project: 2
-    description: '5.0.0'
+    description: 'releases/lucene-solr/5.0.0'
     previous_tag: 11
 - model: contributions.tag
   pk: 13
   fields:
     project: 2
-    description: '6.0.0'
+    description: 'releases/lucene-solr/6.0.0'
     previous_tag: 12
 - model: contributions.tag
   pk: 14
   fields:
     project: 2
-    description: '7.0.0'
+    description: 'releases/lucene-solr/7.0.0'
     previous_tag: 13
 - model: contributions.tag
   pk: 15
   fields:
     project: 2
-    description: '8.0.0'
+    description: 'releases/lucene-solr/8.0.0'
     previous_tag: 14
