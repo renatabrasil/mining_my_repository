@@ -3,6 +3,11 @@
   fields:
     project_name: Apache Ant
     project_path: https://github.com/apache/ant.git
+- model: contributions.project
+  pk: 2
+  fields:
+    project_name: Apache Lucene
+    project_path: https://github.com/apache/lucene-solr
 - model: contributions.tag
   pk: 1
   fields:
@@ -62,3 +67,32 @@
     project: 1
     description: 'rel/1.10.0'
     previous_tag: 9
+- model: contributions.tag
+  pk: 11
+  fields:
+    project: 2
+    description: '4.0.0'
+- model: contributions.tag
+  pk: 12
+  fields:
+    project: 2
+    description: '5.0.0'
+    previous_tag: 11
+- model: contributions.tag
+  pk: 13
+  fields:
+    project: 2
+    description: '6.0.0'
+    previous_tag: 12
+- model: contributions.tag
+  pk: 14
+  fields:
+    project: 2
+    description: '7.0.0'
+    previous_tag: 13
+- model: contributions.tag
+  pk: 15
+  fields:
+    project: 2
+    description: '8.0.0'
+    previous_tag: 14
