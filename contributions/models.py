@@ -80,7 +80,7 @@ class Commit(models.Model):
     delta_rmd_components = models.FloatField(null=True, default=0.0)
 
     def __str__(self):
-        return self.hash + " - Author: " + self.author.name
+        return self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
 
     def calculate_boosting_factor(self,activity_array):
         if not activity_array or len(activity_array) == 1:

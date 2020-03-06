@@ -19,6 +19,8 @@ class CommitUtils(object):
                 email += '@'
             elif part == 'dot':
                 email += '.'
+            elif part == 'dash':
+                email += '-'
             else:
                 email += part
 
