@@ -686,28 +686,34 @@ def __read_PM_file__(folder,tag_id):
                     else:
                         architecture_metrics = architecture_metrics[0]
                         new_metric = False
+                    # Has ancestor and it is compilable
                     if previous_commit:
                         previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
                         if previous_architecture_metrics.count() > 0:
                             architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[0]
                             architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
+                    # Ancestor is not compilable
                     elif previous_commit and not previous_commit.compilable:
+                        # Same author
                         if commit.author == last_architectural_metric.commit.author:
                             architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
+                        # Distinct authors
                         else:
                             architecture_metrics.delta_rmd = (architecture_metrics.rmd - last_architectural_metric.rmd)/2
+                    # It is an orphan commit
                     else:
+                        # It is the initial commit in this component
                         if directory.initial_commit == commit:
                             architecture_metrics.delta_rmd = architecture_metrics.rmd
                         else:
                             architecture_metrics.delta_rmd = 0.0
 
                     if new_metric:
+                        # Delta normalization by LOC changed
                         architecture_metrics.delta_rmd /= commit.u_cloc
                         architecture_metrics.save()
                         directory.save()
 
-                    # commit_rmds.append(architecture_metrics.rmd)
                     commit_rmds.append([architecture_metrics.rmd, True if directory.initial_commit == commit else False])
             finally:
                 f.close()
@@ -721,19 +727,28 @@ def __read_PM_file__(folder,tag_id):
                     commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
                     commit.delta_rmd_components = commit.mean_rmd_components
 
-                    # if previous_commit is None and directory.initial_commit == commit:
-                    #     commit_rmds.append(architecture_metrics.rmd)
-                    # else:
-                    #     commit_rmds.append(0.0)
+                    # Delta calculation
                     if previous_commit is not None and previous_commit.compilable:
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
-                    elif (previous_commit is not None and not previous_commit.compilable) and (last_architectural_metric.commit is not None and last_architectural_metric.commit.author == commit.author):
-                        commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
+                    # Ancestor is not compilable
+                    elif previous_commit is not None and not previous_commit.compilable:
+                        if last_architectural_metric.commit is not None:
+                            # Same author
+                            if last_architectural_metric.commit.author == commit.author:
+                                commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
+                            # Distinct authors
+                            else:
+                                commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
+                                commit.delta_rmd_components /= 2
+                        else:
+                            commit.delta_rmd_components = 0.0
+                    # If it is an orphan commit that introduces new components
                     elif any(True == c[1] for c in commit_rmds):
                         commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
                     else:
                         commit.delta_rmd_components = 0.0
 
+                    # Delta normalization by LOC changed
                     commit.delta_rmd_components/=commit.u_cloc
 
 

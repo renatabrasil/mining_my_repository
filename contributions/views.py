@@ -158,7 +158,7 @@ def index(request):
                                                         nloc=nloc,
                                                         complexity=modification_repo.complexity)
                             # To prevent redundat action
-                            time.sleep(.200)
+                            # time.sleep(.200)
                             modification.save()
                         except Exception as e:
                             # raise  # reraises the exceptio
