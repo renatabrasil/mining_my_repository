@@ -44,14 +44,18 @@ def index(request):
             load_commits = True
 
     if load_commits:
-        total_commits = Commit.objects.all().count() - 1
-        if total_commits > 0:
-            hash = Commit.objects.all()[total_commits].hash
-        else:
-            hash= None
+        hash = None
+
+        if tag.previous_tag is not None:
+            last_commit = Commit.objects.filter(tag=tag.previous_tag).last()
+            if last_commit is not None:
+                hash = last_commit.hash
+
         for commit_repository in RepositoryMining(project.project_path, only_in_branch='master',
                                                   to_tag=tag_description,
+                                                # from_tag='rel/1.9.8',
                                                   from_commit=hash,
+                                            # from_commit = '4e101e3c49a970d5818e750d03580421bb99ae28',
                                                   only_modifications_with_file_types=['.java'],
                                                   only_no_merge=True).traverse_commits():
             # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
@@ -88,6 +92,12 @@ def index(request):
                     # if len(author_and_email.split("\"")) > 0:
                     #     email = author_and_email.split("\"")[2].replace("<","").replace(">","").replace(" ","")
                 author_name = author_name.strip()
+                if author_name == 'twogee':
+                    author_name = 'Gintas Grigelionis'
+                elif author_name == 'Jan Matrne':
+                    author_name = 'Jan Materne'
+                elif author_name == 'cmanolache':
+                    author_name == 'Costin Manolache'
                 author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
                     if login != 'dev-null' and login != 'ant-dev':
