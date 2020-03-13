@@ -629,8 +629,10 @@ def __read_PM_file__(folder,tag_id):
     previous_commit = None
     start_commit_analysis_period = Commit.objects.all().first()
     first_commit_id = start_commit_analysis_period.pk
+    ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_id).delete()
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
+    Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0, delta_rmd_components=0.0)
     analysis_period = None
     components_evolution = []
     n_commits = 0
