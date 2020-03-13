@@ -15,11 +15,13 @@ class CommitUtils(object):
         # email = email[0]+"@"+email[2]+"."+email[4]
         email = ''
         for part in array_email:
-            if part == 'at':
+            if part.lower() == 'at':
                 email += '@'
-            elif part == 'dot':
+            elif part.lower() == 'dot':
                 email += '.'
-            elif part == 'dash':
+            elif part.lower() == 'dash':
+                email += '-'
+            elif part.lower() == 'minus':
                 email += '-'
             else:
                 email += part

@@ -44,9 +44,9 @@ def index(request):
             load_commits = True
 
     if load_commits:
-        total_commits = Commit.objects.all().count() - 1
-        if total_commits > 0:
-            hash = Commit.objects.all()[total_commits].hash
+        last_commit = Commit.objects.all().last()
+        if last_commit is not None:
+            hash = last_commit.hash
         else:
             hash= None
         for commit_repository in RepositoryMining(project.project_path, only_in_branch='master',
@@ -61,19 +61,19 @@ def index(request):
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
                 email = commit_repository.author.email.lower()
                 login = commit_repository.author.email.split("@")[0].lower()
-                m = re.search(r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*at\s*|@)[a-zA-Z0-9-]+(\s*dot\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))', commit_repository.msg, re.IGNORECASE)
+                m = re.search(r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))', commit_repository.msg, re.IGNORECASE)
                 found = ''
                 if m:
                     found = m.group(0)
                     if found:
                         author_and_email = re.sub(r'\Submitted\s*([bB][yY])[:]*\s*', '',found)
-                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*at\s*|@)[a-zA-Z0-9-]+((\s*dot\s*|\.)[a-zA-Z0-9-.]+)+|(\)|\>|\])', '',
+                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+)+|(\)|\>|\])', '',
                                              author_and_email)
                         author_name = author_name.replace("\"","")
                         author_name = CommitUtils.strip_accents(author_name)
                         author_name = author_name.strip()
                         email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email, re.IGNORECASE)
-                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*at\s*)[a-zA-Z0-9-]+((\s*dot\s*)[a-zA-Z0-9-.]+)+', author_and_email, re.IGNORECASE)
+                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-.]+)+', author_and_email, re.IGNORECASE)
                         if email_pattern:
                             email_found = email_pattern.group(0)
                             if email_found:
@@ -158,7 +158,7 @@ def index(request):
                                                         nloc=nloc,
                                                         complexity=modification_repo.complexity)
                             # To prevent redundat action
-                            time.sleep(.200)
+                            # time.sleep(.200)
                             modification.save()
                         except Exception as e:
                             # raise  # reraises the exceptio
