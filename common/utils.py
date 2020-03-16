@@ -1,4 +1,6 @@
 # # third-party
+import itertools
+import math
 import unicodedata
 import unidecode
 
@@ -6,6 +8,25 @@ import unidecode
 from contributions import models
 
 class CommitUtils(object):
+
+    # From: https://stackoverflow.com/questions/5110177/how-to-convert-floating-point-number-to-base-3-in-python
+    @staticmethod
+    def convert_base(x, base=3, precision=None):
+        length_of_int = int(math.log(x, base))
+        iexps = range(length_of_int, -1, -1)
+        if precision == None:
+            fexps = itertools.count(-1, -1)
+        else:
+            fexps = range(-1, -int(precision + 1), -1)
+
+        def cbgen(x, base, exponents):
+            for e in exponents:
+                d = int(x // (base ** e))
+                x -= d * (base ** e)
+                yield d
+                if x == 0 and e < 0: break
+
+        return cbgen(int(x), base, iexps), cbgen(x - int(x), base, fexps)
 
     @staticmethod
     def get_email(full_email):
