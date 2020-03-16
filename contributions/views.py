@@ -63,6 +63,7 @@ def index(request):
             commit = Commit.objects.filter(hash=commit_repository.hash)
             if not commit.exists():
                 author_name = CommitUtils.strip_accents(commit_repository.author.name)
+                committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
                 email = commit_repository.author.email.lower()
                 login = commit_repository.author.email.split("@")[0].lower()
                 m = re.search(r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))', commit_repository.msg, re.IGNORECASE)
@@ -92,11 +93,18 @@ def index(request):
                     # if len(author_and_email.split("\"")) > 0:
                     #     email = author_and_email.split("\"")[2].replace("<","").replace(">","").replace(" ","")
                 author_name = author_name.strip()
-                if author_name == 'twogee':
-                    author_name = 'Gintas Grigelionis'
+                skipAuthorAndCommiterCheck = False
+                if author_name == 'Gintas Grigelionis':
+                    if commit_repository.committer.name == 'Gintas Grigelionis':
+                        committer_name = 'twogee'
+                    author_name = 'twogee'
                 elif author_name == 'Jan Matrne':
+                    if commit_repository.committer.name == 'Jan Matrne':
+                        committer_name = 'Jan Materne'
                     author_name = 'Jan Materne'
                 elif author_name == 'cmanolache':
+                    if commit_repository.committer.name == 'cmanolache':
+                        committer_name = 'Costin Manolache'
                     author_name == 'Costin Manolache'
                 author = Developer.objects.filter(name__iexact=author_name)
                 if author.count() == 0:
@@ -122,7 +130,6 @@ def index(request):
                 if author.name == commit_repository.committer.name:
                     committer = author
                 else:
-                    committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
                     committer = Developer.objects.filter(name__iexact=committer_name)
                     if committer.count() == 0:
                         email = commit_repository.committer.email.lower()

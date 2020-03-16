@@ -275,6 +275,7 @@ def impactful_commits(request):
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
             #                 in commits]
             metrics_dict = [[x.author_experience, x.delta_rmd_components] for x in commits]
+            commits_df = [[x.tag.description, x.hash] for x in commits]
 
             # metrics_dict = []
             # for i, g in groupby(sorted(metrics_aux), key=lambda x: x[0]):
@@ -288,6 +289,8 @@ def impactful_commits(request):
                 # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','mudou'])
 
             my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
+            commits_df = pd.DataFrame(commits_df, columns=['versao', 'commit'])
+            commits_df.to_csv('commits_by_version.csv', index=False, header=True)
 
             rho = my_df.corr(method='spearman')
             # ax = my_df.hist(column='x', bins=10, grid=False, figsize=(12, 8), color='#86bf91',
@@ -630,7 +633,7 @@ def __read_PM_file__(folder,tag_id):
     start_commit_analysis_period = Commit.objects.all().first()
     first_commit_id = start_commit_analysis_period.pk
 
-    ArchitecturalMetricsByCommit.objects.filter(tag_id=tag_id).delete()
+    ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_id).delete()
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0, delta_rmd_components=0.0)
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
@@ -846,6 +849,7 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
 def list_commits(project,form):
     # Restricting to commits which has children
     # first_commit = Commit.objects.filter(children_commit__gt=0).first()
+    FileCommits.objects.all().delete()
     folder = form['directory'].value()
 
     # commits = [i for i in list(Commit.objects.filter(id__gte=first_commit.id).order_by("id"))]
