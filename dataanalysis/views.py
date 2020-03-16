@@ -18,6 +18,7 @@ POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
 MEANS_BY_DEV_AND_VERSION = 4
+OVERVIEW_BY_DEV = 5
 
 def index(request):
     template = loader.get_template('data_analysis/index.html')
@@ -76,6 +77,14 @@ def descriptive_statistics(request, type):
             print('Correlation by dev')
         elif type == MEANS_BY_DEV_AND_VERSION:
             print('means')
+        elif type == OVERVIEW_BY_DEV:
+            commits_by_dev = []
+            file_name = 'overview_by_dev.csv'
+            for dev in metric_by_dev:
+                commits_by_dev.append([dev.name, metric_by_dev[dev]])
+            my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'ncommis'])
+            my_df.to_csv(file_name, index=None, header=True)
+            print('overview by dev')
 
         my_df.to_csv(file_name, index=False, header=True)
         messages.success(request, 'Files successfully created! File: '+file_name)
@@ -114,6 +123,12 @@ def __process_metrics__(type):
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [])
                 metric_by_dev[key].append([commit.author_experience, commit.delta_rmd_components])
+            elif type == OVERVIEW_BY_DEV:
+
+                key = commit.author
+                if key not in metric_by_dev:
+                    metric_by_dev.setdefault(key, 0)
+                metric_by_dev[key] += 1
 
             # if key not in metric_by_dev:
             #     metric_by_dev.setdefault(key, [[], []])
