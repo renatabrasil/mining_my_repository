@@ -111,7 +111,15 @@
             </td>
             <td>{{metric.parents.0.author.name}}</td>
             <td style="text-align:right">{{metric.parents.0.author_experience|floatformat:4}}</td>
-            <td style="text-align:right">{{metric.parents.0.mean_rmd_components|floatformat:8}}</td>
+            <td style="text-align:right">
+                {% if not metric.parents.0 %}
+                    Commit orfão (introduziu novos comp)
+                {% elif not metric.parents.0.compilable %}
+                    Não compilou
+                {% else %}
+                    {{metric.parents.0.mean_rmd_components|floatformat:8}}
+                {% endif %}
+            </td>
         </tr>
         <tr style="border-bottom: solid 2px">
             <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> </td>

@@ -81,8 +81,8 @@ def descriptive_statistics(request, type):
             commits_by_dev = []
             file_name = 'overview_by_dev.csv'
             for dev in metric_by_dev:
-                commits_by_dev.append([dev.name, metric_by_dev[dev]])
-            my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'ncommis'])
+                commits_by_dev.append([dev.name, Commit.objects.filter(author=dev).count(), metric_by_dev[dev]])
+            my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'total_commits', 'contributions'])
             my_df.to_csv(file_name, index=None, header=True)
             print('overview by dev')
 

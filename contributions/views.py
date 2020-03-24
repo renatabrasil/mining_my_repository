@@ -181,6 +181,9 @@ def index(request):
                             # raise  # reraises the exceptio
                             print(str(e))
 
+            else:
+                commit[0].save()
+
     url_path = 'contributions/index.html'
     current_developer = None
     current_tag_filter = None

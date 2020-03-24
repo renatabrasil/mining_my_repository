@@ -60,7 +60,18 @@
 <div class="table-responsive">
 
     <table class="table table-striped table-sm">
-
+        <tr>
+            <th style="text-align: right">Compila</th>
+            <td style="text-align: center;" class="{% if not commit.compilable %} text-danger {% else %} text-success {% endif %}" colspan="2">
+            <strong>
+                {% if not commit.compilable %}
+                Não compila
+                {% else %}
+                    Compila
+                {% endif %}
+            </strong>
+            </td>
+        </tr>
         <tr>
             <th style="text-align: right">Tag:</th>
             <td colspan="2">{{commit.tag.description}}</td>
@@ -68,6 +79,14 @@
         <tr>
             <th style="text-align: right">Autor:</th>
             <td colspan="2">{{commit.author.name}} - Moment Experience: {{commit.author_experience|floatformat:2}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Senioridade do Autor:</th>
+            <td colspan="2">{{commit.author_seniority}} dias</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Numero de commits:</th>
+            <td colspan="2">{{commit.total_commits}}</td>
         </tr>
         <tr>
             <th style="text-align: right">Committer:</th>

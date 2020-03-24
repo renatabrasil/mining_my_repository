@@ -123,7 +123,7 @@ def compileds(request, file_id):
                         os.chdir(current_project_path)
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
-                        if os.path.getsize(jar) < 102400:
+                        if os.path.getsize(jar) < 512000:
                             os.chdir(current_project_path + '/' + compiled_directory)
                             folder = 'version-' + commit.replace("/" ,"").replace(".","-")
                             commit_with_errors.append(commit.replace("/","").replace(".","-"))
@@ -274,7 +274,7 @@ def impactful_commits(request):
         else:
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
             #                 in commits]
-            metrics_dict = [[x.author_experience, x.delta_rmd_components] for x in commits]
+            metrics_dict = [[x.author_experience, x.delta_rmd_components, x.u_cloc, x.total_commits, x.author_seniority] for x in commits]
             commits_df = [[x.tag.description, x.hash] for x in commits]
 
             # metrics_dict = []
@@ -285,7 +285,7 @@ def impactful_commits(request):
             if directory_filter > 0:
                 my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component', 'mudou'])
             else:
-                my_df = pd.DataFrame(metrics_dict, columns=['x', 'y'])
+                my_df = pd.DataFrame(metrics_dict, columns=['x', 'y', 'loc','commits', 't'])
                 # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','mudou'])
 
             my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=True)
@@ -588,9 +588,9 @@ def quality_between_versions(request):
                         components_mean.append(float(value[version]))
 
                 # components_mean = np.mean([float(c[version]) for c in list(metrics_by_directories.values())])
-                metrics.append([version, np.mean(components_mean)])
+                metrics.append([version.replace('rel','').replace('-','',1).replace('-','.'), np.mean(components_mean)])
         # my_df_metrics = pd.DataFrame.from_dict(metrics, orient='index', columns=['version', 'y'])
-        my_df_metrics = pd.DataFrame(metrics, columns=['version', 'y'])
+        my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'y'])
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
         my_df_metrics.to_csv('metrics_by_version.csv', index=False, header=True)
@@ -705,7 +705,7 @@ def __read_PM_file__(folder,tag_id):
                             architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
                         # Distinct authors
                         else:
-                            architecture_metrics.delta_rmd = (architecture_metrics.rmd - last_architectural_metric.rmd)/2
+                            architecture_metrics.delta_rmd = (architecture_metrics.rmd + last_architectural_metric.rmd)/2
                     # It is an orphan commit
                     else:
                         # It is the initial commit in this component
@@ -744,7 +744,7 @@ def __read_PM_file__(folder,tag_id):
                                 commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
                             # Distinct authors
                             else:
-                                commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
+                                commit.delta_rmd_components += last_architectural_metric.commit.mean_rmd_components
                                 commit.delta_rmd_components /= 2
                         else:
                             commit.delta_rmd_components = 0.0
@@ -755,7 +755,11 @@ def __read_PM_file__(folder,tag_id):
                         commit.delta_rmd_components = 0.0
 
                     # Delta normalization by LOC changed
-                    commit.delta_rmd_components/=commit.u_cloc
+                    if commit.delta_rmd_components != 0.0 and abs(commit.delta_rmd_components) <= 0.01:
+                        commit.delta_rmd_components = 0.0
+                    else:
+                        commit.delta_rmd_components/=commit.u_cloc
+                    # commit.delta_rmd_components /= commit.u_cloc
 
 
                     removed_components = [x for x in list(components_db) if x not in components]
