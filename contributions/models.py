@@ -44,6 +44,19 @@ class Tag(models.Model):
     description = models.CharField(max_length=100)
     previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
     # alias = models.CharField(max_length=40, null=True)
+    v1_1 = 1
+
+    @staticmethod
+    def line_base():
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+
+    @staticmethod
+    def line_1_10_x():
+        return Tag.line_base() + [24, 25, 26, 27, 28, 29, 30, 31]
+
+    @staticmethod
+    def line_1_9_x():
+        return Tag.line_base() + [17, 18, 19, 20, 21, 22, 23]
 
     def __str__(self):
         return self.description

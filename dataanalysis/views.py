@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict
 from itertools import groupby
 
 # third-party
@@ -12,13 +13,14 @@ from django.template import loader
 from django.urls import reverse
 
 from architecture.models import ArchitecturalMetricsByCommit
-from contributions.models import Commit
+from contributions.models import Commit, Tag
 
 POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
 MEANS_BY_DEV_AND_VERSION = 4
 OVERVIEW_BY_DEV = 5
+MEANS_BY_COMMITS_FREQUENCY = 6
 
 def index(request):
     template = loader.get_template('data_analysis/index.html')
@@ -40,11 +42,31 @@ def descriptive_statistics(request, type):
 
             file_name = 'population_means.csv'
             population_means_list = []
-            for exp_arr, degrad_arr in metric_by_dev.values():
-                population_means_list.append([np.mean(exp_arr), np.mean(degrad_arr)])
+            deltas = [len(exp_arr[0]) for exp_arr in metric_by_dev.values()]
+            threshold = np.percentile(deltas, 80)
+            # metrics = {k: metric_by_dev[k] for k in metric_by_dev.keys() - {'orange'}}
+            # devs = [[dev_contributions, np.mean(metric_by_dev[dev_contributions][0]),
+            #          np.mean(metric_by_dev[dev_contributions][1])] for dev_contributions in metric_by_dev.keys() if
+            #         len(metric_by_dev[dev_contributions][0]) >= threshold]
+            devs =[]
+            for dev, arrays in metric_by_dev.items():
+                exp_arr = arrays[0]
+                degrad_arr = arrays[1]
+                population_means_list.append([dev.name,np.mean(exp_arr), np.mean(degrad_arr), Commit.objects.filter(author=dev).count(), len(exp_arr)])
+                if len(exp_arr) >= threshold:
+                    devs.append([dev.name,np.mean(exp_arr), np.mean(degrad_arr), Commit.objects.filter(author=dev).count(), len(exp_arr)])
+                # population_means_list.append(
+                #     [np.mean(exp_arr), np.mean(degrad_arr), Commit.objects.filter(author=dev).count(),
+                #      len(exp_arr)])
 
-            my_df = pd.DataFrame(population_means_list, columns=['x', 'y'])
+            my_df = pd.DataFrame(population_means_list, columns=['author','x', 'y','commits','deltas'])
             my_df.to_csv(file_name, index=False, header=True)
+            if len(devs) > 0:
+                my_df = pd.DataFrame(devs, columns=['dev', 'x', 'y', 'commits', 'deltas'])
+                my_df.to_csv('dev_media.csv', index=False, header=True)
+            # my_df = pd.DataFrame(population_means_list, columns=['x', 'y', 'commits', 'deltas'])
+
+
         elif type == CORRELATION_BY_VERSION:
 
             file_name = 'correlation_version.csv'
@@ -61,6 +83,7 @@ def descriptive_statistics(request, type):
             # my_df.to_excel(writer, 'Sheet2')
             writer.save()
             print('Correlation by version')
+
         elif type == CORRELATION_BY_DEV:
 
             file_name = 'correlation_dev.csv'
@@ -75,8 +98,10 @@ def descriptive_statistics(request, type):
             my_df.to_csv(file_name, index=None, header=True)
             # my_df.to_excel(file_name, sheet_name='correlacao', engine='xlsxwriter', index=None, header=True)
             print('Correlation by dev')
+
         elif type == MEANS_BY_DEV_AND_VERSION:
             print('means')
+
         elif type == OVERVIEW_BY_DEV:
             commits_by_dev = []
             file_name = 'overview_by_dev.csv'
@@ -86,6 +111,53 @@ def descriptive_statistics(request, type):
             my_df.to_csv(file_name, index=None, header=True)
             print('overview by dev')
 
+        elif type == MEANS_BY_COMMITS_FREQUENCY:
+            file_name = 'by_commit_frequency.csv'
+            frequencies = OrderedDict({'100':[[],[]],'200':[[],[]],'300':[[],[]],'400':[[],[]],'500':[[],[]],'600':[[],[]],'700':[[],[]],'> 800':[[],[]]})
+            last_key = '> 800'
+
+            deltas = [len(author_exp) for author_exp in metric_by_dev.values()]
+            threshold = np.percentile(deltas, 80)
+
+            # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
+            # devs = [dev_contributions for dev_contributions in metric_by_dev.keys() if len(metric_by_dev[dev_contributions]) >= threshold and dev_contributions.id != 41]
+            devs = [dev_contributions for dev_contributions in metric_by_dev.keys() if len(metric_by_dev[dev_contributions]) >= threshold]
+
+            means = []
+
+            # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
+            commits = Commit.objects.exclude(delta_rmd_components=0).exclude(author_id=41).filter(tag_id__in=Tag.line_1_10_x())
+            # Com todos
+            # commits = Commit.objects.exclude(delta_rmd_components=0).filter(tag_id__in=Tag.line_1_10_x())
+
+            for commit in commits:
+                if any(commit.author == c for c in devs):
+                    find = False
+
+                    for freq,exp_degrad_arr in frequencies.items():
+                        exp_arr = exp_degrad_arr[0]
+                        degrad_arr = exp_degrad_arr[1]
+                        if freq.isdigit() and commit.total_commits <= int(freq):
+                            exp_arr.append(commit.author_experience)
+                            degrad_arr.append(commit.delta_rmd_components)
+                            find = True
+                            break;
+                    if not find:
+                        frequencies[last_key][0].append(commit.author_experience)
+                        frequencies[last_key][1].append(commit.delta_rmd_components)
+
+
+            # devs = [[dev_contributions.name, metric_by_dev[dev_contributions][0], metric_by_dev[dev_contributions][1], metric_by_dev[dev_contributions][2]] for
+            #         dev_contributions in metric_by_dev.keys() if len(metric_by_dev[dev_contributions]) >= threshold]
+
+            mean_list = []
+            for freq, means in frequencies.items():
+                mean_list.append([freq,np.mean(means[0]),np.mean(means[1])])
+
+            my_df = pd.DataFrame(mean_list, columns=['commits', 'x', 'y'])
+
+            print("by_commit_frequency.csv")
+
         my_df.to_csv(file_name, index=False, header=True)
         messages.success(request, 'Files successfully created! File: '+file_name)
     except Exception as e:
@@ -93,6 +165,9 @@ def descriptive_statistics(request, type):
         messages.error(request, 'Could not create file! (motive: '+e.args[0]+')')
 
     return HttpResponseRedirect(reverse('analysis:index', ))
+
+# def __get_frequency__(commits, frequencies):
+#
 
 def __process_metrics__(type):
     commits = Commit.objects.exclude(delta_rmd_components=0)
@@ -110,7 +185,7 @@ def __process_metrics__(type):
                 metric_by_dev[key][0].append(commit.author_experience)
                 metric_by_dev[key][1].append(commit.delta_rmd_components)
 
-            elif type == CORRELATION_BY_DEV:
+            elif type == CORRELATION_BY_DEV or type == MEANS_BY_COMMITS_FREQUENCY:
                 key = commit.author
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [])
@@ -129,6 +204,7 @@ def __process_metrics__(type):
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, 0)
                 metric_by_dev[key] += 1
+
 
             # if key not in metric_by_dev:
             #     metric_by_dev.setdefault(key, [[], []])
