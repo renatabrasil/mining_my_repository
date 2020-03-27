@@ -74,6 +74,23 @@
 
         </div>
     </div>
+
+    <div class="form-row align-items-center">
+        <div class="col-auto">
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioCommitsImpactantes" name="analysis" value="impactful_commits" {% if analysis_check == "impactful_commits" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioCommitsImpactantes">Apenas commits impactantes</label>
+            </div>
+            <div class="custom-control custom-radio custom-control-inline">
+              <input type="radio" id="radioTodosCommits" name="analysis" value="geral" {% if analysis_check == "geral" %}checked="checked"{% endif %} class="custom-control-input">
+              <label class="custom-control-label" for="radioTodosCommits">Todos</label>
+            </div>
+
+
+
+        </div>
+    </div>
+
     <div class="form-row">
         <div class="col-auto">
             <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
@@ -83,7 +100,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag_state={{until_tag_state}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analisys_check}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>
