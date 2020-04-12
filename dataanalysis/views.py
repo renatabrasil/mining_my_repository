@@ -15,6 +15,7 @@ from scipy.stats import spearmanr
 
 from contributions.models import Commit, Tag
 
+# OPERATIONS
 POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
@@ -23,6 +24,11 @@ OVERVIEW_BY_DEV = 5
 MEANS_BY_COMMITS_FREQUENCY = 6
 PROJECT_OVERVIEW = 7
 CONTRIBUTIONS_BY_DEV = 8
+
+
+# TYPE OF CONTRIBUTIONS
+DECAY = 1
+IMPROVEMENT = 2
 
 def index(request):
     template = loader.get_template('data_analysis/index.html')
@@ -88,13 +94,26 @@ def descriptive_statistics(request, type):
             my_df.to_csv(file_name, index=False, header=True)
         elif type == CONTRIBUTIONS_BY_DEV:
             print("Piora e melhora da arquitetura por autor")
-            file_name = 'author_contributions_statistics.csv'
-            contributions_list = []
+            file_name1 = 'worsening_contributions_by_author.csv'
+            pioram_contributions_list = []
+            melhoram_contributions_list = []
             for dev in metric_by_dev:
-                loc = sum([x.u_cloc for x in commits])
-                contributions_list.append([dev.name, metric_by_dev[dev][0]/loc, metric_by_dev[dev][1]/loc])
-            my_df = pd.DataFrame(contributions_list, columns=['autor', 'piora', 'melhora'])
-            my_df.to_csv(file_name, index=False, header=True)
+                if metric_by_dev[dev][0] != 0.0:
+                    loc = sum([x.u_cloc for x in commits])
+                    pioram_contributions_list.append([dev.name, metric_by_dev[dev][0]/loc])
+                elif metric_by_dev[dev][1] != 0.0:
+                    loc = sum([x.u_cloc for x in commits])
+                    melhoram_contributions_list.append([dev.name,metric_by_dev[dev][1]/loc])
+
+            my_df = pd.DataFrame(pioram_contributions_list, columns=['autor', 'cum_delta'])
+            my_df.to_csv(file_name1, index=False, header=True)
+
+            file_name2 = 'contributions_that_improve_by_author.csv'
+
+            my_df = pd.DataFrame(melhoram_contributions_list, columns=['autor', 'cum_delta'])
+            my_df.to_csv(file_name2, index=False, header=True)
+
+            file_name = '(1) '+file_name1+'</strong> e <strong>'+file_name2
 
         elif type == OVERVIEW_BY_DEV:
             commits_by_dev = []
@@ -119,15 +138,13 @@ def descriptive_statistics(request, type):
             all_commits = Commit.objects.filter(tag_id__in=Tag.line_1_10_x())
             total_commits = all_commits.count()
 
-
             relative_impactul_commits = len(commits)/total_commits
             relative_non_impactul_commits = 1 - relative_impactul_commits
 
-            stats.append(['Commits impactantes',relative_impactul_commits, 2439.7])
-            stats.append(['Commits nao-impactantes', relative_non_impactul_commits, 6051.8])
+            stats.append(['Commits impactantes',relative_impactul_commits])
+            stats.append(['Commits nao-impactantes', relative_non_impactul_commits])
 
-            my_df = pd.DataFrame(stats, columns=['legenda','Total de commits', 'radius'])
-
+            my_df = pd.DataFrame(stats, columns=['legenda','Total de commits'])
             my_df.to_csv(file_name1, index=False, header=True)
 
             # About authors of commits regards of impactful commits and non-impactful commits
@@ -140,43 +157,34 @@ def descriptive_statistics(request, type):
             relative_impactful_authors = all_impactful_authors/all_authors
             relative_non_impactful_authors = 1 - relative_impactful_authors
 
-            stats.append(['Impactaram a arquitetura',relative_impactful_authors, 2439.7])
-            stats.append(['Nao impactaram a arquitetura', relative_non_impactful_authors, 6051.8])
+            stats.append(['Impactaram a arquitetura',relative_impactful_authors])
+            stats.append(['Nao impactaram a arquitetura', relative_non_impactful_authors])
 
-            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de autores', 'radius'])
-
+            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de autores'])
             my_df.to_csv(file_name2, index=False, header=True)
 
 
             file_name3 = 'among_impactful_commits_statistics.csv'
-            stats = []
-
-            # FIXME: If seniority changes to years, fix it:
-            commits_author_with_1year = len(set([x.id for x in commits if x.is_author_newcomer]))
-            commits_author_with_2years = len(set([x.id for x in commits if x.author_seniority > 365 and x.author_seniority <= 730 and not x.has_submitted_by]))
-            commits_author_with_3years = len(set([x.id for x in commits if
-                                                  x.author_seniority > 730 and x.author_seniority <= 1095 and not x.has_submitted_by]))
-            commits_author_with_4years = len(set([x.id for x in commits if
-                                                  x.author_seniority > 1095 and x.author_seniority <= 1460 and not x.has_submitted_by]))
-            # commits_author_more_than_3years = len(set([x.id for x in commits if x.author_seniority > 1095 and not x.has_submitted_by]))
-
-            relative_with_1year = commits_author_with_1year/len(commits)
-            relative_with_2years = commits_author_with_2years/len(commits)
-            relative_with_3years = commits_author_with_3years / len(commits)
-            relative_with_4years = commits_author_with_4years / len(commits)
-            relative_more_than_4years = 1 - (relative_with_1year + relative_with_2years + relative_with_3years + relative_with_4years)
-
-            stats.append(['Autores com <= 1 ano de projeto',relative_with_1year])
-            stats.append(['Autores com > 1 ano e <= 2 anos de projeto', relative_with_2years])
-            stats.append(['Autores com > 2 anos e <= 3 anos de projeto', relative_with_3years])
-            stats.append(['Autores com > 3 anos e <= 4 anos de projeto', relative_with_4years])
-            stats.append(['Autores com > 4 anos de projeto', relative_more_than_4years])
+            stats = __impactful_commits_statistics__(commits)
 
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
-
             my_df.to_csv(file_name3, index=False, header=True)
 
-            file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong> e <strong>(3) ' + file_name3
+
+            file_name4 = 'improving_commits_statistics.csv'
+            stats = __impactful_commits_statistics__(commits,IMPROVEMENT)
+
+            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
+            my_df.to_csv(file_name4, index=False, header=True)
+
+            file_name5 = 'decaying_commits_statistics.csv'
+            stats = __impactful_commits_statistics__(commits, DECAY)
+
+            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
+            my_df.to_csv(file_name5, index=False, header=True)
+
+            file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 +\
+                        '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5
             print("Informações gerais")
 
 
@@ -186,6 +194,36 @@ def descriptive_statistics(request, type):
         messages.error(request, 'Could not create file! (<strong>motive:</strong> '+e.args[0]+')')
 
     return HttpResponseRedirect(reverse('analysis:index', ))
+
+
+def __impactful_commits_statistics__(commits, type=0, groups=1):
+    stats = []
+    # FIXME: If seniority changes to years, fix it:
+    if type == DECAY:
+        commits = [x for x in commits if x.delta_rmd_components > 0.0]
+    elif type == IMPROVEMENT:
+        commits = [x for x in commits if x.delta_rmd_components < 0.0]
+
+    commits_author_with_1year = len(set([x.id for x in commits if x.is_author_newcomer]))
+    commits_author_with_2years = len(set(
+        [x.id for x in commits if x.author_seniority > 365 and x.author_seniority <= 730 and not x.has_submitted_by]))
+    commits_author_with_3years = len(set([x.id for x in commits if
+                                          x.author_seniority > 730 and x.author_seniority <= 1095 and not x.has_submitted_by]))
+    commits_author_with_4years = len(set([x.id for x in commits if
+                                          x.author_seniority > 1095 and x.author_seniority <= 1460 and not x.has_submitted_by]))
+    # commits_author_more_than_3years = len(set([x.id for x in commits if x.author_seniority > 1095 and not x.has_submitted_by]))
+    relative_with_1year = commits_author_with_1year / len(commits)
+    relative_with_2years = commits_author_with_2years / len(commits)
+    relative_with_3years = commits_author_with_3years / len(commits)
+    relative_with_4years = commits_author_with_4years / len(commits)
+    relative_more_than_4years = 1 - (
+                relative_with_1year + relative_with_2years + relative_with_3years + relative_with_4years)
+    stats.append(['Autores com <= 1 ano de projeto', relative_with_1year])
+    stats.append(['Autores com > 1 ano e <= 2 anos de projeto', relative_with_2years])
+    stats.append(['Autores com > 2 anos e <= 3 anos de projeto', relative_with_3years])
+    stats.append(['Autores com > 3 anos e <= 4 anos de projeto', relative_with_4years])
+    stats.append(['Autores com > 4 anos de projeto', relative_more_than_4years])
+    return stats
 
 
 def __exp_and_degradation_by_class__(file_name, metric_by_dev):
