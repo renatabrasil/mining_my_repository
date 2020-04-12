@@ -58,8 +58,8 @@
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
                         <td style="text-align: center;">{{commit.tag.description}}</td>
                         <td style="text-align: center;">{{commit.u_cloc}}</td>
-                        <td style="text-align: center;" class="{% if commit.delta_rmd_components > 0 %} text-danger {% elif commit.delta_rmd_components < 0 %} text-success {% endif %}">
-                            <strong>{{commit.delta_rmd_components|floatformat:8}}</strong>
+                        <td style="text-align: center;" class="{% if commit.normalized_delta > 0 %} text-danger {% elif commit.normalized_delta < 0 %} text-success {% endif %}">
+                            <strong>{{commit.normalized_delta|floatformat:8}}</strong>
                         </td>
                         <td nowrap>{{ commit.committer.name}} </td>
                         <td nowrap>{{ commit.author.name}}</td>

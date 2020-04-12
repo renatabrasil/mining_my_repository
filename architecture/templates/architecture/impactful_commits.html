@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% load contributions_extra %}
+{% load mathfilters %}
+{% load humanize %}
 
 {% block title %}Métricas da arquitetura por diretorio{% endblock %}
 
@@ -78,7 +80,7 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioCommitsImpactantes" name="analysis" value="impactful_commits" {% if analysis_check == "impactful_commits" %}checked="checked"{% endif %} class="custom-control-input">
+              <input type="radio" id="radioCommitsImpactantes" name="analysis" value="impactful_commits" {% if analysis_check == "impactful_commits" or analysis_check == "" %}checked="checked"{% endif %} class="custom-control-input">
               <label class="custom-control-label" for="radioCommitsImpactantes">Apenas commits impactantes</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
@@ -100,7 +102,7 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analisys_check}}">
+        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analysis_check}}">
             <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
         </a>
     </form>
@@ -112,13 +114,14 @@
             <th>Commit (autor)</th>
             <th>Author</th>
             <th width="13%" style="text-align:right">Author Experience</th>
-            <th style="text-align:right">Delta RMD</th>
+            <th style="text-align:right">Delta</th>
+            <th style="text-align:right">Delta normalizado</th>
         </tr>
 {% if metrics %}
 
     {% for metric in metrics %}
         <tr style="background-color: rgba(0,123,255, 0.15)">
-        <td colspan="3">{{metric.tag.description}}</td>
+        <td colspan="4">{{metric.tag.description}}</td>
             <td style="text-align: right"></td>
         </tr>
 
@@ -134,21 +137,24 @@
                 {% elif not metric.parents.0.compilable %}
                     Não compilou
                 {% else %}
-                    {{metric.parents.0.mean_rmd_components|floatformat:8}}
+                    {{metric.parents.0.mean_rmd_components|mul:10000000|floatformat:4}}
                 {% endif %}
             </td>
+            <td></td>
         </tr>
         <tr style="border-bottom: solid 2px">
             <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> </td>
             <td>{{metric.author.name}}</td>
             <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-            <td style="text-align:right;">{{metric.mean_rmd_components|floatformat:8}}</td>
+            <td style="text-align:right;">{{metric.mean_rmd_components|mul:10000000|floatformat:4}}</td>
+            <td></td>
         </tr>
     <tr style="font-weight: bold">
         <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
-        <td>{{metric.author.name}}</td>
+        <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %}Novato{% else %}Long-term dev{% endif %})</td>
         <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|floatformat:8}}</td>
+        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|mul:10000000|floatformat:4}}</td>
+        <td style="text-align:right" class="{% if metric.normalized_delta > 0 %} text-danger {% elif metric.normalized_delta < 0 %} text-success {% endif %}"  >{{metric.normalized_delta|mul:10000000|floatformat:4}}</td>
     </tr>
     {% endfor %}
 {% else %}

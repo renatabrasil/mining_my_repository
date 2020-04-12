@@ -47,7 +47,7 @@ def index(request):
         hash = None
 
         if tag.previous_tag is not None:
-            last_commit = Commit.objects.filter(tag=tag.previous_tag).last()
+            last_commit = Commit.objects.filter(tag_id__lte=tag.id).last()
             if last_commit is not None:
                 hash = last_commit.hash
 
@@ -72,13 +72,13 @@ def index(request):
                     found = m.group(0)
                     if found:
                         author_and_email = re.sub(r'\Submitted\s*([bB][yY])[:]*\s*', '',found)
-                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+)+|(\)|\>|\])', '',
+                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-. ]+)+|(\)|\>|\])', '',
                                              author_and_email)
                         author_name = author_name.replace("\"","")
                         author_name = CommitUtils.strip_accents(author_name)
                         author_name = author_name.strip()
                         email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email, re.IGNORECASE)
-                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-.]+)+', author_and_email, re.IGNORECASE)
+                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+', author_and_email, re.IGNORECASE)
                         if email_pattern:
                             email_found = email_pattern.group(0)
                             if email_found:
@@ -89,12 +89,23 @@ def index(request):
                             if email_found:
                                 email = CommitUtils.get_email(email_found)
                         login = email.split("@")[0].lower()
+                        commit.hasSubmittedBy = True
 
-                    # if len(author_and_email.split("\"")) > 0:
-                    #     email = author_and_email.split("\"")[2].replace("<","").replace(">","").replace(" ","")
                 author_name = author_name.strip()
-                skipAuthorAndCommiterCheck = False
-                if author_name == 'Gintas Grigelionis':
+
+                if author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
+                    if commit_repository.committer.name == 'jkf' or commit_repository.committer.name == 'Martijn Kruithof' or commit_repository.committer.name == 'J.M.Martijn Kruithof':
+                        committer_name = 'Jacobus Martinus Kruithof'
+                    author_name = 'Jacobus Martinus Kruithof'
+                elif author_name == 'Steve Cohen':
+                    if commit_repository.committer.name == 'Steve Cohen':
+                        committer_name = 'Steven M. Cohen'
+                    author_name = 'Steven M. Cohen'
+                elif author_name == 'Jesse Glick':
+                    if commit_repository.committer.name == 'Jesse Glick':
+                        committer_name = 'Jesse N. Glick'
+                    author_name = 'Jesse N. Glick'
+                elif author_name == 'Gintas Grigelionis':
                     if commit_repository.committer.name == 'Gintas Grigelionis':
                         committer_name = 'twogee'
                     author_name = 'twogee'
@@ -181,8 +192,10 @@ def index(request):
                             # raise  # reraises the exceptio
                             print(str(e))
 
-            else:
-                commit[0].save()
+            # else:
+            #     # for mod in commit[0].modifications.all():
+            #     #     mod.save()
+            #     commit[0].save()
 
     url_path = 'contributions/index.html'
     current_developer = None

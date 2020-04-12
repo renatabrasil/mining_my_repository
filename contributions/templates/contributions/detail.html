@@ -41,7 +41,8 @@
             <h5 class="card-title">Impacto na arquitetura <small>(em componentes de interesse)</small></h5>
             <p class="card-text">
                 Design evaluation: {{commit.mean_rmd_components|floatformat:8}} <br/>
-                Design evaluation (delta): {{commit.delta_rmd_components|floatformat:8}} <br/>
+                Delta: {{commit.delta_rmd_components|floatformat:8}} <br/>
+                Delta normalizado: {{commit.normalized_delta|floatformat:8}} <br/>
                 {% for metric in commit.architectural_metrics.all %}
                     {% if metric.delta_rmd != 0.0 %}
                        * {{metric.delta_rmd|floatformat:8}} ({{metric.directory.name}}) <br/>

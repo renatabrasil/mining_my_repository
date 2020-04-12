@@ -43,8 +43,13 @@ class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
     previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
+    delta_rmd_components = models.FloatField(null=True, default=0.0)
     # alias = models.CharField(max_length=40, null=True)
     v1_1 = 1
+
+    @staticmethod
+    def line_major_versions():
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 24]
 
     @staticmethod
     def line_base():
@@ -94,6 +99,7 @@ class Commit(models.Model):
 
     author_seniority = models.IntegerField(default=0)
     total_commits = models.IntegerField(default=0)
+    has_submitted_by = models.BooleanField(default=False)
 
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
     changed_architecture = models.BooleanField(default=False)
@@ -107,9 +113,11 @@ class Commit(models.Model):
     std_rmd_components = models.FloatField(null=True, default=0.0)
     # delta
     delta_rmd_components = models.FloatField(null=True, default=0.0)
+    # normalized_delta
+    normalized_delta = models.FloatField(null=True, default=0.0)
 
     def __str__(self):
-        return self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
+        return str(self.pk) + " - hash: " + self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
 
     def calculate_boosting_factor(self, activity_array):
         if not activity_array or len(activity_array) == 1:
@@ -179,6 +187,10 @@ class Commit(models.Model):
             delta += metric.delta_rmd
         return delta
 
+    @property
+    def is_author_newcomer(self):
+        return (self.author_seniority / 365) <= 1 or self.has_submitted_by
+
     def cloc_uncommented(self, directory):
         cloc = 0
         for mod in self.modifications.all():
@@ -200,29 +212,42 @@ class Commit(models.Model):
         self.author.save()
         self.committer.save()
 
-        previous_commit = Commit.objects.filter(author=self.author).last()
-        if self.pk is not None:
-            previous_commit = Commit.objects.filter(author=self.author, id__lt=self.pk).last()
-
-        first_commit = Commit.objects.filter(author=self.author).first()
-
-        if first_commit is not None and previous_commit is not None:
-            self.total_commits = previous_commit.total_commits + 1
-            self.author_seniority = self.author_date - first_commit.author_date
-            self.author_seniority = self.author_seniority.days
-
         for hash in self.parents:
             parent = Commit.objects.filter(hash=hash)
             if parent.count() > 0:
                 self.parent = parent[0]
 
         if self.pk is None:
+
+            m = re.search(
+                r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
+                self.msg, re.IGNORECASE)
+            found = ''
+            if m:
+                found = m.group(0)
+                if found:
+                    self.has_submitted_by = True
+
+            # previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
+            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
+
+            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id).first()
+
+            total_commits = previous_commit.total_commits if previous_commit is not None else 0
+
+            if previous_commit is not None:
+                self.total_commits = total_commits + 1
+
+            if first_commit is not None:
+                self.author_seniority = self.author_date - first_commit.author_date
+                self.author_seniority = self.author_seniority.days
+
             self.author_experience = 0.0
-            previous_commit = None
 
             file_by_authors = Modification.objects.none()
-            if previous_commit.total_commits > 0:
-                file_by_authors = Modification.objects.filter(commit__author=self.author)
+            if total_commits > 0:
+                file_by_authors = Modification.objects.filter(commit__author=self.author, commit__tag_id__lte=self.tag.id)
+
 
             self.cloc_activity = 0
             if previous_commit is not None:
@@ -233,7 +258,21 @@ class Commit(models.Model):
 
             files = file_by_authors.values("path").distinct().count()
 
-            self.author_experience = 0.2 * previous_commit.total_commits + 0.4 * files + 0.4 * self.cloc_activity
+            self.author_experience = 0.2 * total_commits + 0.4 * files + 0.4 * self.cloc_activity
+
+            print('Cadastrando commit: ' + self.hash)
+            print('\nVersao: ' + self.tag.__str__())
+            print('\nAutor: ' + self.author.name)
+            print('\nSenioridade: ' + self.author_seniority)
+            print('\nResumo experiência:')
+            print('\n--------------------------------')
+            print('\nTotal de commits: ' + total_commits)
+            print('\nTotal de arquivos distintos modificados: ' + files)
+            print('\nTotal de linhas modificadas ate o commit: ' + self.cloc_activity)
+            print('\n-')
+            print('\nExperiência: 0.2*' + total_commits+ " + 0.4*"+files + " + 0.4*"+self.cloc_activity)
+            print('\nExperiência= '+self.author_experience)
+            print('\n\n')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -788,7 +827,7 @@ class IndividualContribution(models.Model):
             self.cloc_exp = (self.bf_cloc + 1) * (sum(cloc_activity) / denominator)
             self.experience_bf = 0.4 * self.commit_exp + 0.4 * self.file_exp + 0.2 * self.cloc_exp
             self.experience = 0.4 * (sum(commit_activity) / denominator) + 0.4 * (
-                        sum(file_activity) / denominator) + 0.2 * (sum(cloc_activity) / denominator)
+                    sum(file_activity) / denominator) + 0.2 * (sum(cloc_activity) / denominator)
 
         # self.directory_report.experience_threshold
         super().save(*args, **kwargs)  # Call the "real" save() method.

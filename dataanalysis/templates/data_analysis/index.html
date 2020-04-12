@@ -5,183 +5,74 @@
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<!--<form action="" method="post" enctype="multipart/form-data">-->
-<!--{% csrf_token %}-->
-<!--    <div class="form-row">-->
-<!--        <div class="col-md-4 mb-3">-->
-<!--          <div class="custom-file">-->
-<!--              <input type="file" class="custom-file-input" id="customFile">-->
-<!--              <label class="custom-file-label" for="customFile">Selecione o CSV</label>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
+<div class="alert bg-info shadow p-3 mb-5 bg-white rounded" role="alert">
 
-<!--    <div class="form-row">-->
-<!--        <label>Tipo de gráfico: </label>-->
-<!--        <div class="col-md-4 mb-3">-->
-<!--            <div class="custom-control custom-radio custom-control-inline">-->
-<!--              <input type="radio" id="radioBox" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">-->
-<!--              <label class="custom-control-label" for="radioBox">Box plot</label>-->
-<!--            </div>-->
-<!--            <div class="custom-control custom-radio custom-control-inline">-->
-<!--              <input type="radio" id="radioScatter" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">-->
-<!--              <label class="custom-control-label" for="radioScatter">Scatter plot</label>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
+  <p>Todos os arquivos <i class="fas fa-file-csv"></i> baixados serão salvos na pasta raiz do projeto.</p>
+  <hr>
 
-<!--    <div class="form-row">-->
-<!--        <label>Dado: </label>-->
-<!--        <div class="col-md-4 mb-3">-->
-<!--          <div class="custom-control custom-radio custom-control-inline">-->
-
-<!--              <input type="radio" id="radioExp" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">-->
-<!--              <label class="custom-control-label" for="radioExp">Experiência (X)</label>-->
-<!--            </div>-->
-<!--            <div class="custom-control custom-radio custom-control-inline">-->
-<!--              <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">-->
-<!--              <label class="custom-control-label" for="radioDegrada">Degradação - delta (Y)</label>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--    <input type="submit" class="btn btn-primary mb-2" value="Gerar Gráficos">-->
-<!--       -->
-
-<!--</form>-->
-
-<h5>Opções</h5>
-
-<div class="alert alert-secondary" role="alert">
-  Todos os arquivos baixados estarão na pasta raiz do projeto
 </div>
+
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 {% if messages %}
-<div class="alert alert-info alert-dismissible fade show" role="alert">
+
 {% for message in messages %}
-<p><strong>{{ message }}</strong></p>
+
+<p class="alert {{ message.tags }} alert-dismissible fade show w-50 p-3" role="alert">{{ message|safe }}
+
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
     <span aria-hidden="true">&times;</span>
   </button>
-</div>
+</p>
+
 
 {% endfor %}
 
 {% endif %}
 
+<h5>Opções</h5>
+
 <div class="row">
-    <div class="col-sm">
-      <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Média da experiência e degradação por pessoa (Todas as versões)</h5>
-            <p class="card-text">Traz a média da experiência e da degradação considerando todas as versões analisadas para cada desenvolvedor.</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-              Sem <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;desenvolvedor&gt;</br>
-                <strong>Colunas:</strong> &lt;média da experiência&gt; | &lt;média da degradação&gt;
+
+    <ul class="list-group w-50 p-3">
+        <li class="list-group-item">Estatísticas gerais do projeto <a href="/data_analysis/descriptive_statistics/7" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">
+                -> general_commits_statistics.csv</br>
+                -> authors_commits_statistics.csv </br>
+                -> among_impactful_commits_statistics.csv</p>
+        </li>
+        <li class="list-group-item">Tendência do delta (delta e delta normalizado) e da degradação
+            <a href="/data_analysis/descriptive_statistics/4" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> delta_trend.csv</p>
+        </li>
+        <li class="list-group-item">Piora e melhora da arquitetura por autor
+            <a href="/data_analysis/descriptive_statistics/8" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> author_contributions_statistics.csv</p>
+        </li>
+        <li class="list-group-item">Commits impactantes por desenvolvedor
+            <a href="/data_analysis/descriptive_statistics/5" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> overview_by_dev.csv</p>
+        </li>
+        <li class="list-group-item">Média da experiência e da degradação por desenvolvedor
+            <a href="/data_analysis/descriptive_statistics/1" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">
+                -> population_means.csv</br>
+                -> dev_media.csv
             </p>
-              <p class="card-text">Tipo de arquivo: <i class="fas fa-file-csv"></i> .csv</p>
-            <a href="/data_analysis/descriptive_statistics/1" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-
-    <div class="col-sm">
-      <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Correlação por versão</h5>
-            <p class="card-text">A correlação em cada versão unindo todos os devs.</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-                Com <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;tag&gt;</br>
-                <strong>Colunas:</strong> &lt;nome da tag&gt; | &lt;coeficiente da correlação&gt;
-            </p>
-              <p class="card-text">Tipo de arquivo: <i class="far sm fa-file-excel"></i> .xlsx e <i class="fas fa-file-csv"></i> .csv</p>
-            <a href="/data_analysis/descriptive_statistics/2" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-
-
-    <div class="col-sm">
-      <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Correlação por pessoa em todas as versões</h5>
-            <p class="card-text">A correlação é feita usando a experiência e a degradação em todas as versões analisadas.</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-                Com <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;desenvolvedor&gt;</br>
-                <strong>Colunas:</strong> &lt;nome do desenvolvedor&gt; | &lt;coeficiente da correlação&gt;
-            </p>
-              <p class="card-text">Tipo de arquivo: <i class="far sm fa-file-excel"></i> .xlsx</p>
-            <a href="/data_analysis/descriptive_statistics/3" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-    <div class="col-sm">
-        <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Correlação por dev em todas as versões (Todas as versões)</h5>
-            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-                Com <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;desenvolvedor&gt;</br>
-                <strong>Colunas:</strong> &lt;nome do desenvolvedor&gt; | &lt;média da experiência na versão n&gt; ^ &lt;média da degradação na versão n&gt; |
-            </p>
-              <p class="card-text">Tipo de arquivo: <i class="far sm fa-file-excel"></i> .xlsx</p>
-            <a href="/data_analysis/descriptive_statistics/4" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-
-    <div class="col-sm">
-        <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Informações gerais por dev</h5>
-            <p class="card-text">Numero de commits impactantes por autor</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-                Com <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;desenvolvedor&gt;</br>
-                <strong>Colunas:</strong> &lt;nome do desenvolvedor&gt; | &lt;numero de commits impactantes&gt; |
-            </p>
-              <p class="card-text">Tipo de arquivo: <i class="fas fa-file-csv"></i> .csv</p>
-            <a href="/data_analysis/descriptive_statistics/5" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-
-
-
-    <div class="col-sm">
-      <div class="card" style="width: 28rem;">
-<!--          <img src="..." class="card-img-top" alt="...">-->
-          <div class="card-body">
-            <h5 class="card-title">Média por frequencia de commit</h5>
-            <p class="card-text">Traz a média da experiência e da degradação considerando todas as versões analisadas para cada desenvolvedor.</p>
-            <p class="card-text">
-                <p class="h5">Formato</p>
-              Sem <mark>título</mark> nas colunas e sem <mark>índice</mark> nas linhas</br>
-                <strong>Linhas:</strong> &lt;desenvolvedor&gt;</br>
-                <strong>Colunas:</strong> &lt;média da experiência&gt; | &lt;média da degradação&gt;
-            </p>
-              <p class="card-text">Tipo de arquivo: <i class="fas fa-file-csv"></i> .csv</p>
-            <a href="/data_analysis/descriptive_statistics/6" class="btn btn-primary"><i class="fas fa-download"></i> Baixar</a>
-          </div>
-        </div>
-    </div>
-
-
-
+        </li>
+        <li class="list-group-item">Correlação por versão
+            <a href="/data_analysis/descriptive_statistics/2" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> correlation_version.csv</p>
+        </li>
+        <li class="list-group-item">Correlação por por desenvolvedor
+            <a href="/data_analysis/descriptive_statistics/3" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> correlation_dev.csv</p>
+        </li>
+        <li class="list-group-item">Médias da Experiência e Degradação por classe (faixa de quantidade de commits)
+            <a href="/data_analysis/descriptive_statistics/6" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <p class="font-weight-light">-> by_commit_frequency_10x_semOutliers.csv</p>
+        </li>
+    </ul>
 
 </div>
 
