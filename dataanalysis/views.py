@@ -165,22 +165,22 @@ def descriptive_statistics(request, type):
 
 
             file_name3 = 'among_impactful_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits)
+            stats = __impactful_commits_statistics__(commits,5)
 
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
             my_df.to_csv(file_name3, index=False, header=True)
 
 
             file_name4 = 'improving_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits,IMPROVEMENT)
+            stats = __impactful_commits_statistics__(commits,IMPROVEMENT,5)
 
-            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
+            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que melhoram'])
             my_df.to_csv(file_name4, index=False, header=True)
 
             file_name5 = 'decaying_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits, DECAY)
+            stats = __impactful_commits_statistics__(commits, DECAY,5)
 
-            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
+            my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que degradam'])
             my_df.to_csv(file_name5, index=False, header=True)
 
             file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 +\
@@ -204,25 +204,54 @@ def __impactful_commits_statistics__(commits, type=0, groups=1):
     elif type == IMPROVEMENT:
         commits = [x for x in commits if x.delta_rmd_components < 0.0]
 
-    commits_author_with_1year = len(set([x.id for x in commits if x.is_author_newcomer]))
-    commits_author_with_2years = len(set(
-        [x.id for x in commits if x.author_seniority > 365 and x.author_seniority <= 730 and not x.has_submitted_by]))
-    commits_author_with_3years = len(set([x.id for x in commits if
-                                          x.author_seniority > 730 and x.author_seniority <= 1095 and not x.has_submitted_by]))
-    commits_author_with_4years = len(set([x.id for x in commits if
-                                          x.author_seniority > 1095 and x.author_seniority <= 1460 and not x.has_submitted_by]))
-    # commits_author_more_than_3years = len(set([x.id for x in commits if x.author_seniority > 1095 and not x.has_submitted_by]))
-    relative_with_1year = commits_author_with_1year / len(commits)
-    relative_with_2years = commits_author_with_2years / len(commits)
-    relative_with_3years = commits_author_with_3years / len(commits)
-    relative_with_4years = commits_author_with_4years / len(commits)
-    relative_more_than_4years = 1 - (
-                relative_with_1year + relative_with_2years + relative_with_3years + relative_with_4years)
-    stats.append(['Autores com <= 1 ano de projeto', relative_with_1year])
-    stats.append(['Autores com > 1 ano e <= 2 anos de projeto', relative_with_2years])
-    stats.append(['Autores com > 2 anos e <= 3 anos de projeto', relative_with_3years])
-    stats.append(['Autores com > 3 anos e <= 4 anos de projeto', relative_with_4years])
-    stats.append(['Autores com > 4 anos de projeto', relative_more_than_4years])
+    by_year = {}
+
+    for i in range(groups):
+        if i==0:
+            commits_by_period = len(set([x.id for x in commits if x.author_seniority <= 365 or x.has_submitted_by]))
+        else:
+            commits_by_period = len(set([x.id for x in commits if x.author_seniority > 365*i and
+                                         x.author_seniority <= 365*(i+1) and not x.has_submitted_by]))
+        commits_by_period /= len(commits)
+        by_year.setdefault(i,commits_by_period)
+
+    # commits_by_period = len(set([x.id for x in commits if x.author_seniority > 365 * groups and not x.has_submitted_by]))
+    # commits_by_period /= len(commits)
+    by_year.setdefault(groups, 1-sum(by_year.values()))
+
+    for year in by_year:
+        if year == 0:
+            legenda = 'Autores com <= 1 ano de projeto'
+        elif year == groups:
+            legenda = 'Autores com > {} anos de projeto'.format(groups)
+            if year == 1:
+                legenda = 'Autores com > {} ano de projeto'.format(groups)
+        else:
+            legenda = 'Autores com > {} ano e <= {} anos de projeto'.format(year, year+1)
+        stats.append([legenda,by_year[year]])
+
+
+
+    # commits_author_with_1year = len(set([x.id for x in commits if x.is_author_newcomer]))
+    # commits_author_with_2years = len(set(
+    #     [x.id for x in commits if x.author_seniority > 365 and x.author_seniority <= 730 and not x.has_submitted_by]))
+    # commits_author_with_3years = len(set([x.id for x in commits if
+    #                                       x.author_seniority > 730 and x.author_seniority <= 1095 and not x.has_submitted_by]))
+    # commits_author_with_4years = len(set([x.id for x in commits if
+    #                                       x.author_seniority > 1095 and x.author_seniority <= 1460 and not x.has_submitted_by]))
+    # # commits_author_more_than_3years = len(set([x.id for x in commits if x.author_seniority > 1095 and not x.has_submitted_by]))
+    # relative_with_1year = commits_author_with_1year / len(commits)
+    # relative_with_2years = commits_author_with_2years / len(commits)
+    # relative_with_3years = commits_author_with_3years / len(commits)
+    # relative_with_4years = commits_author_with_4years / len(commits)
+    # relative_more_than_4years = 1 - (
+    #             relative_with_1year + relative_with_2years + relative_with_3years + relative_with_4years)
+    #
+    # stats.append(['Autores com <= 1 ano de projeto', relative_with_1year])
+    # stats.append(['Autores com > 1 ano e <= 2 anos de projeto', relative_with_2years])
+    # stats.append(['Autores com > 2 anos e <= 3 anos de projeto', relative_with_3years])
+    # stats.append(['Autores com > 3 anos e <= 4 anos de projeto', relative_with_4years])
+    # stats.append(['Autores com > 4 anos de projeto', relative_more_than_4years])
     return stats
 
 
