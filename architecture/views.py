@@ -27,6 +27,9 @@ from contributions.models import (Commit, Developer, Directory,
                                   ProjectIndividualContribution, Tag)
 from dataanalysis.models import AnalysisPeriod
 
+SCALE = 6
+ROUDING_SCALE = 10**SCALE
+
 
 def index(request):
     """"Architecture Configuration"""
@@ -127,11 +130,15 @@ def compileds(request, file_id):
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1433600:
+                        if os.path.getsize(jar) < 1126400:
+                            # 1.1 76800
+                            # 1.2 194560
+                            # 1.3 352256
+                            # 1.4: 460800
+                            # 1.7.0 1433600
                             # 1.5.0 614400
                             # 1.6.0 1126400
                             # 1.8.0: 1843200
-                            # 1.4: 460800:
                             # 102400, 184320
                         # if os.path.getsize(jar) < 1771200:
                             os.chdir(current_project_path + '/' + compiled_directory)
@@ -305,7 +312,7 @@ def impactful_commits(request):
 
         if directory_filter > 0:
             commits = sorted(commits, key=lambda x: x.id, reverse=False)
-            metrics_dict = [[x.commit.id,x.commit.author_experience,x.commit.delta_rmd * (10 ** 6), x.commit.total_commits, x.commit.author_seniority, x.commit.u_cloc] for x in commits]
+            metrics_dict = [[x.commit.id,x.commit.author_experience,x.commit.delta_rmd * ROUDING_SCALE, x.commit.total_commits, x.commit.author_seniority, x.commit.u_cloc] for x in commits]
         else:
             commits = sorted(commits, key=lambda x: x.id, reverse=False)
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
@@ -346,12 +353,12 @@ def impactful_commits(request):
 
             if delta_threshold != 0:
                 metrics_dict = [
-                    [x.id, x.author_experience, x.normalized_delta * (10 ** 7), x.total_commits, x.author_seniority,
+                    [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
                      x.u_cloc]
                     for x in commits if abs(x.normalized_delta) < delta_threshold]
             else:
                 metrics_dict = [
-                    [x.id, x.author_experience, x.normalized_delta * (10 ** 7), x.total_commits, x.author_seniority,
+                    [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
                      x.u_cloc] for x in commits]
 
 
@@ -794,14 +801,14 @@ def __read_PM_file__(folder,tag_id):
                         previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
                         if previous_architecture_metrics.count() > 0:
                             architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[0]
-                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
+                            architecture_metrics.delta_rmd = round(architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd,SCALE)
                     # Ancestor is not compilable
                     elif previous_commit and not previous_commit.compilable:
                         # Same author
-                        if commit.author == last_architectural_metric.commit.author:
-                            architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
-                        else:
-                            architecture_metrics.delta_rmd = 0.0
+                        # if commit.author == last_architectural_metric.commit.author:
+                        #     architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
+                        # else:
+                        architecture_metrics.delta_rmd = 0.0
                         # Distinct authors
                         # else:
                         #     architecture_metrics.delta_rmd = (architecture_metrics.rmd + last_architectural_metric.rmd)/2
@@ -835,6 +842,7 @@ def __read_PM_file__(folder,tag_id):
                     # Delta calculation
                     if previous_commit is not None and previous_commit.compilable:
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
+                        commit.delta_rmd_components = round(commit.delta_rmd_components,SCALE)
                     # Ancestor is not compilable
                     # elif previous_commit is not None and not previous_commit.compilable:
                     #     if last_architectural_metric.commit is not None and last_architectural_metric.commit.author == commit.author:

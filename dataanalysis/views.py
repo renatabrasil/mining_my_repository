@@ -13,6 +13,7 @@ from django.template import loader
 from django.urls import reverse
 from scipy.stats import spearmanr
 
+from architecture.views import ROUDING_SCALE
 from contributions.models import Commit, Tag
 
 # OPERATIONS
@@ -151,6 +152,8 @@ def descriptive_statistics(request, type):
             file_name2 = 'authors_commits_statistics.csv'
             stats = []
 
+            continuaram_a_fazer_commits_apos_um_ano = len(set([x.author for x in all_commits if x.author_seniority > 365]))
+
             all_impactful_authors = len(set([x.author for x in commits]))
             all_authors = len(set([x.author for x in all_commits]))
 
@@ -165,7 +168,7 @@ def descriptive_statistics(request, type):
 
 
             file_name3 = 'among_impactful_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits,5)
+            stats = __impactful_commits_statistics__(commits)
 
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits impactantes'])
             my_df.to_csv(file_name3, index=False, header=True)
@@ -358,7 +361,7 @@ def __process_metrics__(type,tags=Tag.line_1_10_x()):
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [[], []])
                 metric_by_dev[key][0].append(commit.author_experience)
-                metric_by_dev[key][1].append(commit.normalized_delta*(10**7))
+                metric_by_dev[key][1].append(commit.normalized_delta*ROUDING_SCALE)
             elif type == CONTRIBUTIONS_BY_DEV:
                 key = commit.author
                 if key not in metric_by_dev:

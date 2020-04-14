@@ -130,14 +130,14 @@
                 {{metric.parents.0.hash}}
             </td>
             <td>{{metric.parents.0.author.name}}</td>
-            <td style="text-align:right">{{metric.parents.0.author_experience|floatformat:4}}</td>
+            <td style="text-align:right">{{metric.parents.0.author_experience|floatformat:2}}</td>
             <td style="text-align:right">
                 {% if not metric.parents.0 %}
                     Commit orfão (introduziu novos comp)
                 {% elif not metric.parents.0.compilable %}
                     Não compilou
                 {% else %}
-                    {{metric.parents.0.mean_rmd_components|mul:10000000|floatformat:4}}
+                    {{metric.parents.0.mean_rmd_components|mul:1000000|floatformat:2}}
                 {% endif %}
             </td>
             <td></td>
@@ -145,16 +145,16 @@
         <tr style="border-bottom: solid 2px">
             <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> </td>
             <td>{{metric.author.name}}</td>
-            <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-            <td style="text-align:right;">{{metric.mean_rmd_components|mul:10000000|floatformat:4}}</td>
+            <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
+            <td style="text-align:right;">{{metric.mean_rmd_components|mul:1000000|floatformat:2}}</td>
             <td></td>
         </tr>
     <tr style="font-weight: bold">
         <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
         <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %}Novato{% else %}Long-term dev{% endif %})</td>
-        <td style="text-align:right">{{metric.author_experience|floatformat:4}}</td>
-        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|mul:10000000|floatformat:4}}</td>
-        <td style="text-align:right" class="{% if metric.normalized_delta > 0 %} text-danger {% elif metric.normalized_delta < 0 %} text-success {% endif %}"  >{{metric.normalized_delta|mul:10000000|floatformat:4}}</td>
+        <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
+        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|mul:1000000|floatformat:2}}</td>
+        <td style="text-align:right" class="{% if metric.normalized_delta > 0 %} text-danger {% elif metric.normalized_delta < 0 %} text-success {% endif %}"  >{{metric.normalized_delta|mul:1000000|floatformat:2}}</td>
     </tr>
     {% endfor %}
 {% else %}
