@@ -18,14 +18,26 @@ os.system('cls')
 directory = sys.argv[1]
 limite_inf = int(sys.argv[2])
 
-def convert_bytes(num):
-    """
-    this function will convert bytes to MB.... GB... etc
-    """
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
-        if num < 1024.0:
-            return "%3.4f %s" % (num, x)
-        num /= 1024.0
+
+def humanbytes(B):
+   'Return the given bytes as a human friendly KB, MB, GB, or TB string'
+   B = float(B)
+   KB = float(1024)
+   MB = float(KB ** 2) # 1,048,576
+   GB = float(KB ** 3) # 1,073,741,824
+   TB = float(KB ** 4) # 1,099,511,627,776
+
+   if B < KB:
+      return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+   elif KB <= B < MB:
+      return '{0:.2f} KB'.format(B/KB)
+   elif MB <= B < GB:
+      return '{0:.2f} MB'.format(B/MB)
+   elif GB <= B < TB:
+      return '{0:.2f} GB'.format(B/GB)
+   elif TB <= B:
+      return '{0:.2f} TB'.format(B/TB)
+
 
 
 def file_size(file_path):
@@ -34,7 +46,7 @@ def file_size(file_path):
     """
     if os.path.isfile(file_path):
         file_info = os.stat(file_path)
-        return convert_bytes(file_info.st_size)
+        return humanbytes(file_info.st_size)
 
 TRED =  '\033[1;31;40m '
 TGREEN =  '\033[32m' # Green Text
@@ -84,9 +96,9 @@ if directory:
                 
     print("\n----------------------\n")
     average = average / number_of_files
-    print("Media do tamanho de arquivos: " + BOLD + convert_bytes(average) + ENDC + '\n')
-    print("Minimo: " + BOLD + convert_bytes(minimo) + ENDC + ' ('+minor_file+')\n')
-    print("Maximo: " + BOLD + convert_bytes(maximo) + ENDC + '\n')
+    print("Media do tamanho de arquivos: " + BOLD + humanbytes(average) + ENDC + '\n')
+    print("Minimo: " + BOLD + humanbytes(minimo) + ENDC + ' ('+minor_file+')\n')
+    print("Maximo: " + BOLD + humanbytes(maximo) + ENDC + '\n')
     
 else:
     print("Processo encerrado\nTempo de execucao:")
