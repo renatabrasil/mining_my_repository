@@ -54,38 +54,36 @@ for file in dest:
         #print('destino: ' + file)
         #print('origem: '+source[source_hashes.index(hash_commit)])
 
-# print(files)
-
-log = []
+print(files)
 
 
-source = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.5\\jars'
-dest1 = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.4\\jars'
+# source = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.5Copia\\jars'
+# dest1 = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.5Copia\\jars'
 
-files_dir = os.listdir(source)
-files_dir = sorted(files_dir, key=lambda x: int(x.split('-')[1]))
+# files_dir = os.listdir(source)
+# files_dir = sorted(files_dir, key=lambda x: int(x.split('-')[1]))
 
-replaced = []
+# replaced = []
 
-for file in files_dir:
-    if not os.path.isdir(os.path.join(source, file)):
-        print('not directory')
-        continue # Not a directory
-    if os.path.exists(os.path.join(source, file)):
-        # print(file)
-        if file in files.keys():
-            for jarfile in os.listdir(os.path.join(source, file)):
-                if jarfile.endswith(".jar"):
-                    os.rename(os.path.join(source+'\\'+file, jarfile), os.path.join(source+'\\'+file, files[file]+'.jar') )
-            os.rename(os.path.join(source, file), os.path.join(source, files[file]))
-            shutil.move(os.path.join(source, files[file]), os.path.join(dest1, files[file]))
-            replaced.append('De: '+os.path.join(source, files[file])+' --> Para: '+os.path.join(dest1, files[file])+'\n')
+# for file in files_dir:
+    # if not os.path.isdir(os.path.join(source, file)):
+        # print('not directory')
+        # continue # Not a directory
+    # if os.path.exists(os.path.join(source, file)):
+        # # print(file)
+        # if file in files.keys():
+            # for jarfile in os.listdir(os.path.join(source, file)):
+                # if jarfile.endswith(".jar"):
+                    # os.rename(os.path.join(source+'\\'+file, jarfile), os.path.join(source+'\\'+file, files[file]+'.jar') )
+            # os.rename(os.path.join(source, file), os.path.join(source, files[file]))
+            # shutil.move(os.path.join(source, files[file]), os.path.join(dest1, files[file]))
+            # replaced.append('De: '+os.path.join(source, files[file])+' --> Para: '+os.path.join(dest1, files[file])+'\n')
 
 
-f = open("replaced.txt","w")
-f.write( str(replaced) )
-f.close()
-print('O resultado da operacao foi salvo na pasta onde esta este script com o nome \"replaced.txt\"')
+# f = open("replaced.txt","w")
+# f.write( str(replaced) )
+# f.close()
+# print('O resultado da operacao foi salvo na pasta onde esta este script com o nome \"replaced.txt\"')
 # print(replaced)
 
 

@@ -13,10 +13,12 @@ from django.template import loader
 from django.urls import reverse
 from scipy.stats import spearmanr
 
-from architecture.views import ROUDING_SCALE
+from architecture.views import ROUDING_SCALE, NO_OUTLIERS
 from contributions.models import Commit, Tag
 
 # OPERATIONS
+from dataanalysis.models import Period
+
 POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
@@ -26,12 +28,16 @@ MEANS_BY_COMMITS_FREQUENCY = 6
 PROJECT_OVERVIEW = 7
 CONTRIBUTIONS_BY_DEV = 8
 
+# POPULATION = "tag"
+POPULATION = "author"
+
 
 # TYPE OF CONTRIBUTIONS
 DECAY = 1
 IMPROVEMENT = 2
 
 def index(request):
+
     template = loader.get_template('data_analysis/index.html')
 
     if request.method == 'POST':
@@ -44,18 +50,26 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 def descriptive_statistics(request, type):
+
     if type == DELTAS_TREND:
-        commits, metric_by_dev = __process_metrics__(type,Tag.line_major_versions())
+        commits, metric_by_dev = __process_metrics__(type,request.commit_db,Tag.line_major_versions())
     else:
-        commits, metric_by_dev = __process_metrics__(type)
+        commits, metric_by_dev = __process_metrics__(type,request.commit_db)
     file_name = 'undefined'
 
     try:
         if type == POPULATION_MEANS:
+            if POPULATION == 'tag':
+                by_author = False
+            else:
+                by_author = True
 
-            devs, file_name, population_means_list = __exp_and_degradation_means__(file_name, metric_by_dev)
+            devs, file_name, population_means_list = __exp_and_degradation_means__(file_name, metric_by_dev, request.commit_db, by_author)
 
-            my_df = pd.DataFrame(population_means_list, columns=['author', 'x', 'y', 'commits'])
+            if by_author:
+                my_df = pd.DataFrame(population_means_list, columns=['author', 'x', 'y', 'commits'])
+            else:
+                my_df = pd.DataFrame(population_means_list, columns=['versao', 'experiencia', 'delta_normalizado'])
             my_df.to_csv(file_name, index=False, header=True)
             if len(devs) > 0:
                 my_df = pd.DataFrame(devs, columns=['dev', 'x', 'y', 'commits'])
@@ -66,19 +80,19 @@ def descriptive_statistics(request, type):
 
             correlation_list, file_name = __correlation_version__(file_name, metric_by_dev)
 
-            my_df = pd.DataFrame(correlation_list, columns=['x', 'y'])
-            writer = pd.ExcelWriter('correlation_version.xlsx')
-            my_df.to_excel(writer, 'Sheet1', index=None, header=True)
+            my_df = pd.DataFrame(correlation_list, columns=['versao', 'r', 'p-value'])
+            # writer = pd.ExcelWriter('correlation_version.xlsx')
+            # my_df.to_excel(writer, 'Sheet1', index=None, header=True)
             my_df.to_csv(file_name, index=None, header=True)
             # my_df.to_excel(writer, 'Sheet2')
-            writer.save()
+            # writer.save()
             print('Correlation by version')
 
         elif type == CORRELATION_BY_DEV:
 
             correlation_list, file_name = __correlation_by_dev__(file_name, metric_by_dev)
 
-            my_df = pd.DataFrame(correlation_list, columns=['dev', 'p', 'p-value'])
+            my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value'])
             my_df.to_csv(file_name, index=None, header=True)
             # my_df.to_excel(file_name, sheet_name='correlacao', engine='xlsxwriter', index=None, header=True)
             print('Correlation by dev')
@@ -98,16 +112,19 @@ def descriptive_statistics(request, type):
             file_name1 = 'worsening_contributions_by_author.csv'
             pioram_contributions_list = []
             melhoram_contributions_list = []
+            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions())
             for dev in metric_by_dev:
+                loc = sum([x.u_cloc for x in all_commits if x.author == dev])
                 if metric_by_dev[dev][0] != 0.0:
-                    loc = sum([x.u_cloc for x in commits])
-                    pioram_contributions_list.append([dev.name, metric_by_dev[dev][0]/loc])
-                elif metric_by_dev[dev][1] != 0.0:
-                    loc = sum([x.u_cloc for x in commits])
-                    melhoram_contributions_list.append([dev.name,metric_by_dev[dev][1]/loc])
+                    # loc = sum([x.u_cloc for x in all_commits])
+                    pioram_contributions_list.append([dev.name, metric_by_dev[dev][0]*ROUDING_SCALE/loc])
+                if metric_by_dev[dev][1] != 0.0:
+                    # loc = sum([x.u_cloc for x in all_commits])
+                    melhoram_contributions_list.append([dev.name,metric_by_dev[dev][1]*ROUDING_SCALE/loc])
 
             my_df = pd.DataFrame(pioram_contributions_list, columns=['autor', 'cum_delta'])
-            my_df.to_csv(file_name1, index=False, header=True)
+            my_df.index = np.arange(1, len(my_df)+1)
+            my_df.to_csv(file_name1, index=True, header=True)
 
             file_name2 = 'contributions_that_improve_by_author.csv'
 
@@ -120,7 +137,7 @@ def descriptive_statistics(request, type):
             commits_by_dev = []
             file_name = 'overview_by_dev.csv'
             for dev in metric_by_dev:
-                commits_by_dev.append([dev.name, Commit.objects.filter(author=dev, tag_id__in=Tag.line_1_10_x()).count(), metric_by_dev[dev]])
+                commits_by_dev.append([dev.name, request.commit_db.filter(author=dev, tag_id__in=Tag.line_1_10_x()).count(), metric_by_dev[dev]])
             my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'total_commits', 'contributions'])
             my_df.to_csv(file_name, index=None, header=True)
             print('overview by dev')
@@ -136,7 +153,7 @@ def descriptive_statistics(request, type):
 
             # About commits
             file_name1 = 'general_commits_statistics.csv'
-            all_commits = Commit.objects.filter(tag_id__in=Tag.line_1_10_x())
+            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions())
             total_commits = all_commits.count()
 
             relative_impactul_commits = len(commits)/total_commits
@@ -175,13 +192,13 @@ def descriptive_statistics(request, type):
 
 
             file_name4 = 'improving_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits,IMPROVEMENT,5)
+            stats = __impactful_commits_statistics__(commits,IMPROVEMENT)
 
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que melhoram'])
             my_df.to_csv(file_name4, index=False, header=True)
 
             file_name5 = 'decaying_commits_statistics.csv'
-            stats = __impactful_commits_statistics__(commits, DECAY,5)
+            stats = __impactful_commits_statistics__(commits, DECAY)
 
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que degradam'])
             my_df.to_csv(file_name5, index=False, header=True)
@@ -199,7 +216,7 @@ def descriptive_statistics(request, type):
     return HttpResponseRedirect(reverse('analysis:index', ))
 
 
-def __impactful_commits_statistics__(commits, type=0, groups=1):
+def __impactful_commits_statistics__(commits, type=0):
     stats = []
     # FIXME: If seniority changes to years, fix it:
     if type == DECAY:
@@ -207,31 +224,63 @@ def __impactful_commits_statistics__(commits, type=0, groups=1):
     elif type == IMPROVEMENT:
         commits = [x for x in commits if x.delta_rmd_components < 0.0]
 
-    by_year = {}
+    by_period = {}
 
-    for i in range(groups):
-        if i==0:
-            commits_by_period = len(set([x.id for x in commits if x.author_seniority <= 365 or x.has_submitted_by]))
-        else:
-            commits_by_period = len(set([x.id for x in commits if x.author_seniority > 365*i and
-                                         x.author_seniority <= 365*(i+1) and not x.has_submitted_by]))
-        commits_by_period /= len(commits)
-        by_year.setdefault(i,commits_by_period)
+    # FIXME:
+    # prev_period = None
+    # for period_ in groups:
+    #     if prev_period==None:
+    #         commits_by_period = len(set([x.id for x in commits if x.author_seniority <= period_.period_factor or x.has_submitted_by]))
+    #     else:
+    #         commits_by_period = len(set([x.id for x in commits if x.author_seniority > period_.period_factor * prev_period.period and
+    #                                      x.author_seniority <= period_.period_factor * period_.period and not x.has_submitted_by]))
+    #     commits_by_period /= len(commits)
+    #     by_period.setdefault(period_,commits_by_period)
+    #     prev_period = period_
 
-    # commits_by_period = len(set([x.id for x in commits if x.author_seniority > 365 * groups and not x.has_submitted_by]))
-    # commits_by_period /= len(commits)
-    by_year.setdefault(groups, 1-sum(by_year.values()))
+    # for period in by_period:
+    #     if period[0] == -1:
+    #         # Mudei no braco
+    #         legenda = 'Autores com > {} {} de projeto'.format(prev_period.period, prev_period.period_alias)
+    #         if period[0] == 1:
+    #             legenda = 'Autores com > {} {} de projeto'.format(period.period, period.period_alias)
+    #     else:
+    #         legenda = 'Autores com > {} {} e <= {} {} de projeto'.format(prev_period.period, prev_period.period_alias, period.period, period.period_alias)
+    #     prev_period = period
+    #     stats.append([legenda,by_period[period]])
 
-    for year in by_year:
-        if year == 0:
-            legenda = 'Autores com <= 1 ano de projeto'
-        elif year == groups:
-            legenda = 'Autores com > {} anos de projeto'.format(groups)
-            if year == 1:
-                legenda = 'Autores com > {} ano de projeto'.format(groups)
-        else:
-            legenda = 'Autores com > {} ano e <= {} anos de projeto'.format(year, year+1)
-        stats.append([legenda,by_year[year]])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority <= 30 or x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com até 1 mês de projeto', commits_by_period])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority > 30 and
+                                         x.author_seniority <= 365 and not x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com > 1 mês e até 1 ano de projeto', commits_by_period])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority > 365 and
+                                 x.author_seniority <= 730 and not x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com > 1 ano e até 2 anos de projeto', commits_by_period])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority > 730 and
+                                 x.author_seniority <= 1095 and not x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com > 2 anos e até 3 anos de projeto', commits_by_period])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority > 1095 and
+                                 x.author_seniority <= 1460 and not x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com > 3 anos e até 4 anos de projeto', commits_by_period])
+
+    commits_by_period = len(set([x.id for x in commits if x.author_seniority > 1460 and
+                                 x.author_seniority <= 1825 and not x.has_submitted_by]))
+    commits_by_period /= len(commits)
+    stats.append(['Autores com > 4 anos e até 5 anos de projeto', commits_by_period])
+
+    commits_by_period = 1-sum([i[1] for i in stats])
+    stats.append(['Mais de 5 anos de projeto', commits_by_period])
 
 
 
@@ -258,7 +307,7 @@ def __impactful_commits_statistics__(commits, type=0, groups=1):
     return stats
 
 
-def __exp_and_degradation_by_class__(file_name, metric_by_dev):
+def __exp_and_degradation_by_class__(file_name, metric_by_dev,commit_db):
     file_name = 'by_commit_frequency_10x_semOutliers.csv'
     begin__in = 0
     interval = 100
@@ -279,10 +328,10 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev):
             len(metric_by_dev[dev_contributions]) >= threshold]
     means = []
     # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
-    commits = Commit.objects.exclude(delta_rmd_components=0).exclude(author_id__in=[41, 20]).filter(
+    commits = commit_db.exclude(normalized_delta=0).filter(
         tag_id__in=Tag.line_1_10_x())
     # Com todos
-    # commits = Commit.objects.exclude(delta_rmd_components=0).filter(tag_id__in=Tag.line_1_10_x())
+    # commits = Commit.objects.exclude(normalized_delta=0).filter(tag_id__in=Tag.line_1_10_x())
     for commit in commits:
         if any(commit.author == c for c in devs):
             find = False
@@ -314,7 +363,7 @@ def __correlation_by_dev__(file_name, metric_by_dev):
         my_df = pd.DataFrame(metric_by_dev[dev], columns=['x', 'y'])
         r = my_df.corr(method='spearman').values[0][1]
         p = my_df.corr(method=spearmanr_pval).values[0][1]
-        if not math.isnan(r):
+        if not math.isnan(r) and not math.isnan(p):
             correlation_list.append([dev.name, r, p])
     return correlation_list, file_name
 
@@ -325,38 +374,63 @@ def __correlation_version__(file_name, metric_by_dev):
     for tag in metric_by_dev:
         my_df = pd.DataFrame(metric_by_dev[tag], columns=['x', 'y'])
         r = my_df.corr(method='spearman').values[0][1]
-        correlation_list.append([tag.description, r])
+        p = my_df.corr(method=spearmanr_pval).values[0][1]
+        correlation_list.append([tag.description, r,p])
     return correlation_list, file_name
 
 
-def __exp_and_degradation_means__(file_name, metric_by_dev):
-    file_name = 'population_means.csv'
+def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author=True):
+    if by_author:
+        file_name = 'author_population_means.csv'
+    else:
+        file_name = 'version_population_means.csv'
     population_means_list = []
     deltas = [len(exp_arr[0]) for exp_arr in metric_by_dev.values()]
     threshold = np.percentile(deltas, 80)
     devs = []
-    for dev, arrays in metric_by_dev.items():
+
+    for key, arrays in metric_by_dev.items():
         exp_arr = arrays[0]
         degrad_arr = arrays[1]
-        population_means_list.append(
-            [dev.name, np.mean(exp_arr), np.mean(degrad_arr), Commit.objects.filter(author=dev).count()])
-        if len(exp_arr) >= threshold:
-            devs.append(
-                [dev.name, np.mean(exp_arr), np.mean(degrad_arr), Commit.objects.filter(author=dev).count()])
+        if by_author:
+            population_means_list.append(
+                [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.filter(author=key).count()])
+            if len(exp_arr) >= threshold:
+                devs.append(
+                    [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.filter(author=key).count()])
+        else:
+            population_means_list.append(
+                [key.description.replace('rel/',''), np.mean(exp_arr), np.mean(degrad_arr)])
+    # else:
+    #
     return devs, file_name, population_means_list
 
 
-def __process_metrics__(type,tags=Tag.line_1_10_x()):
-    commits = Commit.objects.exclude(delta_rmd_components=0).filter(tag_id__in=tags)
+def __process_metrics__(type,commit_db,tags=Tag.line_major_versions()):
+    commits = commit_db.exclude(normalized_delta=0).filter(tag_id__in=tags)
+    # commits = [x for x in commits if x.author_experience <= 10000 and x.normalized_delta < 0]
+    # commits = [x for x in commits if x.normalized_delta > 0]
     # commits = [x for x in commits if abs(x.delta_rmd_components) < 21.62/(10 ** 7)]
     # values = set(map(lambda x: x.author, commits))
     metric_by_dev = {}
 
+    if type == CORRELATION_BY_VERSION:
+        metric_by_dev = {key: [[c.author_experience, c.normalized_delta*ROUDING_SCALE] for c in commits if c.tag==key] for key in set([c.tag for c in commits])}
+    # elif type == CORRELATION_BY_DEV or type == MEANS_BY_COMMITS_FREQUENCY:
+    #     metric_by_dev = {
+    #         key: [[c.author_experience, c.normalized_delta * ROUDING_SCALE] for c in commits if c.author == key] for key
+    #         in set([c.author for c in commits])}
+    # Faz duas listas e depois passa o Sum em cada uma dentro da lista principal
+    # elif type == POPULATION_MEANS:
+    #     metric_by_dev = {key: [[sum(c.author_experience), sum(c.normalized_delta*ROUDING_SCALE)] for c in commits if c.author==key] for key in set([c.author for c in commits])}
     try:
         for commit in commits:
 
             if type == POPULATION_MEANS:
-                key = commit.author
+                if POPULATION == 'tag':
+                    key = commit.tag
+                else:
+                    key = commit.author
 
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [[], []])
@@ -388,12 +462,6 @@ def __process_metrics__(type,tags=Tag.line_1_10_x()):
                 metric_by_dev[key][1] += commit.normalized_delta
                 # metric_by_dev[key].append([commit.delta_rmd_components*commit.u_cloc, commit.delta_rmd_components])
 
-            elif type == CORRELATION_BY_VERSION:
-                key = commit.tag
-
-                if key not in metric_by_dev:
-                    metric_by_dev.setdefault(key, [])
-                metric_by_dev[key].append([commit.author_experience, commit.normalized_delta])
             elif type == OVERVIEW_BY_DEV:
 
                 key = commit.author

@@ -30,6 +30,9 @@ from dataanalysis.models import AnalysisPeriod
 SCALE = 6
 ROUDING_SCALE = 10**SCALE
 
+# 1: ON, Otherwise: OFF
+NO_OUTLIERS = 1
+
 
 def index(request):
     """"Architecture Configuration"""
@@ -130,7 +133,7 @@ def compileds(request, file_id):
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1126400:
+                        if os.path.getsize(jar) < 1843200:
                             # 1.1 76800
                             # 1.2 194560
                             # 1.3 352256
@@ -228,7 +231,7 @@ def impactful_commits(request):
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     developers = Developer.objects.all().order_by("name")
-    developers = [d for d in developers if d.commits.exclude(delta_rmd_components=0)]
+    developers = [d for d in developers if d.commits.exclude(normalized_delta=0)]
     commits = []
     directory_name = ''
     tag_name = ''
@@ -293,16 +296,16 @@ def impactful_commits(request):
             commits = sorted(commits, key=lambda x: x.commit.author_experience, reverse=False)
         else:
             if 'delta_rmd_components__lt' in query or 'delta_rmd_components__gt' in query:
-                commits = Commit.objects.filter(**query)
+                commits = request.commit_db.filter(**query)
             else:
                 # commits = Commit.objects.exclude(delta_rmd_components=0).exclude(author_id=41).exclude(author_id=20).exclude(author_id=11).filter(**query)
                 # query.setdefault('author_id__in', [41,20,11])
                 if request.POST.get('analysis') == 'geral' or request.GET.get('analysis') == 'geral':
                     analysis_check = 'geral'
-                    commits = Commit.objects.filter(**query)
+                    commits = request.commit_db.filter(**query)
                 else:
                     analysis_check = 'impactful_commits'
-                    commits = Commit.objects.exclude(delta_rmd_components=0).filter(**query)
+                    commits = request.commit_db.exclude(normalized_delta=0).filter(**query)
             commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
 
             devs = set(x.author for x in commits if x.is_author_newcomer)
@@ -318,14 +321,9 @@ def impactful_commits(request):
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
             #                 in commits]
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.u_cloc, x.total_commits, x.author_seniority] for x in commits]
-            if tag_filter > 0:
-                experiences = [x.author_experience for x in Commit.objects.filter(tag_id=tag_filter)]
-            else:
-                experiences = [x.author_experience for x in Commit.objects.all()]
 
             deltas = [abs(x.normalized_delta) for x in commits]
 
-            threshold = np.percentile(experiences, 80)
             delta_threshold = 0
             # delta_threshold = np.percentile(deltas, 50)
             # delta_threshold = 21.62/(10 ** 7)
@@ -359,10 +357,11 @@ def impactful_commits(request):
             else:
                 metrics_dict = [
                     [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
-                     x.u_cloc] for x in commits]
+                     x.u_cloc] for x in commits if x.author_experience <= 10000]
+                # metrics_dict = [
+                #     [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
+                #      x.u_cloc] for x in commits if x.author_experience <= 10000]
 
-
-            commits_es = [x for x in commits if abs(x.normalized_delta) > delta_threshold]
 
         if len(metrics_dict) > 0:
             if directory_filter > 0:
@@ -429,109 +428,6 @@ def impactful_commits(request):
 
     return HttpResponse(template.render(context, request))
 
-
-# Using individual component evaluation
-def old_impactful_commits(request):
-    export_csv = (request.GET.get("export_csv") and request.GET.get("export_csv") == "true") if True else False
-
-    directories = Directory.objects.filter(visible=True).order_by("name")
-    developers = Developer.objects.all().order_by("name")
-    metrics = []
-    directory_name = 'all'
-    tag_name = 'tag-all'
-    dev_name = 'dev-all'
-    directory_filter = 0
-    tag_filter = 0
-    developer_filter = 0
-    delta_check = ''
-
-    query = {}
-
-    if request.POST.get('directory_id') or request.GET.get('directory_id'):
-        directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else int(request.GET.get('directory_id'))
-        if directory_filter > 0:
-            query.setdefault('directory_id', directory_filter)
-            directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
-
-    if request.POST.get('tag_id') or request.GET.get('tag_id'):
-        tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(request.GET.get('tag_id'))
-        if tag_filter > 0:
-            query.setdefault('commit__tag_id', tag_filter)
-            tag_name = 'tag-' + Tag.objects.get(pk=tag_filter).description.replace('/', '_')
-
-    if request.POST.get('developer_id') or request.GET.get('developer_id'):
-        developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(request.GET.get('developer_id'))
-        if developer_filter > 0:
-            query.setdefault('commit__author_id', developer_filter)
-            dev_name = Developer.objects.get(pk=developer_filter).name.split(' ')[0].lower()
-
-    if len(query) > 0:
-        if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
-            query.setdefault('delta_rmd__gt', 0)
-            delta_check = 'positive'
-        elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':
-            query.setdefault('delta_rmd__lt', 0)
-            delta_check = 'negative'
-
-        if 'delta_rmd__lt' in query or 'delta_rmd__gt' in query:
-            metrics = ArchitecturalMetricsByCommit.objects.filter(**query)
-        else:
-            metrics = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(**query)
-
-    metrics = sorted(metrics, key=lambda x: x.commit.author_experience, reverse=False)
-
-    if export_csv:
-
-        if directory_filter > 0:
-            metrics_dict = [[x.commit.author_experience,x.delta_rmd, x.commit.tag.description, x.directory.name] for x in metrics]
-        else:
-            metrics_aux = [[x.commit.author_experience, x.delta_rmd, x.commit.tag.description] for x
-                            in metrics]
-
-            metrics_dict = []
-            for i, g in groupby(sorted(metrics_aux), key=lambda x: x[0]):
-                metrics_dict.append([i, sum(v[1] for v in g)])
-
-        if len(metrics_dict) > 0:
-            # my_df = pd.DataFrame(metrics_dict, columns=['x','y','tag','component'])
-            my_df = pd.DataFrame(metrics_dict)
-
-            my_df.to_csv(dev_name+'-'+directory_name+'_'+tag_name+'_delta-'+delta_check+'.csv', index=False, header=False)
-
-            rho = my_df.corr(method='spearman')
-            # hist = my_df.hist(bins=3)
-            # ax = my_df.hist(column='x', bins=10, grid=False, figsize=(12, 8), color='#86bf91',
-            #              zorder=2, rwidth=0.9)
-            # my_df.boxplot(by='y', column=['x'], grid=False)
-
-            # sb.heatmap(rho,
-            #             xticklabels=rho.columns,
-            #             yticklabels=rho.columns)
-
-            # s = sb.heatmap(rho,
-            #            xticklabels=rho.columns,
-            #            yticklabels=rho.columns,
-            #            cmap='RdBu_r',
-            #            annot=True,
-            #            linewidth=0.5)
-
-            # x=my_df.iloc[:,0]
-            # y = my_df.iloc[:,1]
-            # slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
-
-    template = loader.get_template('architecture/impactful_commits.html')
-    context = {
-
-        'metrics': metrics,
-        'current_directory_id': directory_filter,
-        'current_tag_id': tag_filter,
-        'current_developer_id': developer_filter,
-        'directories': directories,
-        'developers': developers,
-        'delta_check': delta_check,
-    }
-
-    return HttpResponse(template.render(context, request))
 
 def update_compilable_commits(commits_with_errors):
     try:
@@ -823,6 +719,7 @@ def __read_PM_file__(folder,tag_id):
                     if new_metric:
                         # Delta normalization by LOC changed
                         architecture_metrics.delta_rmd /= commit.u_cloc
+                        architecture_metrics.delta_rmd = 0 if round(architecture_metrics.delta_rmd,SCALE) == 0.0 else architecture_metrics.delta_rmd
                         architecture_metrics.save()
                         directory.save()
 
@@ -842,7 +739,8 @@ def __read_PM_file__(folder,tag_id):
                     # Delta calculation
                     if previous_commit is not None and previous_commit.compilable:
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
-                        commit.delta_rmd_components = round(commit.delta_rmd_components,SCALE)
+                        if round(commit.delta_rmd_components,SCALE) == 0.0:
+                            commit.delta_rmd_components = 0
                     # Ancestor is not compilable
                     # elif previous_commit is not None and not previous_commit.compilable:
                     #     if last_architectural_metric.commit is not None and last_architectural_metric.commit.author == commit.author:
@@ -870,6 +768,8 @@ def __read_PM_file__(folder,tag_id):
                     # else:
                     #     commit.delta_rmd_components/=commit.u_cloc
                     commit.normalized_delta = commit.delta_rmd_components/commit.u_cloc
+                    if round(commit.normalized_delta, SCALE) == 0.0:
+                        commit.normalized_delta = 0.0
 
 
                     removed_components = [x for x in list(components_db) if x not in components]

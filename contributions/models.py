@@ -18,6 +18,9 @@ from common.utils import CommitUtils
 from dataanalysis.models import AnalysisPeriod
 
 
+AUTHOR_FILTER = ["Peter Donald"]
+
+
 class Developer(models.Model):
     name = models.CharField(max_length=200)
     login = models.CharField(max_length=60, default='')
@@ -42,26 +45,34 @@ class Project(models.Model):
 class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
+    major = models.BooleanField(default=True)
+    max_minor_version_description = models.CharField(max_length=80,default='')
     previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
     delta_rmd_components = models.FloatField(null=True, default=0.0)
     # alias = models.CharField(max_length=40, null=True)
     v1_1 = 1
 
+    @property
+    def minors(self):
+        return self.max_minor_version_description.split(',') if self.max_minor_version_description != '' else []
+
     @staticmethod
     def line_major_versions():
-        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 24]
+        return Tag.objects.filter(major=True).values_list('id', flat=True)
 
     @staticmethod
     def line_base():
-        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        line1_9_x = Tag.objects.get(description='rel/1.9.x').pk
+        line1_10_0 = Tag.objects.get(description='rel/1.10.0').pk
+        return [i for i in Tag.line_major_versions() if i != line1_9_x and i != line1_10_0]
 
     @staticmethod
     def line_1_10_x():
-        return Tag.line_base() + [24, 25, 26, 27, 28, 29, 30, 31]
+        return Tag.line_base().append(Tag.objects.get(description='rel/1.10.0').pk)
 
     @staticmethod
     def line_1_9_x():
-        return Tag.line_base() + [17, 18, 19, 20, 21, 22, 23]
+        return Tag.line_base().append(Tag.objects.get(description='rel/1.9.x').pk)
 
     def __str__(self):
         return self.description
@@ -83,6 +94,14 @@ class Directory(models.Model):
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
 
+class NoOutlierCommitManager(models.Manager):
+    def get_queryset(self):
+        ids = []
+        for author in AUTHOR_FILTER:
+            author_db = Developer.objects.get(name=author)
+            if author_db:
+                ids.append(author_db.id)
+        return super().get_queryset().exclude(author_id__in=ids)
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
@@ -115,6 +134,9 @@ class Commit(models.Model):
     delta_rmd_components = models.FloatField(null=True, default=0.0)
     # normalized_delta
     normalized_delta = models.FloatField(null=True, default=0.0)
+
+    objects = models.Manager()  # The default manager.
+    no_outliers_objects = NoOutlierCommitManager()  # The specific manager.
 
     def __str__(self):
         return str(self.pk) + " - hash: " + self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
@@ -228,6 +250,7 @@ class Commit(models.Model):
                 if found:
                     self.has_submitted_by = True
 
+
             # previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
             previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
 
@@ -261,18 +284,18 @@ class Commit(models.Model):
             self.author_experience = 0.2 * total_commits + 0.4 * files + 0.4 * self.cloc_activity
 
             print('Cadastrando commit: ' + self.hash)
-            print('\nVersao: ' + self.tag.__str__())
-            print('\nAutor: ' + self.author.name)
-            print('\nSenioridade: ' + self.author_seniority)
-            print('\nResumo experiência:')
-            print('\n--------------------------------')
-            print('\nTotal de commits: ' + total_commits)
-            print('\nTotal de arquivos distintos modificados: ' + files)
-            print('\nTotal de linhas modificadas ate o commit: ' + self.cloc_activity)
-            print('\n-')
-            print('\nExperiência: 0.2*' + total_commits+ " + 0.4*"+files + " + 0.4*"+self.cloc_activity)
-            print('\nExperiência= '+self.author_experience)
-            print('\n\n')
+            print('Versao: ' + self.tag.__str__())
+            print('Autor: ' + self.author.name)
+            print('Senioridade: ' + str(self.author_seniority))
+            print('Resumo experiência:')
+            print('--------------------------------')
+            print('Total de commits: ' + str(total_commits))
+            print('Total de arquivos distintos modificados: ' + str(files))
+            print('Total de linhas modificadas ate o commit: ' + str(self.cloc_activity))
+            print('-')
+            print('Experiência: 0.2*' + str(total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
+            print('Experiência= '+str(self.author_experience))
+            print('\n')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -495,7 +518,7 @@ class ProjectIndividualContribution(models.Model):
         contributions = self.__all_previous_contributions__()
         extra_values = []
         # whether there is any contribution in this directory from other authors
-        # It means that is not a new directory, so we have to count all period
+        # It means that is not a new directory, so we have to count all period_factor
         # if len(contributions) > 0:
         first_tag_in_this_project = ProjectReport.objects.filter(
             tag__project_id=self.project_report.tag.project.id).order_by("pk").first().tag.id
@@ -748,7 +771,7 @@ class IndividualContribution(models.Model):
         contributions = self.__all_previous_contributions__()
         extra_values = []
         # whether there is any contribution in this directory from other authors
-        # It means that is not a new directory, so we have to count all period
+        # It means that is not a new directory, so we have to count all period_factor
         first_tag_in_this_project = DirectoryReport.objects.filter(tag__project_id=self.directory_report.tag.project.id,
                                                                    directory_id=self.directory_report.directory.id).order_by(
             "pk").first().tag.id

@@ -51,151 +51,53 @@ def index(request):
             if last_commit is not None:
                 hash = last_commit.hash
 
-        for commit_repository in RepositoryMining(project.project_path, only_in_branch='master',
-                                                  to_tag=tag_description,
-                                                # from_tag='rel/1.9.8',
-                                                  from_commit=hash,
-                                            # from_commit = '4e101e3c49a970d5818e750d03580421bb99ae28',
-                                                  only_modifications_with_file_types=['.java'],
-                                                  only_no_merge=True).traverse_commits():
-            # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
-            # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
-            commit = Commit.objects.filter(hash=commit_repository.hash)
-            if not commit.exists():
-                author_name = CommitUtils.strip_accents(commit_repository.author.name)
-                committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
-                email = commit_repository.author.email.lower()
-                login = commit_repository.author.email.split("@")[0].lower()
-                m = re.search(r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))', commit_repository.msg, re.IGNORECASE)
-                found = ''
-                if m:
-                    found = m.group(0)
-                    if found:
-                        author_and_email = re.sub(r'\Submitted\s*([bB][yY])[:]*\s*', '',found)
-                        author_name = re.sub(r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-. ]+)+|(\)|\>|\])', '',
-                                             author_and_email)
-                        author_name = author_name.replace("\"","")
-                        author_name = CommitUtils.strip_accents(author_name)
-                        author_name = author_name.strip()
-                        email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email, re.IGNORECASE)
-                        full_email_pattern = re.search(r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+', author_and_email, re.IGNORECASE)
-                        if email_pattern:
-                            email_found = email_pattern.group(0)
-                            if email_found:
-                                email = email_found.lower()
-                        elif full_email_pattern:
-                            # Full email
-                            email_found = full_email_pattern.group(0)
-                            if email_found:
-                                email = CommitUtils.get_email(email_found)
-                        login = email.split("@")[0].lower()
-                        commit.hasSubmittedBy = True
+        #  git log --graph --oneline --decorate --tags *.java
+        versions = __go_to_first_tag__(tag)[::-1]
+        tag_aux = tag.description
+        filter = {}
+        filter.setdefault('only_in_branch', 'master')
+        filter.setdefault('only_modifications_with_file_types', ['.java'])
+        filter.setdefault('only_no_merge', True)
+        filter.setdefault('from_commit', hash)
+        filter.setdefault('to_tag', tag.description)
+        if tag.previous_tag:
+            filter.setdefault('from_tag', tag.previous_tag.description)
+        tag_is_not_first_tag = True
+        commit = None
+        if hash is not None:
+            if tag.minors:
+                for minor in [tag.description]+tag.minors:
+                    filter['to_tag'] = minor
+                    # if commit is not None:
+                    #     filter['from_commit'] = commit.hash
+                    #     filter.pop('from_tag', None)
+                    # else:
+                    filter.pop('from_commit', None)
 
-                author_name = author_name.strip()
+                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                        commit = __build_and_save_commit__(commit_repository, tag)
 
-                if author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
-                    if commit_repository.committer.name == 'jkf' or commit_repository.committer.name == 'Martijn Kruithof' or commit_repository.committer.name == 'J.M.Martijn Kruithof':
-                        committer_name = 'Jacobus Martinus Kruithof'
-                    author_name = 'Jacobus Martinus Kruithof'
-                elif author_name == 'Steve Cohen':
-                    if commit_repository.committer.name == 'Steve Cohen':
-                        committer_name = 'Steven M. Cohen'
-                    author_name = 'Steven M. Cohen'
-                elif author_name == 'Jesse Glick':
-                    if commit_repository.committer.name == 'Jesse Glick':
-                        committer_name = 'Jesse N. Glick'
-                    author_name = 'Jesse N. Glick'
-                elif author_name == 'Gintas Grigelionis':
-                    if commit_repository.committer.name == 'Gintas Grigelionis':
-                        committer_name = 'twogee'
-                    author_name = 'twogee'
-                elif author_name == 'Jan Matrne':
-                    if commit_repository.committer.name == 'Jan Matrne':
-                        committer_name = 'Jan Materne'
-                    author_name = 'Jan Materne'
-                elif author_name == 'cmanolache':
-                    if commit_repository.committer.name == 'cmanolache':
-                        committer_name = 'Costin Manolache'
-                    author_name == 'Costin Manolache'
-                author = Developer.objects.filter(name__iexact=author_name)
-                if author.count() == 0:
-                    if login != 'dev-null' and login != 'ant-dev':
-                        author= Developer.objects.filter(login=login)
-                    # If it is find by login, update fields
-                    if author.count() > 0:
-                        author = author[0]
-                        author.email = email
-                        if author_name:
-                            author.name = author_name
-                    else:
-                        if not author_name:
-                            author = Developer(name=login, email=email, login=login)
-                        else:
-                            author = Developer(name=author_name, email=email, login=login)
+                    filter['from_tag'] = minor
+
+
+            else:
+                for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+                    __build_and_save_commit__(commit_repository, tag)
+        else:
+            for tag in versions:
+                upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
+                filter['to_tag'] = upper_tag
+                if tag_aux.previous_tag:
+                    filter.setdefault('from_tag', tag_aux.previous_tag.description)
+                    filter.pop('from_commit', None)
+
+                for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+                    __build_and_save_commit__(commit_repository, tag_aux)
+
+                if tag_aux.previous_tag:
+                    tag_aux = tag_aux.previous_tag
                 else:
-                    # If it is find by name, update fields
-                    author = author[0]
-                    author.email = email
-                    author.login = login
-
-                if author.name == commit_repository.committer.name:
-                    committer = author
-                else:
-                    committer = Developer.objects.filter(name__iexact=committer_name)
-                    if committer.count() == 0:
-                        email = commit_repository.committer.email.lower()
-                        login = email.split("@")[0].lower()
-                        committer = Developer.objects.filter(login=login)
-                        if committer.count() > 0:
-                            committer = committer[0]
-                        else:
-                            committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
-                                              email=email, login=login)
-                    else:
-                        committer = committer[0]
-
-                commit = Commit(hash=commit_repository.hash, tag=tag,
-                                                parents_str=str(commit_repository.parents)[1:-1].replace(" ","").replace("'",""),
-                                               msg=commit_repository.msg,
-                                               author=author, author_date=commit_repository.author_date,
-                                               committer=committer,
-                                               committer_date=commit_repository.committer_date)
-                total_modification = 0
-                for modification_repo in commit_repository.modifications:
-                    path = CommitUtils.true_path(modification_repo)
-                    directory_str = CommitUtils.directory_to_str(path)
-                    # Save only commits with java file and not in test directory
-                    if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1:
-                        total_modification = total_modification + 1
-                        if hasattr(modification_repo, 'nloc'):
-                            nloc = modification_repo.nloc
-                        else:
-                            nloc = None
-                        # diff = GitRepository.parse_diff(modification.diff)
-                        try:
-                            # if total_modification == 1:
-                            #     commit.save()
-                            modification = Modification(commit=commit, old_path=modification_repo.old_path,
-                                                        new_path=modification_repo.new_path,
-                                                        change_type=modification_repo.change_type,
-                                                        diff=modification_repo.diff,
-                                                        source_code=modification_repo.source_code,
-                                                        source_code_before=modification_repo.source_code_before,
-                                                        added=modification_repo.added,
-                                                        removed=modification_repo.removed,
-                                                        nloc=nloc,
-                                                        complexity=modification_repo.complexity)
-                            # To prevent redundat action
-                            # time.sleep(.200)
-                            modification.save()
-                        except Exception as e:
-                            # raise  # reraises the exceptio
-                            print(str(e))
-
-            # else:
-            #     # for mod in commit[0].modifications.all():
-            #     #     mod.save()
-            #     commit[0].save()
+                    tag_is_not_first_tag = False
 
     url_path = 'contributions/index.html'
     current_developer = None
@@ -266,6 +168,159 @@ def index(request):
     print("Tempo total: " + str(end - start))
 
     return HttpResponse(template.render(context, request))
+
+
+def __build_and_save_commit__(commit_repository, tag):
+    # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
+    # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
+    commit = Commit.objects.filter(hash=commit_repository.hash)
+    if not commit.exists():
+        author_name = CommitUtils.strip_accents(commit_repository.author.name)
+        committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
+        email = commit_repository.author.email.lower()
+        login = commit_repository.author.email.split("@")[0].lower()
+        m = re.search(
+            r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
+            commit_repository.msg, re.IGNORECASE)
+        found = ''
+        if m:
+            found = m.group(0)
+            if found:
+                author_and_email = re.sub(r'\Submitted\s*([bB][yY])[:]*\s*', '', found)
+                author_name = re.sub(
+                    r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-. ]+)+|(\)|\>|\])',
+                    '',
+                    author_and_email)
+                author_name = author_name.replace("\"", "")
+                author_name = CommitUtils.strip_accents(author_name)
+                author_name = author_name.strip()
+                email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email,
+                                          re.IGNORECASE)
+                full_email_pattern = re.search(
+                    r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+',
+                    # r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)|.\s*)[a-zA-Z0-9-. ]+)+',
+                    author_and_email, re.IGNORECASE)
+                if email_pattern:
+                    email_found = email_pattern.group(0)
+                    if email_found:
+                        email = email_found.lower()
+                        commit.hasSubmittedBy = True
+                elif full_email_pattern:
+                    # Full email
+                    email_found = full_email_pattern.group(0)
+                    if email_found:
+                        email = CommitUtils.get_email(email_found)
+                        commit.hasSubmittedBy = True
+                login = email.split("@")[0].lower()
+
+
+        author_name = author_name.strip()
+
+        if author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
+            if commit_repository.committer.name == 'jkf' or commit_repository.committer.name == 'Martijn Kruithof' or commit_repository.committer.name == 'J.M.Martijn Kruithof':
+                committer_name = 'Jacobus Martinus Kruithof'
+            author_name = 'Jacobus Martinus Kruithof'
+        elif author_name == 'Steve Cohen':
+            if commit_repository.committer.name == 'Steve Cohen':
+                committer_name = 'Steven M. Cohen'
+            author_name = 'Steven M. Cohen'
+        elif author_name == 'Jesse Glick':
+            if commit_repository.committer.name == 'Jesse Glick':
+                committer_name = 'Jesse N. Glick'
+            author_name = 'Jesse N. Glick'
+        elif author_name == 'Gintas Grigelionis':
+            if commit_repository.committer.name == 'Gintas Grigelionis':
+                committer_name = 'twogee'
+            author_name = 'twogee'
+        elif author_name == 'Jan Matrne':
+            if commit_repository.committer.name == 'Jan Matrne':
+                committer_name = 'Jan Materne'
+            author_name = 'Jan Materne'
+        elif author_name == 'cmanolache':
+            if commit_repository.committer.name == 'cmanolache':
+                committer_name = 'Costin Manolache'
+            author_name == 'Costin Manolache'
+        author = Developer.objects.filter(name__iexact=author_name)
+        if author.count() == 0:
+            if login != 'dev-null' and login != 'ant-dev':
+                author = Developer.objects.filter(login=login)
+            # If it is find by login, update fields
+            if author.count() > 0:
+                author = author[0]
+                author.email = email
+                if author_name:
+                    author.name = author_name
+            else:
+                if not author_name:
+                    author = Developer(name=login, email=email, login=login)
+                else:
+                    author = Developer(name=author_name, email=email, login=login)
+        else:
+            # If it is find by name, update fields
+            author = author[0]
+            author.email = email
+            author.login = login
+
+        if author.name == commit_repository.committer.name:
+            committer = author
+        else:
+            committer = Developer.objects.filter(name__iexact=committer_name)
+            if committer.count() == 0:
+                email = commit_repository.committer.email.lower()
+                login = email.split("@")[0].lower()
+                committer = Developer.objects.filter(login=login)
+                if committer.count() > 0:
+                    committer = committer[0]
+                else:
+                    committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
+                                          email=email, login=login)
+            else:
+                committer = committer[0]
+
+        commit = Commit(hash=commit_repository.hash, tag=tag,
+                        parents_str=str(commit_repository.parents)[1:-1].replace(" ", "").replace("'", ""),
+                        msg=commit_repository.msg,
+                        author=author, author_date=commit_repository.author_date,
+                        committer=committer,
+                        committer_date=commit_repository.committer_date)
+        total_modification = 0
+        for modification_repo in commit_repository.modifications:
+            path = CommitUtils.true_path(modification_repo)
+            directory_str = CommitUtils.directory_to_str(path)
+            # Save only commits with java file and not in test directory
+            if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1\
+                    and str.lower(directory_str).find('proposal') == -1:
+                total_modification = total_modification + 1
+                if hasattr(modification_repo, 'nloc'):
+                    nloc = modification_repo.nloc
+                else:
+                    nloc = None
+                # diff = GitRepository.parse_diff(modification.diff)
+                try:
+                    # if total_modification == 1:
+                    #     commit.save()
+                    modification = Modification(commit=commit, old_path=modification_repo.old_path,
+                                                new_path=modification_repo.new_path,
+                                                change_type=modification_repo.change_type,
+                                                diff=modification_repo.diff,
+                                                source_code=modification_repo.source_code,
+                                                source_code_before=modification_repo.source_code_before,
+                                                added=modification_repo.added,
+                                                removed=modification_repo.removed,
+                                                nloc=nloc,
+                                                complexity=modification_repo.complexity)
+                    # To prevent redundat action
+                    # time.sleep(.200)
+                    modification.save()
+                except Exception as e:
+                    # raise  # reraises the exceptio
+                    print(str(e))
+    # else:
+    #     # for mod in commit[0].modifications.all():
+    #     #     mod.save()
+    #     commit[0].save()
+    return commit
+
 
 def visible_directory(request, directory_id):
     directory = Directory.objects.filter(pk=directory_id)
@@ -745,6 +800,11 @@ def process_commits_by_author(developer_id):
     return answer
 
 
+def __go_to_first_tag__(tag):
+    if tag.previous_tag:
+        return [tag.previous_tag]+__go_to_first_tag__(tag.previous_tag)
+    else:
+        return []
 
 def __author_is_in_project_report__(report, developer):
     return developer in report.commits_by_author and report.commits_by_author[developer] is None

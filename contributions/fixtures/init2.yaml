@@ -150,7 +150,7 @@
   fields:
     project: 1
     description: 'rel/1.10.0'
-    previous_tag: 23
+    previous_tag: 16
 - model: contributions.tag
   pk: 25
   fields:

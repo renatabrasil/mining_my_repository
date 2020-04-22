@@ -55,6 +55,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+
+    'architecture.middleware.SetupMiddleware',
 ]
 
 ROOT_URLCONF = 'mining_my_repository.urls'
