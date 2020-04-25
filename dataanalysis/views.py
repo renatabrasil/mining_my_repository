@@ -17,8 +17,6 @@ from architecture.views import ROUDING_SCALE, NO_OUTLIERS
 from contributions.models import Commit, Tag
 
 # OPERATIONS
-from dataanalysis.models import Period
-
 POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
@@ -90,11 +88,11 @@ def descriptive_statistics(request, type):
 
         elif type == CORRELATION_BY_DEV:
 
-            correlation_list, file_name = __correlation_by_dev__(file_name, metric_by_dev)
+            correlation_list, file_name = __correlation_by_dev__(file_name, metric_by_dev, commits)
 
-            my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value'])
+            my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'r texto'])
             my_df.to_csv(file_name, index=None, header=True)
-            # my_df.to_excel(file_name, sheet_name='correlacao', engine='xlsxwriter', index=None, header=True)
+
             print('Correlation by dev')
 
         elif type == DELTAS_TREND:
@@ -116,10 +114,8 @@ def descriptive_statistics(request, type):
             for dev in metric_by_dev:
                 loc = sum([x.u_cloc for x in all_commits if x.author == dev])
                 if metric_by_dev[dev][0] != 0.0:
-                    # loc = sum([x.u_cloc for x in all_commits])
                     pioram_contributions_list.append([dev.name, metric_by_dev[dev][0]*ROUDING_SCALE/loc])
                 if metric_by_dev[dev][1] != 0.0:
-                    # loc = sum([x.u_cloc for x in all_commits])
                     melhoram_contributions_list.append([dev.name,metric_by_dev[dev][1]*ROUDING_SCALE/loc])
 
             my_df = pd.DataFrame(pioram_contributions_list, columns=['autor', 'cum_delta'])
@@ -225,6 +221,8 @@ def __impactful_commits_statistics__(commits, type=0):
         commits = [x for x in commits if x.delta_rmd_components < 0.0]
 
     by_period = {}
+    
+    # commits = Commit.objects.filter(tag__id__in=Tag.line_major_versions())
 
     # FIXME:
     # prev_period = None
@@ -248,6 +246,8 @@ def __impactful_commits_statistics__(commits, type=0):
     #         legenda = 'Autores com > {} {} e <= {} {} de projeto'.format(prev_period.period, prev_period.period_alias, period.period, period.period_alias)
     #     prev_period = period
     #     stats.append([legenda,by_period[period]])
+
+    # commits = Commit.objects.filter(tag_id__in=Tag.line_major_versions())
 
 
     commits_by_period = len(set([x.id for x in commits if x.author_seniority <= 30 or x.has_submitted_by]))
@@ -280,7 +280,7 @@ def __impactful_commits_statistics__(commits, type=0):
     stats.append(['Autores com > 4 anos e até 5 anos de projeto', commits_by_period])
 
     commits_by_period = 1-sum([i[1] for i in stats])
-    stats.append(['Mais de 5 anos de projeto', commits_by_period])
+    stats.append(['Autores com mais de 5 anos de projeto', commits_by_period])
 
 
 
@@ -356,15 +356,17 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev,commit_db):
     return file_name, mean_list
 
 
-def __correlation_by_dev__(file_name, metric_by_dev):
+def __correlation_by_dev__(file_name, metric_by_dev, commits):
     file_name = 'correlation_dev.csv'
     correlation_list = []
     for dev in metric_by_dev:
+        impactful_commits = 0
         my_df = pd.DataFrame(metric_by_dev[dev], columns=['x', 'y'])
         r = my_df.corr(method='spearman').values[0][1]
         p = my_df.corr(method=spearmanr_pval).values[0][1]
         if not math.isnan(r) and not math.isnan(p):
-            correlation_list.append([dev.name, r, p])
+            impactful_commits = len(set([x.id for x in commits if x.author == dev]))
+            correlation_list.append([dev.name, r, p, str(round(r,4))+(' ('+str(impactful_commits)+')')])
     return correlation_list, file_name
 
 
@@ -408,8 +410,8 @@ def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author
 
 def __process_metrics__(type,commit_db,tags=Tag.line_major_versions()):
     commits = commit_db.exclude(normalized_delta=0).filter(tag_id__in=tags)
-    # commits = [x for x in commits if x.author_experience <= 10000 and x.normalized_delta < 0]
-    # commits = [x for x in commits if x.normalized_delta > 0]
+    # commits = [x for x in commits if x.author_experience <= 10000]
+    # commits = [x for x in commits if x.author_experience <= 10000 and x.normalized_delta > 0]
     # commits = [x for x in commits if abs(x.delta_rmd_components) < 21.62/(10 ** 7)]
     # values = set(map(lambda x: x.author, commits))
     metric_by_dev = {}

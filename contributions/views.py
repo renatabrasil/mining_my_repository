@@ -22,7 +22,7 @@ from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
     Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
     DirectoryReport, IndividualContribution, MetricsReport, Modification,
-    Project, ProjectIndividualContribution, ProjectReport, Tag)
+    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -64,40 +64,41 @@ def index(request):
             filter.setdefault('from_tag', tag.previous_tag.description)
         tag_is_not_first_tag = True
         commit = None
-        if hash is not None:
-            if tag.minors:
-                for minor in [tag.description]+tag.minors:
-                    filter['to_tag'] = minor
-                    # if commit is not None:
-                    #     filter['from_commit'] = commit.hash
-                    #     filter.pop('from_tag', None)
-                    # else:
-                    filter.pop('from_commit', None)
-
-                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                        commit = __build_and_save_commit__(commit_repository, tag)
-
-                    filter['from_tag'] = minor
+        filter.pop('from_commit', None)
+        # if hash is not None:
+        if tag.minors:
+            for minor in [tag.description]+tag.minors:
+                filter['to_tag'] = minor
+                # if commit is not None:
+                #     filter['from_commit'] = commit.hash
+                #     filter.pop('from_tag', None)
+                # else:
 
 
-            else:
-                for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-                    __build_and_save_commit__(commit_repository, tag)
+                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                    commit = __build_and_save_commit__(commit_repository, tag)
+
+                filter['from_tag'] = minor
+
+
         else:
-            for tag in versions:
-                upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
-                filter['to_tag'] = upper_tag
-                if tag_aux.previous_tag:
-                    filter.setdefault('from_tag', tag_aux.previous_tag.description)
-                    filter.pop('from_commit', None)
-
-                for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-                    __build_and_save_commit__(commit_repository, tag_aux)
-
-                if tag_aux.previous_tag:
-                    tag_aux = tag_aux.previous_tag
-                else:
-                    tag_is_not_first_tag = False
+            for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+                __build_and_save_commit__(commit_repository, tag)
+        # else:
+        #     for tag in versions:
+        #         upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
+        #         filter['to_tag'] = upper_tag
+        #         if tag_aux.previous_tag:
+        #             filter.setdefault('from_tag', tag_aux.previous_tag.description)
+        #             filter.pop('from_commit', None)
+        #
+        #         for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+        #             __build_and_save_commit__(commit_repository, tag_aux)
+        #
+        #         if tag_aux.previous_tag:
+        #             tag_aux = tag_aux.previous_tag
+        #         else:
+        #             tag_is_not_first_tag = False
 
     url_path = 'contributions/index.html'
     current_developer = None
@@ -319,6 +320,7 @@ def __build_and_save_commit__(commit_repository, tag):
     #     # for mod in commit[0].modifications.all():
     #     #     mod.save()
     #     commit[0].save()
+    commit.update_component_commits()
     return commit
 
 

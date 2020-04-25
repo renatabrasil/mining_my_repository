@@ -45,7 +45,7 @@
                 Delta normalizado: {{commit.normalized_delta|floatformat:8}} <br/>
                 {% for metric in commit.architectural_metrics.all %}
                     {% if metric.delta_rmd != 0.0 %}
-                       * {{metric.delta_rmd|floatformat:8}} ({{metric.directory.name}}) <br/>
+                * {{metric.delta_rmd|floatformat:8}} ({{metric.directory.name}}) - <strong>Exp especializada:</strong> {{metric.author_experience|floatformat:2}}<br/>
                     {% endif %}
                 {% endfor %}
                 <hr style="border: 0.5px solid"/>

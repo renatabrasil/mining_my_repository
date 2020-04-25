@@ -24,7 +24,7 @@ from architecture.models import ArchitecturalMetricsByCommit, FileCommits
 from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   IndividualContribution, Project,
-                                  ProjectIndividualContribution, Tag)
+                                  ProjectIndividualContribution, Tag, ComponentCommit)
 from dataanalysis.models import AnalysisPeriod
 
 SCALE = 6
@@ -277,13 +277,13 @@ def impactful_commits(request):
             query.setdefault('delta_rmd__gt', 0)
             delta_check = 'positive'
         elif request.POST.get('delta_rmd_components') == 'positive' or request.GET.get('delta_rmd_components') == 'positive':
-            query.setdefault('delta_rmd_components__gt', 0)
+            query.setdefault('normalized_delta__gt', 0)
             delta_check = 'positive'
         elif request.POST.get('delta_rmd_components') == 'negative' or request.GET.get('delta_rmd_components') == 'negative':
-            query.setdefault('delta_rmd_components__lt', 0)
+            query.setdefault('normalized_delta__lt', 0)
             delta_check = 'negative'
         elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':
-            query.setdefault('delta_rmd__lt', 0) if directory_filter > 0 else query.setdefault('delta_rmd_components__lt', 0)
+            query.setdefault('delta_rmd__lt', 0) if directory_filter > 0 else query.setdefault('normalized_delta__lt', 0)
             delta_check = 'negative'
 
 
@@ -295,7 +295,7 @@ def impactful_commits(request):
 
             commits = sorted(commits, key=lambda x: x.commit.author_experience, reverse=False)
         else:
-            if 'delta_rmd_components__lt' in query or 'delta_rmd_components__gt' in query:
+            if 'normalized_delta__lt' in query or 'normalized_delta__gt' in query:
                 commits = request.commit_db.filter(**query)
             else:
                 # commits = Commit.objects.exclude(delta_rmd_components=0).exclude(author_id=41).exclude(author_id=20).exclude(author_id=11).filter(**query)
@@ -313,9 +313,20 @@ def impactful_commits(request):
 
     if export_csv:
 
+        delta_threshold = 0
         if directory_filter > 0:
             commits = sorted(commits, key=lambda x: x.id, reverse=False)
             metrics_dict = [[x.commit.id,x.commit.author_experience,x.commit.delta_rmd * ROUDING_SCALE, x.commit.total_commits, x.commit.author_seniority, x.commit.u_cloc] for x in commits]
+
+            del query['directory_id']
+            components = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
+                'id')
+            components_metrics = [[x.id, x.author_experience, x.delta_rmd * ROUDING_SCALE, x.commit.u_cloc] for x in
+                                  components]
+
+            my_df = pd.DataFrame(components_metrics,
+                                 columns=['time', 'experiencia', 'degradacao', 'LOC'])
+            my_df.to_csv('component_metrics.csv', index=False, header=True)
         else:
             commits = sorted(commits, key=lambda x: x.id, reverse=False)
             # metrics_dict = [[x.author_experience, x.delta_rmd_components, x.tag.description, x.changed_architecture] for x
@@ -324,7 +335,7 @@ def impactful_commits(request):
 
             deltas = [abs(x.normalized_delta) for x in commits]
 
-            delta_threshold = 0
+
             # delta_threshold = np.percentile(deltas, 50)
             # delta_threshold = 21.62/(10 ** 7)
 
@@ -357,7 +368,29 @@ def impactful_commits(request):
             else:
                 metrics_dict = [
                     [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
-                     x.u_cloc] for x in commits if x.author_experience <= 10000]
+                     x.u_cloc] for x in commits]
+
+                # components_metrics = [[c.id, c.author_experience, c.commit.normalized_delta * ROUDING_SCALE, c.commit.u_cloc] for c in [list(x.component_commits.all()) for x in commits]]
+
+                components_metrics = []
+                for commit in commits:
+                    for component in commit.component_commits.all():
+                        component_degradation = ArchitecturalMetricsByCommit.objects.filter(commit=commit, directory=component.component)
+                        if component_degradation.exists():
+                            component_degradation = component_degradation[0]
+                            components_metrics.append([component.id, component.author_experience, component_degradation.delta_rmd * ROUDING_SCALE, commit.u_cloc])
+                        else:
+                            print('oi')
+
+                my_df = pd.DataFrame(components_metrics,
+                                     columns=['time', 'experiencia', 'degradacao', 'LOC'])
+                my_df.to_csv('component_metrics.csv', index=False, header=True)
+
+                # dictionary[new_key] = dictionary[old_key]
+                # del dictionary[old_key]
+                # del query['directory_id']
+                # components = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by('id')
+                # components_metrics = [[x.id, x.author_experience, x.delta_rmd * ROUDING_SCALE, x.commit.u_cloc] for x in components]
                 # metrics_dict = [
                 #     [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
                 #      x.u_cloc] for x in commits if x.author_experience <= 10000]
@@ -671,11 +704,19 @@ def __read_PM_file__(folder,tag_id):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
-                    directory_str = name__exact='src/main/' + row[0]
+                    directory_str ='src/main/' + row[0]
                     directory = Directory.objects.filter(name__exact=directory_str)
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
+
+                    component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
+                    if component_commit.exists():
+                        component_commit = component_commit[0]
+                    else:
+                        component_commit = ComponentCommit.objects.filter(component=directory, commit_id__lte=commit.id,
+                                                                          commit__author=commit.author).last()
+
                     # Change architecture
                     components.append(directory)
 
@@ -685,7 +726,8 @@ def __read_PM_file__(folder,tag_id):
                         directory__name__exact='src/main/' + row[0], commit_id=commit.id)
                     if architecture_metrics.count() == 0:
                         # TODO: use delta
-                        architecture_metrics = ArchitecturalMetricsByCommit(commit=commit, directory=directory,
+                        architecture_metrics = ArchitecturalMetricsByCommit(component_commit=component_commit, commit=commit,
+                                                                            directory=directory,
                                                                           rmd=float(row[5]), rma=float(row[4]),
                                                                           rmi=float(row[3]), ca=float(row[1]),
                                                                           ce=float(row[2]))
@@ -697,17 +739,12 @@ def __read_PM_file__(folder,tag_id):
                         previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(directory_id=directory.id, commit_id=previous_commit.id)
                         if previous_architecture_metrics.count() > 0:
                             architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[0]
-                            architecture_metrics.delta_rmd = round(architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd,SCALE)
+                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
+                            if architecture_metrics.delta_rmd != 0 and round(architecture_metrics.delta_rmd, SCALE) == 0.0:
+                                architecture_metrics.delta_rmd = 0.0
                     # Ancestor is not compilable
                     elif previous_commit and not previous_commit.compilable:
-                        # Same author
-                        # if commit.author == last_architectural_metric.commit.author:
-                        #     architecture_metrics.delta_rmd = architecture_metrics.rmd -last_architectural_metric.rmd
-                        # else:
                         architecture_metrics.delta_rmd = 0.0
-                        # Distinct authors
-                        # else:
-                        #     architecture_metrics.delta_rmd = (architecture_metrics.rmd + last_architectural_metric.rmd)/2
                     # It is an orphan commit
                     else:
                         # It is the initial commit in this component
@@ -726,9 +763,6 @@ def __read_PM_file__(folder,tag_id):
                     commit_rmds.append([architecture_metrics.rmd, True if directory.initial_commit == commit else False])
             finally:
                 f.close()
-                # commit_rmds = ArchitecturalMetricsByCommit.objects.filter(commit=commit).distinct().values_list("rmd", flat=True)
-
-                # commit_rmds = [c.rmd for c in ]
 
                 if new_metric:
 
@@ -741,36 +775,13 @@ def __read_PM_file__(folder,tag_id):
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
                         if round(commit.delta_rmd_components,SCALE) == 0.0:
                             commit.delta_rmd_components = 0
-                    # Ancestor is not compilable
-                    # elif previous_commit is not None and not previous_commit.compilable:
-                    #     if last_architectural_metric.commit is not None and last_architectural_metric.commit.author == commit.author:
-                    #         commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
-                    #         # Same author
-                    #         # if last_architectural_metric.commit.author == commit.author:
-                    #         #     commit.delta_rmd_components -= last_architectural_metric.commit.mean_rmd_components
-                    #         # Distinct authors
-                    #         # Outliers
-                    #         # else:
-                    #         #     commit.delta_rmd_components += last_architectural_metric.commit.mean_rmd_components
-                    #         #     commit.delta_rmd_components /= 2
-                    #     else:
-                    #         commit.delta_rmd_components = 0.0
-                    # If it is an orphan commit that introduces new components
-                    # Outliers
-                    # elif any(True == c[1] for c in commit_rmds):
-                    #     commit.delta_rmd_components = np.mean([c[0] for c in commit_rmds if c[1] == True])
                     else:
                         commit.delta_rmd_components = 0.0
 
                     # Delta normalization by LOC changed
-                    # if commit.delta_rmd_components != 0.0 and abs(commit.delta_rmd_components) <= 0.01:
-                    #     commit.delta_rmd_components = 0.0
-                    # else:
-                    #     commit.delta_rmd_components/=commit.u_cloc
                     commit.normalized_delta = commit.delta_rmd_components/commit.u_cloc
                     if round(commit.normalized_delta, SCALE) == 0.0:
                         commit.normalized_delta = 0.0
-
 
                     removed_components = [x for x in list(components_db) if x not in components]
                     add_components = [x for x in components if x not in list(components_db)]

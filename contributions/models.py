@@ -94,6 +94,9 @@ class Directory(models.Model):
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
 
+    def belongs_to_component(self,path):
+        return self.name == path or (self.name.startswith(path) and not Directory.objects.filter(name__exact=path, visible=True).exists())
+
 class NoOutlierCommitManager(models.Manager):
     def get_queryset(self):
         ids = []
@@ -216,7 +219,8 @@ class Commit(models.Model):
     def cloc_uncommented(self, directory):
         cloc = 0
         for mod in self.modifications.all():
-            if mod.directory == directory:
+            # if mod.directory == directory:
+            if directory.belongs_to_component(mod.directory.name):
                 cloc += mod.u_cloc
         return cloc
 
@@ -229,6 +233,10 @@ class Commit(models.Model):
     @property
     def delta_rmd(self):
         return self.delta_rmd_components
+
+    def update_component_commits(self):
+        for component in self.component_commits.all():
+            component.calculate_experience()
 
     def save(self, *args, **kwargs):
         self.author.save()
@@ -256,10 +264,12 @@ class Commit(models.Model):
 
             first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id).first()
 
-            total_commits = previous_commit.total_commits if previous_commit is not None else 0
+            self.total_commits = previous_commit.total_commits if previous_commit is not None else 0
 
+            self.cloc_activity = 0
             if previous_commit is not None:
-                self.total_commits = total_commits + 1
+                self.total_commits += 1
+                self.cloc_activity = previous_commit.cloc_activity
 
             if first_commit is not None:
                 self.author_seniority = self.author_date - first_commit.author_date
@@ -268,20 +278,17 @@ class Commit(models.Model):
             self.author_experience = 0.0
 
             file_by_authors = Modification.objects.none()
-            if total_commits > 0:
-                file_by_authors = Modification.objects.filter(commit__author=self.author, commit__tag_id__lte=self.tag.id)
+            if self.total_commits > 0:
+                file_by_authors = Modification.objects.filter(commit__author=self.author, commit__tag_id__lte=self.tag.id,
+                                                              commit_id__lte=previous_commit.id)
 
-
-            self.cloc_activity = 0
-            if previous_commit is not None:
-                self.cloc_activity = previous_commit.cloc_activity
 
             # cloc_activity = [c.u_cloc for c in file_by_authors]
             # cloc = sum(cloc_activity)
 
             files = file_by_authors.values("path").distinct().count()
 
-            self.author_experience = 0.2 * total_commits + 0.4 * files + 0.4 * self.cloc_activity
+            self.author_experience = 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
 
             print('Cadastrando commit: ' + self.hash)
             print('Versao: ' + self.tag.__str__())
@@ -289,15 +296,49 @@ class Commit(models.Model):
             print('Senioridade: ' + str(self.author_seniority))
             print('Resumo experiência:')
             print('--------------------------------')
-            print('Total de commits: ' + str(total_commits))
+            print('Total de commits: ' + str(self.total_commits))
             print('Total de arquivos distintos modificados: ' + str(files))
             print('Total de linhas modificadas ate o commit: ' + str(self.cloc_activity))
             print('-')
-            print('Experiência: 0.2*' + str(total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
+            print('Experiência: 0.2*' + str(self.total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
             print('Experiência= '+str(self.author_experience))
             print('\n')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
+
+class ComponentCommit(models.Model):
+    component = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='component_commits')
+    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='component_commits')
+    author_experience = models.FloatField(null=True, default=0.0)
+    cloc_accumulation = models.IntegerField(default=0)
+    commits_accumulation = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.component.name + ', Commit id: ' + str(self.commit.id) + ', Autor: ' + self.commit.author.name
+
+    def calculate_experience(self):
+        previous_component_commit = ComponentCommit.objects.filter(commit__author=self.commit.author, component=self.component,
+                                                                    commit__id__lt=self.commit.id).last()
+        file_by_authors = Modification.objects.none()
+
+        # because components are saved directly
+        if previous_component_commit is not None:
+            self.commits_accumulation = previous_component_commit.commits_accumulation
+            self.cloc_accumulation = previous_component_commit.cloc_accumulation
+            # because Modification model imply any directory whether they are components or not
+            file_by_authors = Modification.objects.filter(commit__author=self.commit.author,
+                                                          commit__tag_id__lte=self.commit.tag.id,
+                                                          commit_id__lt=self.commit.id,
+                                                          directory=self.component)
+        files = file_by_authors.values("path").distinct().count()
+
+        self.author_experience = 0.2 * self.commits_accumulation + \
+                                 0.4 * files + \
+                                 0.4 * self.cloc_accumulation
+
+        self.commits_accumulation += 1
+        self.cloc_accumulation += self.commit.cloc_uncommented(self.component)
+        self.save()
 
 
 class Modification(models.Model):
@@ -306,6 +347,7 @@ class Modification(models.Model):
     path = models.CharField(max_length=200, null=True, default="")
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
+    component_commit = models.ForeignKey(ComponentCommit, on_delete=models.CASCADE, related_name='modifications')
     ADDED = 'ADD'
     DELETED = 'DEL'
     MODIFIED = 'MOD'
@@ -411,7 +453,7 @@ class Modification(models.Model):
                 else:
                     directory_str = "/"
 
-                directory = Directory.objects.filter(name=directory_str)
+                directory = Directory.objects.filter(name__iexact=directory_str)
                 if directory.count() == 0:
                     directory = Directory(name=directory_str, project=self.commit.tag.project,
                                           initial_commit=self.commit)
@@ -420,11 +462,19 @@ class Modification(models.Model):
                 else:
                     self.directory = directory[0]
 
+                component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
+                if component_commit_repo.exists():
+                    self.component_commit = component_commit_repo[0]
+                else:
+                    self.component_commit = ComponentCommit(component=self.directory, commit=self.commit)
+                    self.component_commit.save()
+
                 self.cloc = self.added + self.removed
                 self.commit.cloc_activity += self.u_cloc
                 self.commit.save()
 
                 super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
+
 
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
