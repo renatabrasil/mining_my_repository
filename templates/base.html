@@ -38,6 +38,26 @@
 
     <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
       <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">Mining my repository</a>
+        <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="#"><strong>Projeto: </strong> {{project.project_name}} <span class="sr-only">(current)</span></a>
+      </li>
+        </ul>
+
+        <form class="form-inline my-12 my-lg-0" href="" method="POST">{% csrf_token %}
+
+        <select class="form-control mr-sm-16 mb-16" id="tag2_selector" placeholder="Selecione o projeto" name="project_base_id" >
+          <option selected value="{{project.id}}">Selecione o projeto</option>
+          {% for project in projects %} {{current_project}}
+            <option value="{{project.id}}"
+               {% if tag.id == current_project_id %}selected="selected"{% endif %}>
+               {{project.project_name}}
+            </option>
+            {% endfor %}
+          </select>
+
+      <button class="btn btn-outline-info my-2 my-sm-0" type="submit">Trocar</button>
+    </form>
       <ul class="navbar-nav px-3">
         <li class="nav-item text-nowrap">
           <a class="nav-link" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">Sign out</a>

@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from collections import OrderedDict
 from itertools import groupby
 
@@ -37,6 +38,7 @@ NO_OUTLIERS = 1
 def index(request):
     """"Architecture Configuration"""
     tag = ViewUtils.load_tag(request)
+    request.project = request.session['project']
     template = loader.get_template('architecture/index.html')
     files = []
 
@@ -58,11 +60,11 @@ def index(request):
 
             # HttpResponseRedirect(reverse('architecture:index',))
         # if a GET (or any other method) we'll create a blank form
-    else:
-        form = FilesCompiledForm(initial={'directory': 'compiled',
-                                          'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
-                                          'build_path': 'build/classes'})
-        files = FileCommits.objects.all().order_by("name")
+
+    form = FilesCompiledForm(initial={'directory': 'compiled',
+                                      'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
+                                      'build_path': 'build/classes'})
+    files = FileCommits.objects.filter(tag__project=request.project).order_by("name")
 
     context = {
         'tag': tag,
@@ -90,6 +92,7 @@ def compileds(request, file_id):
         commit_with_errors = []
         commits_not_compilable = Commit.objects.filter(tag=file.tag,compilable=False).values_list("hash",flat=True)
         average_file_size = 0
+        error = False
         for commit in myfile:
             commit = commit.replace('\n','')
             if i==0:
@@ -111,9 +114,17 @@ def compileds(request, file_id):
                         print(os.environ.get('JAVA_HOME'))
                         print(os.environ.get('ANT_HOME'))
 
-                        # Compile
-                        build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
+                        build = subprocess.Popen('python fix.py', shell=False, cwd=file.local_repository)
                         build.wait()
+                        # Compile
+                        # build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
+                        # https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
+                        rc = os.system("ant compile-core")
+                        if rc != 0:
+                            print("Error on ant compile")
+                            error = True
+                        # build = subprocess.Popen('ant compile-core', shell=False, cwd=file.local_repository)
+                        # build.wait()
 
                         # Create jar
                         jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
@@ -133,7 +144,8 @@ def compileds(request, file_id):
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1843200:
+                        if os.path.getsize(jar) < 1843200 or error:
+                            error = False
                             # 1.1 76800
                             # 1.2 194560
                             # 1.3 352256
@@ -168,7 +180,7 @@ def compileds(request, file_id):
                         object_commit.save()
 
 
-                        build_path_repository = build_path
+                        build_path_repository = file.local_repository+'/'+build_path
                         if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
                             build_path_repository = file.local_repository + "/" + build_path
                         if os.path.exists(build_path_repository):
@@ -218,6 +230,7 @@ def compileds(request, file_id):
 
 # Using overall design evaluation
 def impactful_commits(request):
+    tag = ViewUtils.load_tag(request)
     export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
     # full_tag = (request.GET.get("until_tag_state") and request.POST.get("until_tag") == "true") if True else False
 
@@ -231,7 +244,7 @@ def impactful_commits(request):
 
     directories = Directory.objects.filter(visible=True).order_by("name")
     developers = Developer.objects.all().order_by("name")
-    developers = [d for d in developers if d.commits.exclude(normalized_delta=0)]
+    developers = [d for d in developers if d.commits.exclude(normalized_delta=0).filter(tag__project=request.session['project'])]
     commits = []
     directory_name = ''
     tag_name = ''
@@ -261,6 +274,7 @@ def impactful_commits(request):
                 query.setdefault('commit__'+tag_query_str, tag_filter)
             else:
                 query.setdefault(tag_query_str, tag_filter)
+            query.setdefault('tag__project_id', request.session['project'])
             tag_name = Tag.objects.get(pk=tag_filter).description.replace('/', '_')
 
     if request.POST.get('developer_id') or request.GET.get('developer_id'):
@@ -308,8 +322,8 @@ def impactful_commits(request):
                     commits = request.commit_db.exclude(normalized_delta=0).filter(**query)
             commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
 
-            devs = set(x.author for x in commits if x.is_author_newcomer)
-            total = set(x.author for x in commits)
+            # devs = set(x.author for x in commits if x.is_author_newcomer)
+            # total = set(x.author for x in commits)
 
     if export_csv:
 
@@ -704,7 +718,9 @@ def __read_PM_file__(folder,tag_id):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
-                    directory_str ='src/main/' + row[0]
+                    # prefix ='src/main/'
+                    prefix = 'lucene/core/src/java/'
+                    directory_str = prefix + row[0]
                     directory = Directory.objects.filter(name__exact=directory_str)
                     if directory.count() == 0:
                         continue
@@ -966,3 +982,27 @@ def __has_jar_file__(directory):
             if filename.endswith(".jar"):
                 exists = True
     return exists
+
+
+class ProcessException(object):
+    pass
+
+
+def execute(command):
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    # Poll process for new output until finished
+    while True:
+        nextline = process.stdout.readline()
+        if nextline == '' and process.poll() is not None:
+            break
+        sys.stdout.write(nextline)
+        sys.stdout.flush()
+
+    output = process.communicate()[0]
+    exitCode = process.returncode
+
+    if (exitCode == 0):
+        return output
+    else:
+        raise ProcessException(command, exitCode, output)

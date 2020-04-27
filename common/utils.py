@@ -110,7 +110,7 @@ class ViewUtils(object):
             except Exception as e:
                 # raise  # reraises the exceptio
                 print(str(e))
-                tag_id = models.Tag.objects.all().first().id
+                tag_id = models.Tag.objects.filter(project=request.session['project']).first().id
         query = models.Tag.objects.filter(pk=tag_id)
         if not tag_id:
             tag_description = request.GET.get('tag')

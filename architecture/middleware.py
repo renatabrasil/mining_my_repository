@@ -11,6 +11,12 @@ class SetupMiddleware:
         # Code to be executed for each request before
         # the view (and later middleware) are called.
 
+        request.project_base = None
+
+        if request.POST.get('project_base_id') is not None:
+            request.project_base = request.POST.get('project_base_id')
+            request.session['project'] = request.POST.get('project_base_id')
+
         commit_db = Commit.objects
         if NO_OUTLIERS and NO_OUTLIERS==1:
             commit_db = Commit.no_outliers_objects

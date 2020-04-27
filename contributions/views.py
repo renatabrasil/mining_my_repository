@@ -31,9 +31,10 @@ report_directories = None
 # TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
     # tag_text = 'rel/1.2'
-    project = Project.objects.get(project_name="Apache Ant")
-
     start = time.time()
+
+    project = Project.objects.get(id=request.session['project'])
+
 
     tag = ViewUtils.load_tag(request)
     tag_description = tag.description
@@ -47,9 +48,9 @@ def index(request):
         hash = None
 
         if tag.previous_tag is not None:
-            last_commit = Commit.objects.filter(tag_id__lte=tag.id).last()
-            if last_commit is not None:
-                hash = last_commit.hash
+            commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
+            if commit is not None:
+                hash = commit.hash
 
         #  git log --graph --oneline --decorate --tags *.java
         versions = __go_to_first_tag__(tag)[::-1]
@@ -63,27 +64,28 @@ def index(request):
         if tag.previous_tag:
             filter.setdefault('from_tag', tag.previous_tag.description)
         tag_is_not_first_tag = True
-        commit = None
         filter.pop('from_commit', None)
         # if hash is not None:
+
         if tag.minors:
-            for minor in [tag.description]+tag.minors:
+            for minor in list([tag.description]+tag.minors):
+                if minor.find('*') == 0:
+                    filter['from_tag'] = minor.replace('*','')
+                    continue
                 filter['to_tag'] = minor
-                # if commit is not None:
+                # if hash is not None:
                 #     filter['from_commit'] = commit.hash
                 #     filter.pop('from_tag', None)
-                # else:
-
 
                 for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
                     commit = __build_and_save_commit__(commit_repository, tag)
 
                 filter['from_tag'] = minor
 
-
         else:
             for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
                 __build_and_save_commit__(commit_repository, tag)
+        __update_commit__(Commit.objects.filter(tag=tag))
         # else:
         #     for tag in versions:
         #         upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
@@ -152,7 +154,6 @@ def index(request):
     template = loader.get_template(url_path)
     context = {
         'latest_commit_list': latest_commit_list,
-        'project': project,
         'tag': tag_description,
         'current_developer': current_developer,
         'current_tag_filter': current_tag_filter,
@@ -290,7 +291,7 @@ def __build_and_save_commit__(commit_repository, tag):
             directory_str = CommitUtils.directory_to_str(path)
             # Save only commits with java file and not in test directory
             if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1\
-                    and str.lower(directory_str).find('proposal') == -1:
+                    and str.lower(directory_str).find('proposal') == -1 and str.lower(directory_str).startswith('lucene/core'):
                 total_modification = total_modification + 1
                 if hasattr(modification_repo, 'nloc'):
                     nloc = modification_repo.nloc
@@ -320,7 +321,8 @@ def __build_and_save_commit__(commit_repository, tag):
     #     # for mod in commit[0].modifications.all():
     #     #     mod.save()
     #     commit[0].save()
-    commit.update_component_commits()
+        if commit.pk is not None:
+            commit.update_component_commits()
     return commit
 
 
@@ -810,3 +812,14 @@ def __go_to_first_tag__(tag):
 
 def __author_is_in_project_report__(report, developer):
     return developer in report.commits_by_author and report.commits_by_author[developer] is None
+
+def __update_commit__(commits):
+    for commit in commits:
+        lista = commit.parents_str.split(",")
+        for parent_hash in lista:
+            parent = Commit.objects.filter(hash=parent_hash)
+            if parent.count() > 0:
+                parent = parent[0]
+                parent.children_commit = commit
+                commit.parent = parent
+                parent.save(update_fields=['children_commit'])

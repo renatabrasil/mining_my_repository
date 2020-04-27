@@ -54,7 +54,7 @@ class Tag(models.Model):
 
     @property
     def minors(self):
-        return self.max_minor_version_description.split(',') if self.max_minor_version_description != '' else []
+        return [x.strip() for x in self.max_minor_version_description.split(',')] if self.max_minor_version_description != '' else []
 
     @staticmethod
     def line_major_versions():
@@ -260,9 +260,9 @@ class Commit(models.Model):
 
 
             # previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
-            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
+            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id, tag__project=self.tag.project).last()
 
-            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id).first()
+            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id, tag__project=self.tag.project).first()
 
             self.total_commits = previous_commit.total_commits if previous_commit is not None else 0
 
@@ -273,13 +273,14 @@ class Commit(models.Model):
 
             if first_commit is not None:
                 self.author_seniority = self.author_date - first_commit.author_date
-                self.author_seniority = self.author_seniority.days
+                self.author_seniority = abs(self.author_seniority.days)
 
             self.author_experience = 0.0
 
             file_by_authors = Modification.objects.none()
             if self.total_commits > 0:
                 file_by_authors = Modification.objects.filter(commit__author=self.author, commit__tag_id__lte=self.tag.id,
+                                                              commit__tag__project=self.tag.project,
                                                               commit_id__lte=previous_commit.id)
 
 
@@ -318,7 +319,8 @@ class ComponentCommit(models.Model):
 
     def calculate_experience(self):
         previous_component_commit = ComponentCommit.objects.filter(commit__author=self.commit.author, component=self.component,
-                                                                    commit__id__lt=self.commit.id).last()
+                                                                    commit__id__lt=self.commit.id,
+                                                                   commit__tag__project=self.commit.tag.project).last()
         file_by_authors = Modification.objects.none()
 
         # because components are saved directly
@@ -329,6 +331,7 @@ class ComponentCommit(models.Model):
             file_by_authors = Modification.objects.filter(commit__author=self.commit.author,
                                                           commit__tag_id__lte=self.commit.tag.id,
                                                           commit_id__lt=self.commit.id,
+                                                          commit__tag__project=self.commit.tag.project,
                                                           directory=self.component)
         files = file_by_authors.values("path").distinct().count()
 
