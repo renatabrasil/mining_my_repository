@@ -3,17 +3,13 @@
   fields:
     project_name: Apache Ant
     project_path: https://github.com/apache/ant.git
-- model: contributions.project
-  pk: 2
-  fields:
-    project_name: Apache Lucene
-    project_path: https://github.com/apache/lucene-solr
 - model: contributions.tag
   pk: 1
   fields:
     project: 1
     description: 'rel/1.1'
     major: True
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 2
   fields:
@@ -21,6 +17,7 @@
     description: 'rel/1.2'
     previous_tag: 1
     major: True
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 3
   fields:
@@ -28,6 +25,7 @@
     description: 'rel/1.3'
     previous_tag: 2
     major: True
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 4
   fields:
@@ -35,6 +33,7 @@
     description: 'rel/1.4'
     previous_tag: 3
     major: True
+    max_minor_version_description: 'ANT_141'
 - model: contributions.tag
   pk: 5
   fields:
@@ -42,6 +41,7 @@
     description: 'ANT_141'
     previous_tag: 4
     major: False
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 6
   fields:
@@ -49,6 +49,7 @@
     description: 'rel/1.5'
     previous_tag: 5
     major: True
+    max_minor_version_description: 'rel/1.5.1,rel/1.5.2,rel/1.5.3,rel/1.5.4'
 - model: contributions.tag
   pk: 7
   fields:
@@ -56,6 +57,7 @@
     description: 'rel/1.5.4'
     previous_tag: 6
     major: False
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 8
   fields:
@@ -63,6 +65,7 @@
     description: 'rel/1.6.0'
     previous_tag: 7
     major: True
+    max_minor_version_description: 'rel/1.6.1,rel/1.6.2,rel/1.6.3,rel/1.6.4,rel/1.6.5'
 - model: contributions.tag
   pk: 9
   fields:
@@ -70,6 +73,7 @@
     description: 'rel/1.6.5'
     previous_tag: 8
     major: False
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 10
   fields:
@@ -77,6 +81,7 @@
     description: 'rel/1.7.0'
     previous_tag: 9
     major: True
+    max_minor_version_description: 'rel/1.7.1'
 - model: contributions.tag
   pk: 11
   fields:
@@ -84,6 +89,7 @@
     description: 'rel/1.7.1'
     previous_tag: 10
     major: False
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 12
   fields:
@@ -91,6 +97,7 @@
     description: 'rel/1.8.0'
     previous_tag: 11
     major: True
+    max_minor_version_description: 'rel/1.8.1,rel/1.8.2,rel/1.8.3,rel/1.8.4'
 - model: contributions.tag
   pk: 13
   fields:
@@ -98,6 +105,7 @@
     description: 'rel/1.8.4'
     previous_tag: 12
     major: False
+    max_minor_version_description: ''
 - model: contributions.tag
   pk: 14
   fields:
@@ -105,6 +113,12 @@
     description: 'rel/1.9.0'
     previous_tag: 13
     major: True
+#    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
+#        rel/1.9.8,*rel/1.10.1,rel/1.9.9,rel/1.9.10,*rel/1.10.2,rel/1.9.11,*rel/1.10.3,rel/1.9.12,*rel/1.10.4,rel/1.9.13,
+#        *rel/1.10.5,rel/1.9.14'
+    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
+    ANT_198_RC1,*rel/1.10.1,rel/1.9.9,*rel/1.10.2,rel/1.9.10,*rel/1.10.3,rel/1.9.11,*rel/1.10.4,rel/1.9.12,*rel/1.10.5,
+    rel/1.9.13,*rel/1.10.6,rel/1.9.14'
 - model: contributions.tag
   pk: 15
   fields:
@@ -126,6 +140,8 @@
     description: 'rel/1.10.0'
     previous_tag: 15
     major: True
+    max_minor_version_description: '*rel/1.9.8,rel/1.10.1,*rel/1.9.9,rel/1.10.2,*rel/1.9.10,rel/1.10.3,*rel/1.9.11,
+    rel/1.10.4,*rel/1.9.12,rel/1.10.5,*rel/1.9.13,rel/1.10.6,*rel/1.9.14,rel/1.10.7'
 - model: contributions.tag
   pk: 18
   fields:

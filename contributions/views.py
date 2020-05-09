@@ -22,7 +22,7 @@ from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
     Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
     DirectoryReport, IndividualContribution, MetricsReport, Modification,
-    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit)
+    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit, ANT, LUCENE)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -49,8 +49,8 @@ def index(request):
 
         if tag.previous_tag is not None:
             commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
-            if commit is not None:
-                hash = commit.hash
+            # if commit is not None:
+            #     hash = commit.hash
 
         #  git log --graph --oneline --decorate --tags *.java
         versions = __go_to_first_tag__(tag)[::-1]
@@ -59,28 +59,31 @@ def index(request):
         filter.setdefault('only_in_branch', 'master')
         filter.setdefault('only_modifications_with_file_types', ['.java'])
         filter.setdefault('only_no_merge', True)
-        filter.setdefault('from_commit', hash)
         filter.setdefault('to_tag', tag.description)
         if tag.previous_tag:
             filter.setdefault('from_tag', tag.previous_tag.description)
         tag_is_not_first_tag = True
-        filter.pop('from_commit', None)
-        # if hash is not None:
+        # filter.pop('from_commit', None)
+        # if hash:
+        #     filter.setdefault('from_commit', hash)
+        #     filter.pop('from_tag', None)
 
         if tag.minors:
             for minor in list([tag.description]+tag.minors):
-                if minor.find('*') == 0:
+                if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                     filter['from_tag'] = minor.replace('*','')
                     continue
                 filter['to_tag'] = minor
                 # if hash is not None:
                 #     filter['from_commit'] = commit.hash
                 #     filter.pop('from_tag', None)
-
+                print(" \n************ VERSAO: "+filter['to_tag']+' ***************\n\n')
                 for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
                     commit = __build_and_save_commit__(commit_repository, tag)
 
+                # if 'from_tag' in filter.keys():
                 filter['from_tag'] = minor
+                filter.pop('from_commit', None)
 
         else:
             for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
@@ -143,7 +146,7 @@ def index(request):
         elif tag:
             latest_commit_list = load_commits_from_tags(tag)
         else:
-            latest_commit_list = Commit.objects.all().order_by("id","author__name", "committer_date")
+            latest_commit_list = Commit.objects.all().order_by("tag_id","author__name", "committer_date")
         paginator = Paginator(latest_commit_list, 100)
 
         page = request.GET.get('page')
@@ -218,7 +221,11 @@ def __build_and_save_commit__(commit_repository, tag):
 
         author_name = author_name.strip()
 
-        if author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
+        if author_name == 'Mike McCandless':
+            if commit_repository.committer.name == 'Mike McCandless':
+                committer_name = 'Michael McCandless'
+            author_name = 'Michael McCandless'
+        elif author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
             if commit_repository.committer.name == 'jkf' or commit_repository.committer.name == 'Martijn Kruithof' or commit_repository.committer.name == 'J.M.Martijn Kruithof':
                 committer_name = 'Jacobus Martinus Kruithof'
             author_name = 'Jacobus Martinus Kruithof'
@@ -287,11 +294,8 @@ def __build_and_save_commit__(commit_repository, tag):
                         committer_date=commit_repository.committer_date)
         total_modification = 0
         for modification_repo in commit_repository.modifications:
-            path = CommitUtils.true_path(modification_repo)
-            directory_str = CommitUtils.directory_to_str(path)
             # Save only commits with java file and not in test directory
-            if CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1\
-                    and str.lower(directory_str).find('proposal') == -1 and str.lower(directory_str).startswith('lucene/core'):
+            if __no_commits_constraints__(modification_repo, tag):
                 total_modification = total_modification + 1
                 if hasattr(modification_repo, 'nloc'):
                     nloc = modification_repo.nloc
@@ -557,12 +561,12 @@ def export_to_csv_commit_by_author(request):
 param: current tag
 return all commits up to current tag """
 def load_commits_from_tags(tag):
-   commits = Commit.objects.filter(tag__description=tag.description).distinct().order_by("id")
+   commits = Commit.objects.filter(tag__description=tag.description).distinct()
    if len(commits) == 0:
        return commits
    tag = tag.previous_tag
    while tag:
-       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct().order_by("id"))
+       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
        # (Commit.objects.filter(tag__description=tag.description, modifications__in=
        # Modification.objects.filter(
        #     path__contains=".java")).distinct())
@@ -823,3 +827,23 @@ def __update_commit__(commits):
                 parent.children_commit = commit
                 commit.parent = parent
                 parent.save(update_fields=['children_commit'])
+
+def __no_commits_constraints__(modification,tag):
+    path = CommitUtils.true_path(modification)
+    directory_str = CommitUtils.directory_to_str(path)
+
+    ant_conditions = True
+    lucene_conditions = True
+
+    if tag.project.id == ANT:
+        ant_conditions = str.lower(directory_str).find('proposal') == -1
+    if tag.project.id == LUCENE:
+        lucene_conditions = str.lower(directory_str).find('/demo/') == -1
+        lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or
+                                                   str.lower(directory_str).startswith('lucene/src/java')
+                                                   or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
+        # version4 = Tag.objects.filter(description='releases/lucene-solr/4.0.0').first().id
+        # if tag.id >= version4:
+        #     lucene_conditions = lucene_conditions and str.lower(directory_str).startswith('lucene/core')
+
+    return CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1 and ant_conditions and lucene_conditions

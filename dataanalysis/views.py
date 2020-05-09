@@ -50,9 +50,9 @@ def index(request):
 def descriptive_statistics(request, type):
 
     if type == DELTAS_TREND:
-        commits, metric_by_dev = __process_metrics__(type,request.commit_db,Tag.line_major_versions())
+        commits, metric_by_dev = __process_metrics__(type,request.commit_db,request)
     else:
-        commits, metric_by_dev = __process_metrics__(type,request.commit_db)
+        commits, metric_by_dev = __process_metrics__(type,request.commit_db,request)
     file_name = 'undefined'
 
     try:
@@ -149,7 +149,7 @@ def descriptive_statistics(request, type):
 
             # About commits
             file_name1 = 'general_commits_statistics.csv'
-            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions())
+            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions(request.session['project']))
             total_commits = all_commits.count()
 
             relative_impactul_commits = len(commits)/total_commits
@@ -408,8 +408,8 @@ def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author
     return devs, file_name, population_means_list
 
 
-def __process_metrics__(type,commit_db,tags=Tag.line_major_versions()):
-    commits = commit_db.exclude(normalized_delta=0).filter(tag_id__in=tags)
+def __process_metrics__(type,commit_db,request):
+    commits = commit_db.exclude(normalized_delta=0).filter(tag_id__in=Tag.line_major_versions(request.session['project']))
     # commits = [x for x in commits if x.author_experience <= 10000]
     # commits = [x for x in commits if x.author_experience <= 10000 and x.normalized_delta > 0]
     # commits = [x for x in commits if abs(x.delta_rmd_components) < 21.62/(10 ** 7)]

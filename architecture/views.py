@@ -87,7 +87,7 @@ def compileds(request, file_id):
         compiled_directory = file.directory+"/"+file.name.replace(".txt","")+"/jars"
         if not os.path.exists(compiled_directory):
             os.makedirs(compiled_directory, exist_ok=True)
-        os.chdir(file.local_repository)
+
         i = 0
         commit_with_errors = []
         commits_not_compilable = Commit.objects.filter(tag=file.tag,compilable=False).values_list("hash",flat=True)
@@ -106,20 +106,25 @@ def compileds(request, file_id):
                         ".", "-")
 
                     if not __has_jar_file__(jar_folder):
+                        os.chdir(local_repository)
+
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
                         object_commit = Commit.objects.filter(hash=hash_commit)[0]
-                        checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=file.local_repository)
+                        checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
                         checkout.wait()
                         print(os.environ.get('JAVA_HOME'))
                         print(os.environ.get('ANT_HOME'))
 
-                        build = subprocess.Popen('python fix.py', shell=False, cwd=file.local_repository)
+                        build = subprocess.Popen('python fix.py', shell=False, cwd=local_repository)
                         build.wait()
+                        # shutil.rmtree(local_repository+'/lib', ignore_errors=True)
                         # Compile
                         # build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
                         # https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
                         rc = os.system("ant compile-core")
+
+                        # rc = os.system("ant compile")
                         if rc != 0:
                             print("Error on ant compile")
                             error = True
@@ -134,9 +139,9 @@ def compileds(request, file_id):
 
                         os.makedirs(jar_folder, exist_ok=True)
 
-                        input_files = "'"+file.local_repository+"/"+build_path+"'"
+                        input_files = "'"+local_repository+"/"+build_path+"'"
                         print("comando: jar -cf "+jar_file+" "+input_files )
-                        process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=file.local_repository)
+                        process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=local_repository)
                         process.wait()
 
                         # Check whether created jar is valid
@@ -144,7 +149,7 @@ def compileds(request, file_id):
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1843200 or error:
+                        if os.path.getsize(jar) < 225280 or error:
                             error = False
                             # 1.1 76800
                             # 1.2 194560
@@ -170,7 +175,7 @@ def compileds(request, file_id):
                             object_commit.delta_rmd_components = 0.0
                             object_commit.normalized_delta = 0.0
 
-                            os.chdir(file.local_repository)
+                            os.chdir(local_repository)
                         else:
                             # if any(hash_commit == c for c in commits_not_compilable):
                             #     commit_with_errors.append(commit.replace("/","").replace(".","-"))
@@ -180,9 +185,9 @@ def compileds(request, file_id):
                         object_commit.save()
 
 
-                        build_path_repository = file.local_repository+'/'+build_path
+                        build_path_repository = local_repository+'/'+build_path
                         if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
-                            build_path_repository = file.local_repository + "/" + build_path
+                            build_path_repository = local_repository + "/" + build_path
                         if os.path.exists(build_path_repository):
                             shutil.rmtree(build_path_repository)
 
@@ -193,7 +198,7 @@ def compileds(request, file_id):
                     messages.error(request, 'Erro: '+er)
                 finally:
 
-                    os.chdir(file.local_repository)
+                    os.chdir(local_repository)
             i+=1
     except Exception as e:
         print(e)
@@ -595,7 +600,7 @@ def quality_between_versions(request):
     if directory:
         if os.path.exists(directory):
             arr = os.listdir(directory)
-            sorted_files = sorted(arr, key=lambda x: int(x.split('-')[2]))
+            sorted_files = sorted(arr, key=lambda x: int(x.split('#')[len(x.split('#'))-1]))
             for subdirectory in sorted_files:
                 __generate_csv__(directory + "/" + subdirectory)
                 version = subdirectory
@@ -627,18 +632,25 @@ def quality_between_versions(request):
                         components_mean.append(float(value[version]))
 
                 # components_mean = np.mean([float(c[version]) for c in list(metrics_by_directories.values())])
-                name_version = version.replace('rel','').replace('-','',1).replace('-','.')
+                # ANT
+                name_version = version.replace('rel#','').replace('-','',1).replace('_','.')
+                # Lucene
+                # name_version = version.replace('_','.').replace('#','/')
                 architectural_quality = np.mean(components_mean)
                 metrics.append([name_version, architectural_quality])
 
                 # FIXME this is too naive and just work for this project. Should be fix soon.
-                Tag.objects.filter(description__endswith=name_version,project=tag.project).update(delta_rmd_components=architectural_quality)
+                # Ant
+                Tag.objects.filter(description__endswith='rel/'+name_version, project=request.session['project']).update(
+                    delta_rmd_components=architectural_quality)
+                # Lucene
+                # Tag.objects.filter(description__endswith=name_version,project=request.session['project']).update(delta_rmd_components=architectural_quality)
 
         # my_df_metrics = pd.DataFrame.from_dict(metrics, orient='index', columns=['version', 'y'])
         my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
-        my_df_metrics.to_csv('metrics_by_version.csv', index=False, header=True)
+        my_df_metrics.to_csv('metrics_by_version.csv', index=True, index_label='idx', header=True)
         my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
     context = {
         'tag': tag,
@@ -718,6 +730,7 @@ def __read_PM_file__(folder,tag_id):
                     row[5]=row[5].replace('\n', '')
                     row[0] = row[0].replace('.','/')
 
+                    # FIXME: Parametrizar
                     # prefix ='src/main/'
                     prefix = 'lucene/core/src/java/'
                     directory_str = prefix + row[0]
@@ -739,7 +752,7 @@ def __read_PM_file__(folder,tag_id):
                     print(line.replace("\n",""))
 
                     architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                        directory__name__exact='src/main/' + row[0], commit_id=commit.id)
+                        directory__name__exact=directory_str, commit_id=commit.id)
                     if architecture_metrics.count() == 0:
                         # TODO: use delta
                         architecture_metrics = ArchitecturalMetricsByCommit(component_commit=component_commit, commit=commit,

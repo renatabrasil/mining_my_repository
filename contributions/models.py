@@ -19,7 +19,8 @@ from dataanalysis.models import AnalysisPeriod
 
 
 AUTHOR_FILTER = ["Peter Donald"]
-
+ANT = 1
+LUCENE = 2
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -57,8 +58,8 @@ class Tag(models.Model):
         return [x.strip() for x in self.max_minor_version_description.split(',')] if self.max_minor_version_description != '' else []
 
     @staticmethod
-    def line_major_versions():
-        return Tag.objects.filter(major=True).values_list('id', flat=True)
+    def line_major_versions(project_id):
+        return Tag.objects.filter(major=True, project_id=project_id).values_list('id', flat=True)
 
     @staticmethod
     def line_base():
@@ -294,18 +295,21 @@ class Commit(models.Model):
             print('Cadastrando commit: ' + self.hash)
             print('Versao: ' + self.tag.__str__())
             print('Autor: ' + self.author.name)
-            print('Senioridade: ' + str(self.author_seniority))
-            print('Resumo experiência:')
-            print('--------------------------------')
-            print('Total de commits: ' + str(self.total_commits))
-            print('Total de arquivos distintos modificados: ' + str(files))
-            print('Total de linhas modificadas ate o commit: ' + str(self.cloc_activity))
-            print('-')
-            print('Experiência: 0.2*' + str(self.total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
-            print('Experiência= '+str(self.author_experience))
+            # print('Senioridade: ' + str(self.author_seniority))
+            # print('Resumo experiência:')
+            # print('--------------------------------')
+            # print('Total de commits: ' + str(self.total_commits))
+            # print('Total de arquivos distintos modificados: ' + str(files))
+            # print('Total de linhas modificadas ate o commit: ' + str(self.cloc_activity))
+            # print('-')
+            # print('Experiência: 0.2*' + str(self.total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
+            # print('Experiência= '+str(self.author_experience))
             print('\n')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
+
+    class Meta:
+        ordering = ['tag_id', 'id']
 
 class ComponentCommit(models.Model):
     component = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='component_commits')

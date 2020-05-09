@@ -2,27 +2,30 @@
   pk: 49
   fields:
     project: 2
-    description: 'releases/lucene-solr/6.6.1'
+    description: 'releases/lucene-solr/5.5.0'
     major: False
     max_minor_version_description: ''
 - model: contributions.tag
   pk: 50
   fields:
     project: 2
-    description: 'releases/lucene-solr/7.0.0'
+    description: 'releases/lucene-solr/6.0.0'
     major: True
     previous_tag: 49
-    max_minor_version_description: 'releases/lucene-solr/7.0.1,releases/lucene-solr/7.1.0,*releases/lucene-solr/6.6.2,
-    *releases/lucene-solr/5.5.5,releases/lucene-solr/7.2.0,releases/lucene-solr/7.2.1,*releases/lucene-solr/6.6.3,
-    releases/lucene-solr/7.3.0,releases/lucene-solr/7.3.1,*releases/lucene-solr/6.6.4,releases/lucene-solr/7.4.0,
-    *releases/lucene-solr/6.6.5,releases/lucene-solr/7.5.0,releases/lucene-solr/7.6.0,releases/lucene-solr/7.7.0,
-    releases/lucene-solr/7.7.1,*releases/lucene-solr/8.0.0,*releases/lucene-solr/6.6.6,*releases/lucene-solr/8.1.0,
-    *releases/lucene-solr/8.1.1,releases/lucene-solr/7.7.2'
+    max_minor_version_description: '*releases/lucene-solr/5.5.1,releases/lucene-solr/6.0.1,releases/lucene-solr/6.1.0,
+    *releases/lucene-solr/5.5.2,releases/lucene-solr/6.2.0,*releases/lucene-solr/5.5.3,releases/lucene-solr/6.2.1,
+    releases/lucene-solr/6.3.0,releases/lucene-solr/6.4.0,releases/lucene-solr/6.4.1,*releases/lucene-solr/5.5.4,
+    releases/lucene-solr/6.4.2,releases/lucene-solr/6.5.0,releases/lucene-solr/6.5.1,releases/lucene-solr/6.6.0,
+    releases/lucene-solr/6.6.1,*releases/lucene-solr/7.0.0,*releases/lucene-solr/7.0.1,*releases/lucene-solr/7.1.0,
+    releases/lucene-solr/6.6.2,*releases/lucene-solr/5.5.5,*releases/lucene-solr/7.2.0,*releases/lucene-solr/7.2.1,
+    releases/lucene-solr/6.6.3,*releases/lucene-solr/7.3.0,*releases/lucene-solr/7.3.1,releases/lucene-solr/6.6.4,
+    *releases/lucene-solr/7.4.0,releases/lucene-solr/6.6.5,*releases/lucene-solr/7.5.0,*releases/lucene-solr/7.6.0,
+    *releases/lucene-solr/7.7.0,*releases/lucene-solr/7.7.1,*releases/lucene-solr/8.0.0,releases/lucene-solr/6.6.6'
 - model: contributions.tag
   pk: 51
   fields:
     project: 2
-    description: 'releases/lucene-solr/7.7.1'
+    description: 'releases/lucene-solr/6.6.1'
     major: False
     previous_tag: 50
     max_minor_version_description: ''
@@ -30,9 +33,30 @@
   pk: 52
   fields:
     project: 2
-    description: 'releases/lucene-solr/8.0.0'
+    description: 'releases/lucene-solr/7.0.0'
     major: True
     previous_tag: 51
+    max_minor_version_description: 'releases/lucene-solr/7.0.1,releases/lucene-solr/7.1.0,*releases/lucene-solr/6.6.2,
+    *releases/lucene-solr/5.5.5,releases/lucene-solr/7.2.0,releases/lucene-solr/7.2.1,*releases/lucene-solr/6.6.3,
+    releases/lucene-solr/7.3.0,releases/lucene-solr/7.3.1,*releases/lucene-solr/6.6.4,releases/lucene-solr/7.4.0,
+    *releases/lucene-solr/6.6.5,releases/lucene-solr/7.5.0,releases/lucene-solr/7.6.0,releases/lucene-solr/7.7.0,
+    releases/lucene-solr/7.7.1,*releases/lucene-solr/8.0.0,*releases/lucene-solr/6.6.6,*releases/lucene-solr/8.1.0,
+    *releases/lucene-solr/8.1.1,releases/lucene-solr/7.7.2'
+- model: contributions.tag
+  pk: 53
+  fields:
+    project: 2
+    description: 'releases/lucene-solr/7.7.1'
+    major: False
+    previous_tag: 52
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 53
+  fields:
+    project: 2
+    description: 'releases/lucene-solr/8.0.0'
+    major: True
+    previous_tag: 52
     max_minor_version_description: '*releases/lucene-solr/6.6.6,releases/lucene-solr/8.1.0,releases/lucene-solr/8.1.1,
     *releases/lucene-solr/7.7.2,releases/lucene-solr/8.2.0,releases/lucene-solr/8.3.0,releases/lucene-solr/8.3.1,
     releases/lucene-solr/8.4.0,releases/lucene-solr/8.4.1,releases/lucene-solr/8.5.0'
