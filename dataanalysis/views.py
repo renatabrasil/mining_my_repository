@@ -110,7 +110,7 @@ def descriptive_statistics(request, type):
             file_name1 = 'worsening_contributions_by_author.csv'
             pioram_contributions_list = []
             melhoram_contributions_list = []
-            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions())
+            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions(request.session['project']))
             for dev in metric_by_dev:
                 loc = sum([x.u_cloc for x in all_commits if x.author == dev])
                 if metric_by_dev[dev][0] != 0.0:

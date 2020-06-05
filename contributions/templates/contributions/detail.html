@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %}
 {% block title %}Detalhes dos commits{% endblock %}
 
 {% block content %}
@@ -62,7 +63,7 @@
 
     <table class="table table-striped table-sm">
         <tr>
-            <th style="text-align: right">Compila</th>
+            <th style="text-align: right">Compila </th>
             <td style="text-align: center;" class="{% if not commit.compilable %} text-danger {% else %} text-success {% endif %}" colspan="2">
             <strong>
                 {% if not commit.compilable %}
@@ -76,6 +77,10 @@
         <tr>
             <th style="text-align: right">Tag:</th>
             <td colspan="2">{{commit.tag.description}}</td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Real Tag:</th>
+            <td colspan="2">{{commit.real_tag_description}}</td>
         </tr>
         <tr>
             <th style="text-align: right">Autor:</th>
@@ -95,7 +100,7 @@
         </tr>
         <tr>
             <th style="text-align: right">Data:</th>
-            <td colspan="2">{{commmit.committer_date}}</td>
+            <td colspan="2">{{commit.committer_date | date:'d/m/Y H:i'}}</td>
         </tr>
         <tr>
             <th style="text-align: right">Cloc (without commented and blank lines):</th>

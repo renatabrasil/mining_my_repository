@@ -223,7 +223,7 @@
           <strong>Projeto:</strong> {{ project.project_name}}
       </p>
       <p class="card-text">
-          <strong>Tag:</strong> {{tag}}
+          <strong>Tag:</strong> {{tag.description}}
       </p>
         <p class="card-text">
             <form action="{{request_path}}" method="post">{% csrf_token %}

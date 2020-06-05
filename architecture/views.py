@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import sys
+from builtins import object
 from collections import OrderedDict
 from itertools import groupby
 
@@ -20,6 +21,9 @@ from django.template import loader
 from django.urls import reverse
 
 # local Django
+from django.utils import timezone
+from django.utils.timezone import now
+
 from architecture.forms import FilesCompiledForm
 from architecture.models import ArchitecturalMetricsByCommit, FileCommits
 from common.utils import ViewUtils
@@ -41,11 +45,12 @@ def index(request):
     request.project = request.session['project']
     template = loader.get_template('architecture/index.html')
     files = []
+    project_id = request.session['project']
+    project = Project.objects.get(id=project_id)
 
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
         form = FilesCompiledForm(request.POST)
-        project_id = int(request.POST.get('project_id')) if request.POST.get('project_id') else 0
 
         # check whether it's valid:
         if form.is_valid():
@@ -61,7 +66,7 @@ def index(request):
             # HttpResponseRedirect(reverse('architecture:index',))
         # if a GET (or any other method) we'll create a blank form
 
-    form = FilesCompiledForm(initial={'directory': 'compiled',
+    form = FilesCompiledForm(initial={'directory': 'compiled/'+project.project_name.lower().replace(' ','-'),
                                       'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
                                       'build_path': 'build/classes'})
     files = FileCommits.objects.filter(tag__project=request.project).order_by("name")
@@ -107,27 +112,58 @@ def compileds(request, file_id):
 
                     if not __has_jar_file__(jar_folder):
                         os.chdir(local_repository)
+                        # OPENJPA
+                        # rc = os.system("mvn clean")
 
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
                         object_commit = Commit.objects.filter(hash=hash_commit)[0]
+                        # if len(object_commit.parents)
+                        if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and object_commit.parents[0].compilable) and not (object_commit.children_commit is not None):
+                            object_commit.compilable = True
+                            object_commit.save()
+                            continue
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
                         checkout.wait()
                         print(os.environ.get('JAVA_HOME'))
                         print(os.environ.get('ANT_HOME'))
+                        print(os.environ.get('M2_HOME'))
 
-                        build = subprocess.Popen('python fix.py', shell=False, cwd=local_repository)
-                        build.wait()
+                        # Lucene
+                        # build = subprocess.Popen('python fix.py', shell=False, cwd=local_repository)
+                        # build.wait()
                         # shutil.rmtree(local_repository+'/lib', ignore_errors=True)
                         # Compile
                         # build = subprocess.Popen('build.bat', shell=False, cwd=file.local_repository)
                         # https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
-                        rc = os.system("ant compile-core")
+                        # LUCENE
+                        # rc = os.system("ant compile-core")
+                        # OPENJPA
+                        # build = subprocess.Popen('python C:/Users/brasi/Documents/openjpa/cutoff_snapshot.py C:/Users/brasi/Documents/openjpa/pom.xml', shell=False, cwd=local_repository)
+                        # build.wait()
+                        # build = subprocess.Popen('python C:/Users/brasi/Documents/openjpa/cutoff_snapshot.py C:/Users/brasi/Documents/openjpa/openjpa-kernel/pom.xml', shell=False, cwd=local_repository)
+                        # build.wait()
+
+                        # build = subprocess.Popen('python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/pom.xml', shell=False, cwd=local_repository)
+                        # build.wait()
+                        # build = subprocess.Popen('python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/maven-core/pom.xml', shell=False, cwd=local_repository)
+                        # build.wait()
+
+                        # Prepare build commands
+                        for command in object_commit.tag.pre_build_commands:
+                            rc = os.system(command)
+                            if rc != 0:
+                                print("Error on ant compile")
+                                error = True
+                                # break
+
+
+                        rc = os.system(object_commit.tag.build_command)
 
                         # rc = os.system("ant compile")
                         if rc != 0:
                             print("Error on ant compile")
-                            error = True
+                            # error = True
                         # build = subprocess.Popen('ant compile-core', shell=False, cwd=file.local_repository)
                         # build.wait()
 
@@ -149,7 +185,7 @@ def compileds(request, file_id):
                         jar = jar_file.replace(current_project_path,"").replace("/","",1).replace("\"","")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 225280 or error:
+                        if os.path.getsize(jar) < 102400 or error:
                             error = False
                             # 1.1 76800
                             # 1.2 194560
@@ -161,13 +197,8 @@ def compileds(request, file_id):
                             # 1.8.0: 1843200
                             # 102400, 184320
                         # if os.path.getsize(jar) < 1771200:
-                            os.chdir(current_project_path + '/' + compiled_directory)
-                            folder = 'version-' + commit.replace("/" ,"").replace(".","-")
-                            # if not any(hash_commit == c for c in commits_not_compilable):
-                            commit_with_errors.append(commit.replace("/","").replace(".","-"))
-                            shutil.rmtree(folder, ignore_errors=True)
-                            print("BUILD FAILED or Jar creation failed\n")
-                            print(jar+" DELETED\n")
+                            __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory,
+                                                           current_project_path, jar)
                             # TODO: extract method
                             object_commit.compilable = False
                             object_commit.mean_rmd_components = 0.0
@@ -178,12 +209,16 @@ def compileds(request, file_id):
                             os.chdir(local_repository)
                         else:
                             # if any(hash_commit == c for c in commits_not_compilable):
-                            #     commit_with_errors.append(commit.replace("/","").replace(".","-"))
-                            object_commit.compilable = True
+                            #     commit_with_errors.append(commit.replace("/","").replace(".","-")
+                            if not __generate_csv__(jar_folder):
+                                __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory,
+                                                               current_project_path, jar)
+                                object_commit.compilable = False
+                            else:
+                                object_commit.compilable = True
                             average_file_size = os.path.getsize(jar)
 
                         object_commit.save()
-
 
                         build_path_repository = local_repository+'/'+build_path
                         if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
@@ -232,6 +267,17 @@ def compileds(request, file_id):
     file.save()
 
     return HttpResponseRedirect(reverse('architecture:index',))
+
+
+def __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory, current_project_path, jar):
+    os.chdir(current_project_path + '/' + compiled_directory)
+    folder = 'version-' + commit.replace("/", "").replace(".", "-")
+    # if not any(hash_commit == c for c in commits_not_compilable):
+    commit_with_errors.append(commit.replace("/", "").replace(".", "-"))
+    shutil.rmtree(folder, ignore_errors=True)
+    print("BUILD FAILED or Jar creation failed\n")
+    print(jar + " DELETED\n")
+
 
 # Using overall design evaluation
 def impactful_commits(request):
@@ -327,8 +373,6 @@ def impactful_commits(request):
                     commits = request.commit_db.exclude(normalized_delta=0).filter(**query)
             commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
 
-            # devs = set(x.author for x in commits if x.is_author_newcomer)
-            # total = set(x.author for x in commits)
 
     if export_csv:
 
@@ -492,7 +536,12 @@ def update_compilable_commits(commits_with_errors):
                 try:
                     # Go to version
                     hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-','')
-                    object_commit = Commit.objects.filter(hash=hash_commit)[0]
+                    object_commit = Commit.objects.filter(hash=hash_commit, compilable=True)
+                    if not object_commit.exists():
+                        continue
+                    else:
+                        object_commit = object_commit[0]
+
                     object_commit.compilable = False
                     object_commit.mean_rmd_components = 0.0
                     object_commit.std_rmd_components = 0.0
@@ -520,6 +569,8 @@ def calculate_metrics(request, file_id):
         update_compilable_commits(directory_name+"/log-compilation-errors.txt")
     directory_name = directory_name + "/jars"
     metrics = __read_PM_file__(directory_name,file.tag.id)
+    file.metrics_calculated_at = timezone.localtime(timezone.now())
+    file.save()
     directories = metrics.keys()
     for directory in directories:
         contributions = __pre_correlation__(metrics, directory)
@@ -633,7 +684,7 @@ def quality_between_versions(request):
 
                 # components_mean = np.mean([float(c[version]) for c in list(metrics_by_directories.values())])
                 # ANT
-                name_version = version.replace('rel#','').replace('-','',1).replace('_','.')
+                name_version = version.replace('rel#','').replace('-','',1).replace('_','.').replace('#','-')
                 # Lucene
                 # name_version = version.replace('_','.').replace('#','/')
                 architectural_quality = np.mean(components_mean)
@@ -641,7 +692,7 @@ def quality_between_versions(request):
 
                 # FIXME this is too naive and just work for this project. Should be fix soon.
                 # Ant
-                Tag.objects.filter(description__endswith='rel/'+name_version, project=request.session['project']).update(
+                Tag.objects.filter(description__endswith=name_version, project=request.session['project']).update(
                     delta_rmd_components=architectural_quality)
                 # Lucene
                 # Tag.objects.filter(description__endswith=name_version,project=request.session['project']).update(delta_rmd_components=architectural_quality)
@@ -686,6 +737,7 @@ def metrics_by_developer_csv(request, file_id):
 # {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def __read_PM_file__(folder,tag_id):
     metrics = {}
+    tag = Tag.objects.get(id=tag_id)
     previous_commit = None
     start_commit_analysis_period = Commit.objects.all().first()
     first_commit_id = start_commit_analysis_period.pk
@@ -732,8 +784,10 @@ def __read_PM_file__(folder,tag_id):
 
                     # FIXME: Parametrizar
                     # prefix ='src/main/'
-                    prefix = 'lucene/core/src/java/'
-                    directory_str = prefix + row[0]
+                    # prefix = 'lucene/core/src/java/'
+                    # prefix = 'openjpa-kernel/src/main/java/'
+                    # prefix = 'maven-core/src/main/java/'
+                    directory_str = tag.main_directory_prefix + row[0]
                     directory = Directory.objects.filter(name__exact=directory_str)
                     if directory.count() == 0:
                         continue
@@ -795,12 +849,14 @@ def __read_PM_file__(folder,tag_id):
 
                 if new_metric:
 
-                    commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
-                    commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
-                    commit.delta_rmd_components = commit.mean_rmd_components
+                    # FIXME: to prevent error. Shoud be fixed as soon as posible. It is not the right behaviour in all cases
+                    if len(commit_rmds) > 0:
+                        commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
+                        commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
+                        commit.delta_rmd_components = commit.mean_rmd_components
 
                     # Delta calculation
-                    if previous_commit is not None and previous_commit.compilable:
+                    if previous_commit is not None and previous_commit.compilable and previous_commit.tag == commit.tag:
                         commit.delta_rmd_components -=previous_commit.mean_rmd_components
                         if round(commit.delta_rmd_components,SCALE) == 0.0:
                             commit.delta_rmd_components = 0
@@ -841,6 +897,7 @@ def __read_PM_file__(folder,tag_id):
                             a_component.save()
                     else:
                         components_evolution.append([n_commits, len(diff_components)])
+                    commit.compilable = True
                     commit.save()
                     last_architectural_metric = architecture_metrics
 
@@ -903,11 +960,11 @@ def __get_quality_contribution_by_developer__(component, developer, tag):
 def list_commits(project,form):
     # Restricting to commits which has children
     # first_commit = Commit.objects.filter(children_commit__gt=0).first()
-    FileCommits.objects.all().delete()
+    FileCommits.objects.filter(tag__project=project).delete()
     folder = form['directory'].value()
 
     # commits = [i for i in list(Commit.objects.filter(id__gte=first_commit.id).order_by("id"))]
-    commits = [i for i in list(Commit.objects.all().order_by("id"))]
+    commits = [i for i in list(Commit.objects.filter(tag__project=project).order_by("id"))]
     first_commit = commits[0]
 
     files = []
@@ -970,9 +1027,11 @@ def __generate_csv__(folder):
                     arcan_metrics.wait()
                 except Exception as er:
                     print(er)
+                    return False
                 continue
             else:
                 continue
+    return True
 
 def __update_file_commits__(form, filename):
     file = FileCommits.objects.filter(name=filename)

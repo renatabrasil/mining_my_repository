@@ -104,6 +104,7 @@ class ViewUtils(object):
     @staticmethod
     def load_tag(request):
         tag_id = request.POST.get('tag')
+
         if not tag_id:
             try:
                 tag_id = request.session['tag']

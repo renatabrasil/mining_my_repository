@@ -22,7 +22,8 @@ from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
     Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
     DirectoryReport, IndividualContribution, MetricsReport, Modification,
-    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit, ANT, LUCENE)
+    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
+    CASSANDRA)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -56,12 +57,18 @@ def index(request):
         versions = __go_to_first_tag__(tag)[::-1]
         tag_aux = tag.description
         filter = {}
-        filter.setdefault('only_in_branch', 'master')
+        # filter.setdefault('only_in_branch', 'master')
+        filter.setdefault('only_in_branch', project.main_branch)
         filter.setdefault('only_modifications_with_file_types', ['.java'])
         filter.setdefault('only_no_merge', True)
-        filter.setdefault('to_tag', tag.description)
-        if tag.previous_tag:
-            filter.setdefault('from_tag', tag.previous_tag.description)
+        i = 0
+        if tag.real_tag_description.find('*'):
+            tag_aux = tag
+            i+=1
+        filter.setdefault('to_tag', tag.real_tag_description)
+        filter.setdefault('from_tag', tag.previous_tag.description)
+        # if tag.previous_tag:
+        #     filter.setdefault('from_tag', tag.previous_tag.description)
         tag_is_not_first_tag = True
         # filter.pop('from_commit', None)
         # if hash:
@@ -69,7 +76,7 @@ def index(request):
         #     filter.pop('from_tag', None)
 
         if tag.minors:
-            for minor in list([tag.description]+tag.minors):
+            for minor in list([tag.real_tag_description]+tag.minors):
                 if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                     filter['from_tag'] = minor.replace('*','')
                     continue
@@ -79,7 +86,7 @@ def index(request):
                 #     filter.pop('from_tag', None)
                 print(" \n************ VERSAO: "+filter['to_tag']+' ***************\n\n')
                 for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    commit = __build_and_save_commit__(commit_repository, tag)
+                    commit = __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
 
                 # if 'from_tag' in filter.keys():
                 filter['from_tag'] = minor
@@ -87,7 +94,7 @@ def index(request):
 
         else:
             for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-                __build_and_save_commit__(commit_repository, tag)
+                __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
         __update_commit__(Commit.objects.filter(tag=tag))
         # else:
         #     for tag in versions:
@@ -175,7 +182,7 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
-def __build_and_save_commit__(commit_repository, tag):
+def __build_and_save_commit__(commit_repository, tag, real_tag):
     # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
     # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
     commit = Commit.objects.filter(hash=commit_repository.hash)
@@ -291,7 +298,7 @@ def __build_and_save_commit__(commit_repository, tag):
                         msg=commit_repository.msg,
                         author=author, author_date=commit_repository.author_date,
                         committer=committer,
-                        committer_date=commit_repository.committer_date)
+                        committer_date=commit_repository.committer_date,real_tag_description=real_tag)
         total_modification = 0
         for modification_repo in commit_repository.modifications:
             # Save only commits with java file and not in test directory
@@ -382,6 +389,7 @@ def detail(request, commit_id):
         commit = Commit.objects.get(pk=commit_id)
         commit.u_cloc
         print(commit.u_cloc)
+        print(commit.committer_date)
 
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
@@ -834,6 +842,11 @@ def __no_commits_constraints__(modification,tag):
 
     ant_conditions = True
     lucene_conditions = True
+    maven_conditions = True
+    openjpa_conditions = True
+    hadoop_conditions = True
+    cassandra_conditions = True
+    shiro_conditions = True
 
     if tag.project.id == ANT:
         ant_conditions = str.lower(directory_str).find('proposal') == -1
@@ -842,8 +855,26 @@ def __no_commits_constraints__(modification,tag):
         lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or
                                                    str.lower(directory_str).startswith('lucene/src/java')
                                                    or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
+    if tag.project.id == MAVEN:
+        maven_conditions = str.lower(directory_str).startswith('maven-core') and str.lower(directory_str).find('maven-core-') == -1
+    if tag.project.id == OPENJPA:
+        openjpa_conditions = str.lower(directory_str).startswith('openjpa-kernel/')
         # version4 = Tag.objects.filter(description='releases/lucene-solr/4.0.0').first().id
         # if tag.id >= version4:
         #     lucene_conditions = lucene_conditions and str.lower(directory_str).startswith('lucene/core')
 
-    return CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1 and ant_conditions and lucene_conditions
+    if tag.project.id == CASSANDRA:
+        cassandra_conditions = str.lower(directory_str).startswith(tag.main_directory)
+    if tag.project.id == HADOOP:
+        # hadoop_conditions = str.lower(directory_str).startswith('src/java')
+        dirs = [x.strip() for x in tag.core_component.split(',')]
+        hadoop_conditions = False
+        for dir in dirs:
+            hadoop_conditions = hadoop_conditions or str.lower(directory_str).find(dir) > -1
+
+    # FIXME: Fix the others
+    # shiro_conditions = str.lower(directory_str).startswith(tag.main_directory)
+
+    return CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1 and \
+           ant_conditions and lucene_conditions and maven_conditions and openjpa_conditions and cassandra_conditions and \
+           hadoop_conditions and shiro_conditions
