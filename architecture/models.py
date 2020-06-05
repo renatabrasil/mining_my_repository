@@ -8,6 +8,7 @@ from contributions.models import Commit, Directory, Tag, Modification, NoOutlier
 
 class FileCommits(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='files')
+    metrics_calculated_at = models.DateTimeField(blank=True, null=True)
     name = models.CharField(max_length=200)
     directory = models.CharField(max_length=100)
     has_compileds = models.BooleanField(default=False)

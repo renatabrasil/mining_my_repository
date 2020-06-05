@@ -21,6 +21,10 @@ from dataanalysis.models import AnalysisPeriod
 AUTHOR_FILTER = ["Peter Donald"]
 ANT = 1
 LUCENE = 2
+MAVEN = 3
+OPENJPA = 4
+CASSANDRA = 5
+HADOOP = 6
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -34,6 +38,7 @@ class Developer(models.Model):
 class Project(models.Model):
     project_name = models.CharField(max_length=200)
     project_path = models.CharField(max_length=200)
+    main_branch = models.CharField(max_length=80, default='master')
 
     def __str__(self):
         return self.project_name
@@ -41,15 +46,23 @@ class Project(models.Model):
     @property
     def first_tag(self):
         return self.tags.all().first()
+#
+# class BuildProperties(models.Model):
 
 
 class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
+    real_tag_description = models.CharField(max_length=100,default='')
+    # or stable
     major = models.BooleanField(default=True)
-    max_minor_version_description = models.CharField(max_length=80,default='')
-    previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, default=None)
+    max_minor_version_description = models.TextField(default='')
+    previous_tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
     delta_rmd_components = models.FloatField(null=True, default=0.0)
+    build_command = models.CharField(max_length=399, default='ant compile')
+    prepare_build_command = models.CharField(max_length=800, null=True)
+    core_component = models.CharField(max_length=280, default='')
+    main_directory = models.CharField(max_length=280, default='')
     # alias = models.CharField(max_length=40, null=True)
     v1_1 = 1
 
@@ -75,8 +88,17 @@ class Tag(models.Model):
     def line_1_9_x():
         return Tag.line_base().append(Tag.objects.get(description='rel/1.9.x').pk)
 
+    @property
+    def main_directory_prefix(self):
+        return self.main_directory + '/'
+
     def __str__(self):
-        return self.description
+        return self.project.project_name + ': ' + self.description
+
+    @property
+    def pre_build_commands(self):
+        commands = self.prepare_build_command.split(',')
+        return [c.strip() for c in commands]
 
     # def save(self, *args, **kwargs):
     #     if self.alias is None:
@@ -109,6 +131,7 @@ class NoOutlierCommitManager(models.Manager):
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
+    real_tag_description = models.CharField(max_length=300, default="", blank=True, null=True)
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='parent_rel', null=True,
                                         default=None)
     hash = models.CharField(max_length=180, default="")
@@ -128,7 +151,7 @@ class Commit(models.Model):
     changed_architecture = models.BooleanField(default=False)
     analysis_period = models.ForeignKey(AnalysisPeriod, on_delete=models.DO_NOTHING, null=True)
     cloc_activity = models.IntegerField(default=0)
-    compilable = models.BooleanField(default=True)
+    compilable = models.BooleanField(default=False)
     _parents = []
     # mean rmd
     mean_rmd_components = models.FloatField(null=True, default=0.0)
