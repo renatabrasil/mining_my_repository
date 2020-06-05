@@ -1,9 +1,18 @@
+- model: contributions.project
+  pk: 2
+  fields:
+    project_name: Apache Lucene
+    project_path: https://github.com/apache/lucene-solr
+    core_component: 'lucene/core'
+    main_directory: 'lucene/core/src/java'
+    main_branch: 'master'
 - model: contributions.tag
   pk: 19
   fields:
     project: 2
     description: 'releases/lucene/1.0.1'
     major: True
+    build_command: './build.bat'
     max_minor_version_description: 'releases/lucene/1.2,releases/lucene/1.3,releases/lucene/1.4,releases/lucene/1.4.1,
     releases/lucene/1.4.2,releases/lucene/1.4.3,releases/lucene/1.9,releases/lucene/1.9.1'
 - model: contributions.tag
@@ -21,6 +30,8 @@
     description: 'releases/lucene/2.0.0'
     previous_tag: 20
     major: True
+    build_command: 'ant compile'
+    prepare_build_command: 'python fix.py'
     max_minor_version_description: 'releases/lucene/2.1.0,releases/lucene/2.2.0,releases/lucene/2.3.0,releases/lucene/2.3.1,
     releases/lucene/2.3.2,releases/lucene/2.4.0,releases/lucene/2.4.1,releases/lucene/2.9.0,releases/lucene/2.9.1,
     *releases/lucene/3.0.0,releases/lucene/2.9.2'
@@ -39,6 +50,8 @@
     description: 'releases/lucene/3.0.0'
     previous_tag: 22
     major: True
+    build_command: 'ant compile'
+    prepare_build_command: 'python fix.py'
     max_minor_version_description: '*releases/lucene/2.9.2,releases/lucene/3.0.1,releases/lucene-solr/3.1,releases/lucene-solr/3.2,
     releases/lucene-solr/3.3,releases/lucene-solr/3.4.0,releases/lucene-solr/3.5.0,releases/lucene-solr/3.6.0,
     releases/lucene-solr/3.6.1,*releases/lucene-solr/4.0.0,releases/lucene-solr/3.6.2'
@@ -57,6 +70,8 @@
     description: 'releases/lucene-solr/4.0.0'
     previous_tag: 24
     major: True
+    build_command: 'ant compile-core'
+    prepare_build_command: 'python fix.py'
     max_minor_version_description: '*releases/lucene-solr/3.6.2,releases/lucene-solr/4.1.0,releases/lucene-solr/4.2.0,
     releases/lucene-solr/4.2.1,releases/lucene-solr/4.3.0,releases/lucene-solr/4.3.1,releases/lucene-solr/4.4.0,
     releases/lucene-solr/4.5.0,releases/lucene-solr/4.5.1,releases/lucene-solr/4.6.0,releases/lucene-solr/4.6.1,
@@ -79,6 +94,8 @@
     description: 'releases/lucene-solr/5.0.0'
     previous_tag: 26
     major: True
+    build_command: 'ant compile-core'
+    prepare_build_command: 'python fix.py'
     max_minor_version_description: '*releases/lucene-solr/4.10.4,releases/lucene-solr/5.1.0,releases/lucene-solr/5.2.0,
     releases/lucene-solr/5.2.1,releases/lucene-solr/5.3.0,releases/lucene-solr/5.3.1,releases/lucene-solr/5.4.0,
     releases/lucene-solr/5.3.2,releases/lucene-solr/5.4.1,releases/lucene-solr/5.5.0,*releases/lucene-solr/6.0.0,
@@ -99,6 +116,8 @@
     project: 2
     description: 'releases/lucene-solr/6.0.0'
     major: True
+    build_command: 'ant compile-core'
+    prepare_build_command: 'python fix.py'
     previous_tag: 28
     max_minor_version_description: '*releases/lucene-solr/5.5.1,releases/lucene-solr/6.0.1,releases/lucene-solr/6.1.0,
     *releases/lucene-solr/5.5.2,releases/lucene-solr/6.2.0,*releases/lucene-solr/5.5.3,releases/lucene-solr/6.2.1,
@@ -123,6 +142,8 @@
     project: 2
     description: 'releases/lucene-solr/7.0.0'
     major: True
+    build_command: 'ant compile-core'
+    prepare_build_command: 'python fix.py'
     previous_tag: 30
     max_minor_version_description: 'releases/lucene-solr/7.0.1,releases/lucene-solr/7.1.0,*releases/lucene-solr/6.6.2,
     *releases/lucene-solr/5.5.5,releases/lucene-solr/7.2.0,releases/lucene-solr/7.2.1,*releases/lucene-solr/6.6.3,
@@ -144,6 +165,8 @@
     project: 2
     description: 'releases/lucene-solr/8.0.0'
     major: True
+    build_command: 'ant compile-core'
+    prepare_build_command: 'python fix.py'
     previous_tag: 32
     max_minor_version_description: '*releases/lucene-solr/6.6.6,releases/lucene-solr/8.1.0,releases/lucene-solr/8.1.1,
     *releases/lucene-solr/7.7.2,releases/lucene-solr/8.2.0,releases/lucene-solr/8.3.0,releases/lucene-solr/8.3.1,

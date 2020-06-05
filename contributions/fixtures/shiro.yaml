@@ -1,0 +1,112 @@
+- model: contributions.project
+  pk: 7
+  fields:
+    project_name: Apache Shiro
+    project_path: https://github.com/apache/shiro.git
+    main_branch: 'master'
+- model: contributions.tag
+  pk: 78
+  fields:
+    project: 7
+    description: 'SHIRO-121_pre_commit'
+    major: False
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 79
+  fields:
+    project: 7
+    description: 'shiro-1.1.0'
+    real_tag_description: 'shiro-root-1.1.0'
+    major: True
+    core_component: 'src'
+    main_directory: 'core/src/main/java'
+    build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher compile-core'
+    prepare_build_command: 'ant clean,python prepare_build.py ivy.xml,python prepare_build.py ivy/ivysettings.xml,python prepare_build.py build.xml'
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 80
+  fields:
+    project: 7
+    previous_tag: 79
+    description: 'shiro-root-1.2.0-before-rerelease'
+    major: False
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 81
+  fields:
+    project: 7
+    description: 'shiro-root-1.2.6'
+    real_tag_description: 'shiro-root-1.2.0'
+    major: True
+    previous_tag: 80
+    core_component: 'src'
+    main_directory: 'core/src/main/java'
+    build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher compile-core'
+    prepare_build_command: 'ant clean,python prepare_build.py ivy.xml,python prepare_build.py ivy/ivysettings.xml,python prepare_build.py build.xml'
+    max_minor_version_description: 'shiro-root-1.2.1,*trunk_pre_SHIRO-317b_integration,*site-template-before-redesign-20120814,
+    shiro-root-1.2.2,shiro-root-1.2.3,shiro-root-1.2.4,shiro-root-1.2.5,shiro-root-1.2.6,*shiro-root-1.2.6-release-vote1'
+- model: contributions.tag
+  pk: 82
+  fields:
+    project: 7
+    previous_tag: 81
+    description: 'shiro-root-1.3.0-release-vote1'
+    major: False
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 83
+  fields:
+    project: 7
+    description: 'shiro-root-1.3.2'
+    real_tag_description: 'shiro-root-1.3.0'
+    major: True
+    previous_tag: 82
+    core_component: 'src'
+    main_directory: 'src/java'
+    build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher compile-core'
+    prepare_build_command: 'ant clean,python prepare_build.py ivy.xml,python prepare_build.py ivy/ivysettings.xml,python prepare_build.py build.xml'
+    max_minor_version_description: '*shiro-root-1.3.0-release-vote1,shiro-root-1.3.1,*shiro-root-1.3.1-release-vote1,
+    shiro-root-1.3.2,*shiro-root-1.3.2-release-vote1'
+- model: contributions.tag
+  pk: 84
+  fields:
+    project: 7
+    previous_tag: 83
+    description: 'shiro-root-1.4.0-RC2-release-vote1'
+    major: False
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 85
+  fields:
+    project: 7
+    description: 'shiro-root-1.4.2'
+    real_tag_description: 'shiro-root-1.4.0'
+    major: True
+    previous_tag: 84
+    core_component: 'src'
+    main_directory: 'src/java'
+    build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher compile-core'
+    prepare_build_command: 'ant clean,python prepare_build.py ivy.xml,python prepare_build.py ivy/ivysettings.xml,python prepare_build.py build.xml'
+    max_minor_version_description: 'shiro-root-1.4.1,shiro-root-1.4.2'
+- model: contributions.tag
+  pk: 86
+  fields:
+    project: 7
+    previous_tag: 85
+    description: 'shiro-root-1.4.2'
+    major: False
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 87
+  fields:
+    project: 7
+    description: 'shiro-root-1.5.3'
+    real_tag_description: 'shiro-root-1.5.0'
+    major: True
+    previous_tag: 86
+    core_component: 'src'
+    main_directory: 'src/java'
+    build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher compile-core'
+    prepare_build_command: 'ant clean,python prepare_build.py ivy.xml,python prepare_build.py ivy/ivysettings.xml,python prepare_build.py build.xml'
+    max_minor_version_description: '*shiro-root-1.5.1-release-vote1,shiro-root-1.5.1,*shiro-root-1.5.1-release-vote2,
+    *shiro-root-1.5.2-release-vote1,shiro-root-1.5.2,shiro-root-1.5.3,*shiro-root-1.5.3-release-vote1'

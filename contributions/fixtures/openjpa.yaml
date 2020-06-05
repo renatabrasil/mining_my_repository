@@ -1,0 +1,60 @@
+- model: contributions.project
+  pk: 4
+  fields:
+    project_name: Apache OpenJPA
+    project_path: https://github.com/apache/openjpa.git
+    core_component: 'openjpa-kernel'
+    main_directory: 'openjpa-kernel/src/main/java'
+    main_branch: 'master'
+- model: contributions.tag
+  pk: 37
+  fields:
+    project: 4
+    description: '1.0.0'
+    major: True
+    build_command: 'mvn clean compile -Drat.skip=true'
+    prepare_build_command: 'python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/pom.xml,
+    python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/maven-core/pom.xml'
+    max_minor_version_description: '1.0.1,1.0.2,1.1.0,1.0.3,1.2.1,1.2.0,*2.0.0-M3,
+1.2.2,*2.0.0-beta,*2.0.0-beta2,*2.0.0-beta3,*2.0.0,1.0.4,*2.0.1,*2.1.0,*2.1.1,
+*2.2.0,*2.2.1,1.2.3'
+- model: contributions.tag
+  pk: 38
+  fields:
+    project: 4
+    description: '2.0.0-beta3'
+    major: False
+    previous_tag: 37
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 39
+  fields:
+    project: 4
+    description: '2.0.0'
+    major: True
+    build_command: 'mvn clean compile -Drat.skip=true'
+    prepare_build_command: 'python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/pom.xml,
+    python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/maven-core/pom.xml'
+    previous_tag: 38
+    max_minor_version_description: '*1.0.4,2.0.1,2.1.0,2.1.1,2.2.0,2.2.1,*1.2.3,2.2.2,
+*openjpa-parent-2.3.0,2.3.0,*openjpa-parent-2.4.0,2.4.0,*2.4.1-SNAPSHOT,2.4.1,2.4.2,
+*openjpa-parent-2.4.3,*openjpa-parent-3.0.0,2.4.3'
+- model: contributions.tag
+  pk: 40
+  fields:
+    project: 4
+    description: '2.4.3'
+    major: False
+    previous_tag: 39
+    max_minor_version_description: ''
+- model: contributions.tag
+  pk: 41
+  fields:
+    project: 4
+    description: '3.0.0'
+    major: True
+    build_command: 'mvn clean compile -Drat.skip=true'
+    prepare_build_command: 'python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/pom.xml,
+    python C:/Users/brasi/Documents/mining_my_repository/cutoff_snapshot.py C:/Users/brasi/Documents/maven/maven-core/pom.xml'
+    previous_tag: 40
+    max_minor_version_description: '3.1.0'

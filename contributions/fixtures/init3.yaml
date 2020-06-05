@@ -8,6 +8,7 @@
   fields:
     project_name: Apache Lucene
     project_path: https://github.com/apache/lucene-solr
+    core_component: 'lucene/core'
 - model: contributions.tag
   pk: 1
   fields:
