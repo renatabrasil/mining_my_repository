@@ -19,12 +19,15 @@ from dataanalysis.models import AnalysisPeriod
 
 
 AUTHOR_FILTER = ["Peter Donald"]
+HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b"]
 ANT = 1
 LUCENE = 2
 MAVEN = 3
 OPENJPA = 4
 CASSANDRA = 5
 HADOOP = 6
+# filter_outliers = {"author__name": ["Peter Donald"], "hash": ["550a4ef1afd7651dc20110c0b079fb03665ca9da"]}
+filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -39,6 +42,12 @@ class Project(models.Model):
     project_name = models.CharField(max_length=200)
     project_path = models.CharField(max_length=200)
     main_branch = models.CharField(max_length=80, default='master')
+    # filters = models.CharField(max_length=80, default='', blank=True)
+
+    # @property
+    # def filters(self):
+    #     filter = self.filters.split(',')
+    #     return [c.strip() for c in filter]
 
     def __str__(self):
         return self.project_name
@@ -46,8 +55,6 @@ class Project(models.Model):
     @property
     def first_tag(self):
         return self.tags.all().first()
-#
-# class BuildProperties(models.Model):
 
 
 class Tag(models.Model):
@@ -123,11 +130,20 @@ class Directory(models.Model):
 class NoOutlierCommitManager(models.Manager):
     def get_queryset(self):
         ids = []
-        for author in AUTHOR_FILTER:
-            author_db = Developer.objects.get(name=author)
-            if author_db:
-                ids.append(author_db.id)
-        return super().get_queryset().exclude(author_id__in=ids)
+        # FIXME: Generalize for all projects
+        # ANT
+        # for author in AUTHOR_FILTER:
+        #     author_db = Developer.objects.get(name=author)
+        #     if author_db:
+        #         ids.append(author_db.id)
+        # return super().get_queryset().exclude(author_id__in=ids)
+        # LUCENE
+        for hash in HASH_FILTER:
+            hash_db = Commit.objects.get(hash=hash)
+            if hash_db:
+                ids.append(hash_db.id)
+        return super().get_queryset().exclude(id__in=ids)
+
 
 class Commit(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')

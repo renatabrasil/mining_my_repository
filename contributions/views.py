@@ -47,16 +47,17 @@ def index(request):
 
     if load_commits:
         hash = None
-
+        filter = {}
         if tag.previous_tag is not None:
             commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
+            filter.setdefault('from_tag', tag.previous_tag.description)
             # if commit is not None:
             #     hash = commit.hash
 
         #  git log --graph --oneline --decorate --tags *.java
         versions = __go_to_first_tag__(tag)[::-1]
         tag_aux = tag.description
-        filter = {}
+
         # filter.setdefault('only_in_branch', 'master')
         filter.setdefault('only_in_branch', project.main_branch)
         filter.setdefault('only_modifications_with_file_types', ['.java'])
@@ -66,7 +67,7 @@ def index(request):
             tag_aux = tag
             i+=1
         filter.setdefault('to_tag', tag.real_tag_description)
-        filter.setdefault('from_tag', tag.previous_tag.description)
+
         # if tag.previous_tag:
         #     filter.setdefault('from_tag', tag.previous_tag.description)
         tag_is_not_first_tag = True
@@ -852,9 +853,9 @@ def __no_commits_constraints__(modification,tag):
         ant_conditions = str.lower(directory_str).find('proposal') == -1
     if tag.project.id == LUCENE:
         lucene_conditions = str.lower(directory_str).find('/demo/') == -1
-        lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or
-                                                   str.lower(directory_str).startswith('lucene/src/java')
-                                                   or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
+        lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or (
+                str.lower(directory_str).startswith('lucene') and str.lower(directory_str).find('src/java') > -1)) and str.lower(directory_str).find('solr') == -1
+                                                   # or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
     if tag.project.id == MAVEN:
         maven_conditions = str.lower(directory_str).startswith('maven-core') and str.lower(directory_str).find('maven-core-') == -1
     if tag.project.id == OPENJPA:
