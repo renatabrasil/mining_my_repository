@@ -39,6 +39,7 @@ NO_OUTLIERS = 1
 
 def index(request):
     """"Architecture Configuration"""
+    title_description = 'Configuração do Projeto'
     tag = ViewUtils.load_tag(request)
     request.project = request.session['project']
     template = loader.get_template('architecture/index.html')
@@ -68,6 +69,7 @@ def index(request):
     files = FileCommits.objects.filter(tag__project=request.project).order_by("name")
 
     context = {
+        'title': title_description,
         'tag': tag,
         'files': files,
         'form': form,
@@ -418,7 +420,7 @@ def impactful_commits(request):
         template = loader.get_template('architecture/impactful_commits.html')
 
     context = {
-
+        'title': 'Relatório de commits impactantes',
         'metrics': commits,
         'current_directory_id': directory_filter,
         'current_tag_id': tag_filter,
@@ -618,6 +620,7 @@ def quality_between_versions(request):
         my_df_metrics.to_csv('metrics_by_version.csv', index=True, index_label='idx', header=True)
         my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
     context = {
+        'title': 'Cálculo de qualidade da arquitetura por versões',
         'tag': tag,
     }
     return HttpResponse(template.render(context, request))

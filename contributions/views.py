@@ -34,6 +34,8 @@ def index(request):
     # tag_text = 'rel/1.2'
     start = time.time()
 
+    title_description = 'Contribuições - Commits'
+
     project = Project.objects.get(id=request.session['project'])
 
 
@@ -119,11 +121,14 @@ def index(request):
     developer_id = request.POST.get("developer_filter_id")
     tag_id = request.POST.get("tag_filter_id")
     if request.GET.get('commits'):
+        title_description = 'Contributions - Detalhes do commit'
         url_path = 'developers/detail.html'
     elif request.GET.get('directories'):
+        title_description = 'Contributions - Detalhes das contribuições por diretórios'
         latest_commit_list = process_commits_by_directories(request,load_commits_from_tags(tag))
         url_path = 'contributions/detail_by_directories.html'
     elif request.GET.get('project'):
+        title_description = 'Contributions - Detalhes das contribuições por Projeto'
         latest_commit_list = process_commits_by_project(request, load_commits_from_tags(tag))
 
         url_path = 'contributions/detail_by_project.html'
@@ -164,6 +169,7 @@ def index(request):
 
     template = loader.get_template(url_path)
     context = {
+        'title': title_description,
         'latest_commit_list': latest_commit_list,
         'tag': tag_description,
         'current_developer': current_developer,
@@ -383,7 +389,7 @@ def detail_by_hash(request):
         commit = commit[0]
     else:
         commit = None
-    return render(request, 'contributions/detail.html', {'commit': commit, 'current_commit_hash': hash})
+    return render(request, 'contributions/detail.html', {'commit': commit, 'current_commit_hash': hash, 'title': 'Detalhes do commit'})
 
 def detail(request, commit_id):
     try:

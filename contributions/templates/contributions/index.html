@@ -7,12 +7,11 @@
 
 {{ block.super }}
 
-<h3>Commits</h3>
 
-<div class="alert alert-warning" role="alert">
+<div class="alert alert-info" role="alert">
   <h4 class="alert-heading">Aviso</h4>
   <p>Apenas commits que possuem arquivos <strong>.java</strong> serão mostrados.</p>
-    {{current_developer}}
+
   <hr>
     <p><strong>{{ latest_commit_list|length }}</strong> commits encontrados.</p>
 </div>
