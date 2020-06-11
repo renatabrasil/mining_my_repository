@@ -63,7 +63,7 @@ def index(request):
                 messages.error(request, 'Could not create files.')
 
 
-    form = FilesCompiledForm(initial={'directory': 'compileds/' + project.project_name.lower().replace(' ', '-'),
+    form = FilesCompiledForm(initial={'directory': 'compiled/' + project.project_name.lower().replace(' ', '-'),
                                       'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
                                       'build_path': 'build/classes'})
     files = FileCommits.objects.filter(tag__project=request.project).order_by("name")
