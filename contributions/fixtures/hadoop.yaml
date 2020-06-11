@@ -16,7 +16,7 @@
   fields:
     project: 6
     description: 'release-0.20.203.0'
-    real_tag_description: 'release-0.20.203.0'
+      real_tag_description: 'release-0.20.203.0'
     major: True
     previous_tag: 64
     core_component: 'src'
