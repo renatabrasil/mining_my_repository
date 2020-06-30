@@ -16,6 +16,7 @@
   fields:
     project: 5
     description: 'cassandra-0.6.0'
+    real_tag_description: 'cassandra-0.6.0'
     major: True
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
     prepare_build_command: 'ant clean'
@@ -57,6 +58,7 @@
   fields:
     project: 5
     description: 'cassandra-0.7.0'
+    real_tag_description: 'cassandra-0.7.0'
     major: True
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
     prepare_build_command: 'ant clean'
@@ -83,6 +85,7 @@
   fields:
     project: 5
     description: 'cassandra-0.8.0'
+    real_tag_description: 'cassandra-0.8.0'
     major: True
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
     prepare_build_command: 'ant clean'
@@ -107,6 +110,7 @@
   fields:
     project: 5
     description: 'cassandra-1.0.0'
+    real_tag_description: 'cassandra-1.0.0'
     major: True
     previous_tag: 48
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -147,6 +151,7 @@
   fields:
     project: 5
     description: 'cassandra-1.1.0'
+    real_tag_description: 'cassandra-1.1.0'
     major: True
     previous_tag: 50
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -171,6 +176,7 @@
   fields:
     project: 5
     description: 'cassandra-1.2.0'
+    real_tag_description: 'cassandra-1.2.0'
     major: True
     previous_tag: 52
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -200,6 +206,7 @@
   fields:
     project: 5
     description: 'cassandra-2.0.0'
+    real_tag_description: 'cassandra-2.0.0'
     major: True
     previous_tag: 53
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -225,6 +232,7 @@
   fields:
     project: 5
     description: 'cassandra-2.1.0'
+    real_tag_description: 'cassandra-2.1.0'
     major: True
     previous_tag: 56
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -282,6 +290,7 @@
   fields:
     project: 5
     description: 'cassandra-2.2.0'
+    real_tag_description: 'cassandra-2.2.0'
     major: True
     previous_tag: 56
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -315,6 +324,7 @@
   fields:
     project: 5
     description: 'cassandra-3.0.0'
+    real_tag_description: 'cassandra-3.0.0'
     major: True
     previous_tag: 60
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'
@@ -356,6 +366,7 @@
   fields:
     project: 5
     description: 'cassandra-3.1'
+    real_tag_description: 'cassandra-3.1'
     major: True
     previous_tag: 62
     build_command: 'java -Dhttps.protocols=TLSv1.2 -cp %ANT_HOME%/lib/ant-launcher.jar org.apache.tools.ant.launch.Launcher build-project'

@@ -19,7 +19,9 @@ from dataanalysis.models import AnalysisPeriod
 
 
 AUTHOR_FILTER = ["Peter Donald"]
-HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b"]
+HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
+               "390398d38e4fd0d195c91a384f6198a1528bb317", "8ca32df08e5021d144ebfa8b85da7879143c01ae",
+               "e2da258a16359a7112669ef27c8510cde3d860c7"]
 ANT = 1
 LUCENE = 2
 MAVEN = 3
@@ -130,19 +132,24 @@ class Directory(models.Model):
 class NoOutlierCommitManager(models.Manager):
     def get_queryset(self):
         ids = []
+        commit_ids = []
         # FIXME: Generalize for all projects
         # ANT
-        # for author in AUTHOR_FILTER:
-        #     author_db = Developer.objects.get(name=author)
-        #     if author_db:
-        #         ids.append(author_db.id)
-        # return super().get_queryset().exclude(author_id__in=ids)
-        # LUCENE
+        for author in AUTHOR_FILTER:
+            author_db = Developer.objects.get(name=author)
+            if author_db:
+                ids.append(author_db.id)
         for hash in HASH_FILTER:
             hash_db = Commit.objects.get(hash=hash)
             if hash_db:
-                ids.append(hash_db.id)
-        return super().get_queryset().exclude(id__in=ids)
+                commit_ids.append(hash_db.id)
+        return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
+        # LUCENE
+        # for hash in HASH_FILTER:
+        #     hash_db = Commit.objects.get(hash=hash)
+        #     if hash_db:
+        #         ids.append(hash_db.id)
+        # return super().get_queryset().exclude(id__in=ids)
 
 
 class Commit(models.Model):

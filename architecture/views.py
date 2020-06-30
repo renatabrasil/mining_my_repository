@@ -107,6 +107,8 @@ def compiled(request, file_id):
                 local_repository = commit
             elif i == 1:
                 build_path = commit
+            elif i == 2:
+                core_component = commit
             else:
                 try:
                     jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
@@ -119,6 +121,10 @@ def compiled(request, file_id):
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-', '')
                         object_commit = Commit.objects.filter(hash=hash_commit)[0]
+
+                        directories_in_commit = [x.directory for x in object_commit.modifications.all()]
+                        # if not __belongs_to_component__(core_component,directories_in_commit):
+                        #     continue
 
                         if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
                                 object_commit.parents[0].compilable) and not (
@@ -164,7 +170,7 @@ def compiled(request, file_id):
                         jar = jar_file.replace(current_project_path, "").replace("/", "", 1).replace("\"", "")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1024000 or error:
+                        if os.path.getsize(jar) < 2088800 or error:
                             error = False
                             # 1.1 76800
                             # 1.2 194560
@@ -249,7 +255,7 @@ def impactful_commits(request):
         if request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on':
             full_tag = 'on'
 
-    directories = Directory.objects.filter(visible=True).order_by("name")
+    directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by("name")
     developers = Developer.objects.all().order_by("name")
     developers = [d for d in developers if
                   d.commits.exclude(normalized_delta=0).filter(tag__project=request.session['project'])]
@@ -343,7 +349,7 @@ def impactful_commits(request):
             del query['directory_id']
             components = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
                 'id')
-            components_metrics = [[x.id, x.author_experience, x.delta_rmd * ROUDING_SCALE, x.commit.u_cloc] for x in
+            components_metrics = [[x.id, x.author_experience, x.delta_rmd/x.commit.u_cloc * ROUDING_SCALE, x.commit.u_cloc] for x in
                                   components]
 
             my_df = pd.DataFrame(components_metrics,
@@ -351,6 +357,20 @@ def impactful_commits(request):
             my_df.to_csv('component_metrics.csv', index=False, header=True)
         else:
             commits = sorted(commits, key=lambda x: x.id, reverse=False)
+
+            name = ''
+            if dev_name:
+                name += dev_name + '-'
+            if directory_name:
+                name += directory_name + '-'
+            if tag_name:
+                name += tag_name + '-'
+            if delta_check:
+                name += delta_check
+            if name.endswith('-'):
+                name = name[:-1]
+            if analysis_check == 'geral':
+                name += 't'
 
             delta_threshold = 0
             # If delta threshold is used should be uncommented
@@ -369,20 +389,23 @@ def impactful_commits(request):
                      x.u_cloc] for x in commits]
 
                 components_metrics = []
+                metrics_count = 0
                 for commit in commits:
                     for component in commit.component_commits.all():
-                        component_degradation = ArchitecturalMetricsByCommit.objects.filter(commit=commit,
+                        component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(commit=commit,
                                                                                             directory=component.component)
                         if component_degradation.exists():
                             component_degradation = component_degradation[0]
-                            components_metrics.append([component.id, component.author_experience,
-                                                       component_degradation.delta_rmd * ROUDING_SCALE, commit.u_cloc])
+                            if component_degradation.delta_rmd != 0:
+                                components_metrics.append([component.id, component.author_experience,
+                                                           component_degradation.delta_rmd/commit.u_cloc * ROUDING_SCALE, commit.u_cloc])
                         else:
-                            print('Component not found when component metrics are calculated.')
+                            metrics_count += 1
+                            print('Component not found when component metrics were calculated. Count: '+str(metrics_count))
 
                 my_df = pd.DataFrame(components_metrics,
                                      columns=['time', 'experiencia', 'degradacao', 'LOC'])
-                my_df.to_csv('component_metrics.csv', index=False, header=True)
+                my_df.to_csv('component_metrics_'+name+'.csv', index=False, header=True)
 
         if len(metrics_dict) > 0:
             if directory_filter > 0:
@@ -392,19 +415,7 @@ def impactful_commits(request):
                 my_df = pd.DataFrame(metrics_dict,
                                      columns=['commit', 'experiencia', 'degradacao', 'q_commit', 'senioridade', 'LOC'])
 
-            name = ''
-            if dev_name:
-                name += dev_name + '-'
-            if directory_name:
-                name += directory_name + '-'
-            if tag_name:
-                name += tag_name + '-'
-            if delta_check:
-                name += delta_check
-            if name.endswith('-'):
-                name = name[:-1]
-            if analysis_check == 'geral':
-                name += 't'
+
 
             # name += '-maiores'
             if delta_threshold != 0:
@@ -601,7 +612,9 @@ def quality_between_versions(request):
                 # ANT
                 name_version = version.replace('rel#', '').replace('-', '', 1).replace('_', '.').replace('#', '-')
                 # Lucene
-                name_version = version.replace('_', '.').replace('#', '/')
+                name_version = version.replace('_', '.').replace('#', '-')
+                # Cassandra
+                name_version = version.replace('_', '.').replace('#', '-')
                 architectural_quality = np.mean(components_mean)
                 metrics.append([name_version, architectural_quality])
 
@@ -1023,3 +1036,15 @@ def execute(command):
         return output
     else:
         raise ProcessException(command, exitCode, output)
+
+def __belongs_to_component__(component, directories):
+    '''
+    Checks whether if a commit belongs to analized commit (in case that project has separate compilated modules, e.g. Hadoop)
+    :param component:
+    :param directories:
+    :return: whether belongs or not
+    '''
+    for dir in directories:
+        if dir.name.startswith(component):
+            return True
+    return False
