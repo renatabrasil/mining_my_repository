@@ -139,10 +139,10 @@ class NoOutlierCommitManager(models.Manager):
             author_db = Developer.objects.get(name=author)
             if author_db:
                 ids.append(author_db.id)
-        for hash in HASH_FILTER:
-            hash_db = Commit.objects.get(hash=hash)
-            if hash_db:
-                commit_ids.append(hash_db.id)
+        # for hash in HASH_FILTER:
+        #     hash_db = Commit.objects.get(hash=hash)
+        #     if hash_db:
+        #         commit_ids.append(hash_db.id)
         return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
         # LUCENE
         # for hash in HASH_FILTER:
@@ -423,6 +423,7 @@ class Modification(models.Model):
     removed = models.IntegerField(default=0)
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
+    has_impact_loc = models.BooleanField(default=False)
     # FIXME
     nloc = models.IntegerField(default=0, null=True)
     complexity = models.IntegerField(null=True)
@@ -451,10 +452,22 @@ class Modification(models.Model):
         diff_text = self.__diff_text__()
         added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
         deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
-        added_uncommented_lines = count_uncommented_lines(added_text)
-        deleted_uncommented_lines = count_uncommented_lines(deleted_text)
+        # added_uncommented_lines = count_uncommented_lines(added_text)
+        # deleted_uncommented_lines = count_uncommented_lines(deleted_text)
+        added_uncommented_lines = count_loc(added_text)
+        deleted_uncommented_lines = count_loc(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
         # return 0
+
+    def has_impact_loc_calculation(self):
+        diff_text = self.__diff_text__()
+        added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
+        deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
+        # added_uncommented_lines = count_uncommented_lines(added_text)
+        # deleted_uncommented_lines = count_uncommented_lines(deleted_text)
+        added_uncommented_lines = __detect_impact_loc__(added_text)
+        deleted_uncommented_lines = __detect_impact_loc__(deleted_text)
+        return added_uncommented_lines or deleted_uncommented_lines
 
     @property
     def diff_added(self):
@@ -489,6 +502,7 @@ class Modification(models.Model):
     def save(self, *args, **kwargs):
 
         self.path = CommitUtils.true_path(self)
+        self.has_impact_loc = self.has_impact_loc_calculation()
 
         if self.is_java_file:
             self.u_cloc = self.__cloc_uncommented__()
@@ -1385,6 +1399,42 @@ def count_uncommented_lines(code):
     if total_lines > 0:
         # FIXME: Put this part on loop below
         lines = code.split("\n")
+        # In case we should consider commented lines
+        # for line in lines:
+        #     m = re.search(r"\u002F/.*", line)
+        #     found = ''
+        #     if m:
+        #         found = m.group(0)
+        #         if found:
+        #             line = re.sub(r'\u002F/.*', '', line)
+        #             line.replace(' ', '', 1)
+        #             if line.strip().isdigit():
+        #                 commented_lines += 1
+        # uncommented_lines -= commented_lines
+        #
+        # comments = []
+        #
+        # comments = [x.group() for x in
+        #             re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
+        # part_without_comment = code
+        # for comment in comments:
+        #     part_without_comment = part_without_comment.replace(comment, '', 1)
+
+        # blank_lines += count_blank_lines(part_without_comment)
+        # uncommented_lines += part_without_comment.count('\n')
+        # uncommented_lines -= blank_lines
+    return 0 if uncommented_lines < 0 else uncommented_lines
+    # return total_lines-count_blank_lines(code)
+
+def __detect_impact_loc__(code):
+    total_lines = code.count('\n')
+    commented_lines = 0
+    blank_lines = 0
+    uncommented_lines = 0
+    if total_lines > 0:
+        # FIXME: Put this part on loop below
+        lines = code.split("\n")
+        # In case we should consider commented lines
         for line in lines:
             m = re.search(r"\u002F/.*", line)
             found = ''
@@ -1395,21 +1445,30 @@ def count_uncommented_lines(code):
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
+            elif not line.replace(" ", "").isdigit():
+                return True
         uncommented_lines -= commented_lines
 
-        comments = []
+        for line in lines:
+            m = re.search(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*', line)
+            found = ''
+            if m:
+                found = m.group(0)
+                if found:
+                    line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*', '', line)
+                    line.replace(' ', '', 1)
+                    if line.strip().isdigit():
+                        commented_lines += 1
+            elif not line.replace(" ", "").isdigit():
+                return True
 
-        comments = [x.group() for x in
-                    re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
-        part_without_comment = code
-        for comment in comments:
-            part_without_comment = part_without_comment.replace(comment, '', 1)
+    return False
 
-        blank_lines += count_blank_lines(part_without_comment)
-        uncommented_lines += part_without_comment.count('\n')
-        uncommented_lines -= blank_lines
-    return 0 if uncommented_lines < 0 else uncommented_lines
 
+
+def count_loc(code):
+    total_lines = code.count('\n')
+    return total_lines-count_blank_lines(code)
 
 # FIXME: Test technical debt
 def count_blank_lines(code):

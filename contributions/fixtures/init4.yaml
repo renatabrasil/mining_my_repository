@@ -21,6 +21,8 @@
     project: 1
     description: 'rel/1.2'
     real_tag_description: 'rel/1.2'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 1
     major: True
     build_command: './build.bat'
@@ -31,6 +33,8 @@
     project: 1
     description: 'rel/1.3'
     real_tag_description: 'rel/1.3'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 2
     major: True
     build_command: './build.bat'
@@ -41,6 +45,8 @@
     project: 1
     description: 'rel/1.4'
     real_tag_description: 'rel/1.4'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 3
     major: True
     build_command: './build.bat'
@@ -59,6 +65,8 @@
     project: 1
     description: 'rel/1.5'
     real_tag_description: 'rel/1.5'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 5
     major: True
     build_command: './build.bat'
@@ -77,6 +85,8 @@
     project: 1
     description: 'rel/1.6.0'
     real_tag_description: 'rel/1.6.0'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 7
     major: True
     build_command: './build.bat'
@@ -95,6 +105,8 @@
     project: 1
     description: 'rel/1.7.0'
     real_tag_description: 'rel/1.7.0'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 9
     major: True
     build_command: './build.bat'
@@ -113,6 +125,8 @@
     project: 1
     description: 'rel/1.8.0'
     real_tag_description: 'rel/1.8.0'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 11
     major: True
     build_command: './build.bat'
@@ -131,6 +145,8 @@
     project: 1
     description: 'rel/1.9.0'
     real_tag_description: 'rel/1.9.0'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 13
     major: True
     build_command: './build.bat'
@@ -153,6 +169,8 @@
     project: 1
     description: 'rel/1.9.x'
     real_tag_description: 'rel/1.9.8'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 15
     major: True
     build_command: './build.bat'
@@ -162,6 +180,8 @@
     project: 1
     description: 'rel/1.10.0'
     real_tag_description: 'rel/1.10.0'
+    core_component: 'src'
+    main_directory: 'src/main'
     previous_tag: 15
     major: True
     build_command: './build.bat'
