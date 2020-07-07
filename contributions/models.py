@@ -191,6 +191,13 @@ class Commit(models.Model):
     def __str__(self):
         return str(self.pk) + " - hash: " + self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
 
+    @property
+    def has_impact_loc(self):
+        for mod in self.modifications.all():
+            if mod.has_impact_loc:
+                return True
+        return False
+
     def calculate_boosting_factor(self, activity_array):
         if not activity_array or len(activity_array) == 1:
             return 0.0
@@ -507,40 +514,37 @@ class Modification(models.Model):
         if self.is_java_file:
             self.u_cloc = self.__cloc_uncommented__()
 
-            # If cloc = 0 do not save file neither commit
-            if self.u_cloc > 0:
-
-                if self.commit.pk is None:
-                    self.commit.save()
-
-                index = self.path.rfind("/")
-                directory_str = ""
-                if index > -1:
-                    directory_str = self.path[:index]
-                else:
-                    directory_str = "/"
-
-                directory = Directory.objects.filter(name__iexact=directory_str)
-                if directory.count() == 0:
-                    directory = Directory(name=directory_str, project=self.commit.tag.project,
-                                          initial_commit=self.commit)
-                    directory.save()
-                    self.directory = directory
-                else:
-                    self.directory = directory[0]
-
-                component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
-                if component_commit_repo.exists():
-                    self.component_commit = component_commit_repo[0]
-                else:
-                    self.component_commit = ComponentCommit(component=self.directory, commit=self.commit)
-                    self.component_commit.save()
-
-                self.cloc = self.added + self.removed
-                self.commit.cloc_activity += self.u_cloc
+            if self.commit.pk is None:
                 self.commit.save()
 
-                super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
+            index = self.path.rfind("/")
+            directory_str = ""
+            if index > -1:
+                directory_str = self.path[:index]
+            else:
+                directory_str = "/"
+
+            directory = Directory.objects.filter(name__iexact=directory_str)
+            if directory.count() == 0:
+                directory = Directory(name=directory_str, project=self.commit.tag.project,
+                                      initial_commit=self.commit)
+                directory.save()
+                self.directory = directory
+            else:
+                self.directory = directory[0]
+
+            component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
+            if component_commit_repo.exists():
+                self.component_commit = component_commit_repo[0]
+            else:
+                self.component_commit = ComponentCommit(component=self.directory, commit=self.commit)
+                self.component_commit.save()
+
+            self.cloc = self.added + self.removed
+            self.commit.cloc_activity += self.u_cloc
+            self.commit.save()
+
+            super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
 
 
