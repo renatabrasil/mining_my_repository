@@ -35,7 +35,8 @@ class ArchitecturalMetricsByCommit(models.Model):
     previous_architecture_quality_metrics = models.ForeignKey('ArchitecturalMetricsByCommit', on_delete=models.SET_NULL,
                                                               null=True, default=None)
     component_commit = models.ForeignKey(ComponentCommit, on_delete=models.CASCADE, related_name='architectural_metrics', null=True)
-    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics')
+    commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='architectural_metrics', null=True)
+    commit_str = models.CharField(max_length=200, default="", blank=True, null=True)
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='architectural_metrics')
     rmd = models.FloatField(null=True, default=0.0)
     delta_rmd = models.FloatField(null=True, default=0.0)

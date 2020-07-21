@@ -6,6 +6,7 @@ import subprocess
 import sys
 from builtins import object
 from collections import OrderedDict
+import logging
 
 # third-party
 import numpy as np
@@ -21,13 +22,15 @@ from django.urls import reverse
 
 # local Django
 from django.utils import timezone
+from pydriller import GitRepository, RepositoryMining
 
 from architecture.forms import FilesCompiledForm
 from architecture.models import ArchitecturalMetricsByCommit, FileCommits
 from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   IndividualContribution, Project,
-                                  ProjectIndividualContribution, Tag, ComponentCommit)
+                                  ProjectIndividualContribution, Tag, ComponentCommit, Modification,
+                                  has_impact_loc_calculation_static_method)
 from dataanalysis.models import AnalysisPeriod
 
 SCALE = 6
@@ -35,6 +38,8 @@ ROUDING_SCALE = 10 ** SCALE
 
 # 1: ON, Otherwise: OFF
 NO_OUTLIERS = 1
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -61,7 +66,6 @@ def index(request):
                 messages.success(request, 'Files successfully created!')
             else:
                 messages.error(request, 'Could not create files.')
-
 
     form = FilesCompiledForm(initial={'directory': 'compiled/' + project.project_name.lower().replace(' ', '-'),
                                       'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
@@ -99,6 +103,7 @@ def compiled(request, file_id):
 
         i = 0
         commit_with_errors = []
+        residual_commits = {}
 
         error = False
         for commit in myfile:
@@ -107,8 +112,8 @@ def compiled(request, file_id):
                 local_repository = commit
             elif i == 1:
                 build_path = commit
-            elif i == 2:
-                core_component = commit
+            # elif i == 2:
+            #     core_component = commit
             else:
                 try:
                     jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
@@ -120,31 +125,49 @@ def compiled(request, file_id):
 
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-', '')
-                        object_commit = Commit.objects.filter(hash=hash_commit)[0]
+                        object_commit = Commit.objects.filter(hash=hash_commit)
 
-                        directories_in_commit = [x.directory for x in object_commit.modifications.all()]
-                        # if not __belongs_to_component__(core_component,directories_in_commit):
+                        if object_commit.exists():
+                            object_commit = object_commit[0]
+                        else:
+                            print("-- Commit sem java file --\n")
+                            object_commit = None
+
+                        if object_commit is not None:
+                            directories_in_commit = [x.directory for x in object_commit.modifications.all()]
+                            # if not __belongs_to_component__(core_component,directories_in_commit):
+                            #     continue
+
+                            if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
+                                    object_commit.parents[0].compilable) and not (
+                                    object_commit.children_commit is not None) and not object_commit.parents_str:
+                                object_commit.compilable = True
+                                object_commit.save()
+                                continue
+                            elif not (len(object_commit.parents) > 0 and object_commit.parents[
+                                0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
+                                continue
+                        # elif not is_impactful_commit(hash_commit, request.session['project']):
+                        #     print("é impactante ! oi\n")
+                        # Use when running for parent commits that are not in databse
+                        # else:
                         #     continue
-
-                        if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
-                                object_commit.parents[0].compilable) and not (
-                                object_commit.children_commit is not None):
-                            object_commit.compilable = True
-                            object_commit.save()
-                            continue
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
                         checkout.wait()
+
                         print(os.environ.get('JAVA_HOME'))
                         print(os.environ.get('ANT_HOME'))
                         print(os.environ.get('M2_HOME'))
 
                         # Prepare build commands
-                        for command in object_commit.tag.pre_build_commands:
+                        for command in file.tag.pre_build_commands:
                             rc = os.system(command)
                             if rc != 0:
                                 print("Error on compile")
+                                continue
+                        # shutil.rmtree('C:/Users/brasi/Documents/ant/build', ignore_errors=True)
 
-                        rc = os.system(object_commit.tag.build_command)
+                        rc = os.system(file.tag.build_command)
 
                         if rc != 0:
                             print("Error on compile")
@@ -170,7 +193,7 @@ def compiled(request, file_id):
                         jar = jar_file.replace(current_project_path, "").replace("/", "", 1).replace("\"", "")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 2088800 or error:
+                        if os.path.getsize(jar) < 1438400 or error:
                             error = False
                             # 1.1 76800
                             # 1.2 194560
@@ -184,24 +207,35 @@ def compiled(request, file_id):
                             # if os.path.getsize(jar) < 1771200:
                             __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory,
                                                            current_project_path, jar)
+
+                            # os.system('bootstrap.bat')
                             # TODO: extract method
-                            object_commit.compilable = False
-                            object_commit.mean_rmd_components = 0.0
-                            object_commit.std_rmd_components = 0.0
-                            object_commit.delta_rmd_components = 0.0
-                            object_commit.normalized_delta = 0.0
+                            if object_commit is not None:
+                                object_commit.compilable = False
+                                object_commit.mean_rmd_components = 0.0
+                                object_commit.std_rmd_components = 0.0
+                                object_commit.delta_rmd_components = 0.0
+                                object_commit.normalized_delta = 0.0
 
                             os.chdir(local_repository)
                         else:
                             error = False
+                            if object_commit is not None and not (
+                                    len(object_commit.parents) > 0 and object_commit.parents[
+                                0] is not None) and object_commit.parents_str:
+                                residual_commits.setdefault(str(i - 1) + '-' + object_commit.parents_str,
+                                                            commit)
+
                             if not __generate_csv__(jar_folder):
                                 __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory,
                                                                current_project_path, jar)
-                                object_commit.compilable = False
+                                if object_commit is not None:
+                                    object_commit.compilable = False
                             else:
-                                object_commit.compilable = True
-
-                        object_commit.save()
+                                if object_commit is not None:
+                                    object_commit.compilable = True
+                        if object_commit is not None:
+                            object_commit.save()
 
                         build_path_repository = local_repository + '/' + build_path
                         if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
@@ -215,6 +249,23 @@ def compiled(request, file_id):
                     print(er)
                     messages.error(request, 'Erro: ' + er)
                 finally:
+                    if len(residual_commits) > 0:
+                        try:
+                            f = open(compiled_directory.replace("jars", "") + "residual_commits.txt", 'w+')
+                            myfile = File(f)
+                            first = True
+                            myfile.write(local_repository + "\n")
+                            myfile.write(build_path + "\n")
+                            for commit in residual_commits.keys():
+                                if first:
+                                    myfile.write(commit)
+                                    first = False
+                                else:
+                                    myfile.write("\n" + commit)
+                        except OSError as e:
+                            print("Error: %s - %s." % (e.filename, e.strerror))
+                        finally:
+                            f.close()
                     os.chdir(local_repository)
             i += 1
     except Exception as e:
@@ -349,8 +400,9 @@ def impactful_commits(request):
             del query['directory_id']
             components = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
                 'id')
-            components_metrics = [[x.id, x.author_experience, x.delta_rmd/x.commit.u_cloc * ROUDING_SCALE, x.commit.u_cloc] for x in
-                                  components]
+            components_metrics = [
+                [x.id, x.author_experience, x.delta_rmd / x.commit.u_cloc * ROUDING_SCALE, x.commit.u_cloc] for x in
+                components]
 
             my_df = pd.DataFrame(components_metrics,
                                  columns=['time', 'experiencia', 'degradacao', 'LOC'])
@@ -392,20 +444,23 @@ def impactful_commits(request):
                 metrics_count = 0
                 for commit in commits:
                     for component in commit.component_commits.all():
-                        component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(commit=commit,
-                                                                                            directory=component.component)
+                        component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(
+                            delta_rmd=0).filter(commit=commit,
+                                                directory=component.component)
                         if component_degradation.exists():
                             component_degradation = component_degradation[0]
                             if component_degradation.delta_rmd != 0:
                                 components_metrics.append([component.id, component.author_experience,
-                                                           component_degradation.delta_rmd/commit.u_cloc * ROUDING_SCALE, commit.u_cloc])
+                                                           component_degradation.delta_rmd / commit.u_cloc * ROUDING_SCALE,
+                                                           commit.u_cloc])
                         else:
                             metrics_count += 1
-                            print('Component not found when component metrics were calculated. Count: '+str(metrics_count))
+                            print('Component not found when component metrics were calculated. Count: ' + str(
+                                metrics_count))
 
                 my_df = pd.DataFrame(components_metrics,
                                      columns=['time', 'experiencia', 'degradacao', 'LOC'])
-                my_df.to_csv('component_metrics_'+name+'.csv', index=False, header=True)
+                my_df.to_csv('component_metrics_' + name + '.csv', index=False, header=True)
 
         if len(metrics_dict) > 0:
             if directory_filter > 0:
@@ -415,15 +470,12 @@ def impactful_commits(request):
                 my_df = pd.DataFrame(metrics_dict,
                                      columns=['commit', 'experiencia', 'degradacao', 'q_commit', 'senioridade', 'LOC'])
 
-
-
             # name += '-maiores'
             if delta_threshold != 0:
                 name += '-maioria'
             name += '.csv'
 
             my_df.to_csv(name, index=False, header=True)
-
 
     if directory_filter > 0:
         template = loader.get_template('architecture/old_impactful_commits.html')
@@ -691,6 +743,7 @@ def __read_PM_file__(folder, tag_id):
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
     last_architectural_metric = None
+    is_commit_db = False
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
         components_db = Directory.objects.filter(visible=True)
@@ -703,12 +756,18 @@ def __read_PM_file__(folder, tag_id):
                 hash = f.name.split('\\')[1].split('-')[2]
                 if Commit.objects.filter(hash=hash).count() > 0:
                     commit = Commit.objects.filter(hash=hash)[0]
+                    is_commit_db = True
                 else:
-                    continue
+                    is_commit_db = False
+                # else:
+                #     continue
                 commit_rmds = []
+                previous_commit_str = None
                 new_metric = True
-                if commit.parents and commit.parents[0] is not None:
+                if is_commit_db and commit.parents and commit.parents[0] is not None:
                     previous_commit = commit.parents[0]
+                elif not is_commit_db:
+                    previous_commit_str = commit.parents_str
                 else:
                     previous_commit = None
 
@@ -717,23 +776,25 @@ def __read_PM_file__(folder, tag_id):
                     row[5] = row[5].replace('\n', '')
                     row[0] = row[0].replace('.', '/')
 
-                    # FIXME: Parametrizar
-                    # prefix ='src/main/'
-                    # prefix = 'lucene/core/src/java/'
-                    # prefix = 'openjpa-kernel/src/main/java/'
-                    # prefix = 'maven-core/src/main/java/'
                     directory_str = tag.main_directory_prefix + row[0]
                     directory = Directory.objects.filter(name__exact=directory_str)
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
 
-                    component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
+                    if is_commit_db:
+                        component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
+                    else:
+                        component_commit = ComponentCommit.objects.filter(commit_str=hash, component=directory)
+
                     if component_commit.exists():
                         component_commit = component_commit[0]
                     else:
-                        component_commit = ComponentCommit.objects.filter(component=directory, commit_id__lte=commit.id,
-                                                                          commit__author=commit.author).last()
+                        if is_commit_db:
+                            component_commit = ComponentCommit.objects.filter(component=directory,
+                                                                              commit_id__lte=commit.id,
+                                                                              commit__author=commit.author).last()
+                        # Pensar
 
                     # Change architecture
                     components.append(directory)
@@ -741,15 +802,24 @@ def __read_PM_file__(folder, tag_id):
                     print(line.replace("\n", ""))
 
                     architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                        directory__name__exact=directory_str, commit_id=commit.id)
+                        directory__name__exact=directory_str)
+                    if is_commit_db:
+                        architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
+                            directory__name__exact=directory_str, commit=commit)
+                    else:
+                        architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
+                            directory__name__exact=directory_str, commit_str=hash)
                     if architecture_metrics.count() == 0:
                         # TODO: use delta
-                        architecture_metrics = ArchitecturalMetricsByCommit(component_commit=component_commit,
-                                                                            commit=commit,
-                                                                            directory=directory,
+                        architecture_metrics = ArchitecturalMetricsByCommit(directory=directory,
                                                                             rmd=float(row[5]), rma=float(row[4]),
                                                                             rmi=float(row[3]), ca=float(row[1]),
                                                                             ce=float(row[2]))
+                        if is_commit_db:
+                            architecture_metrics.commit = commit
+                            architecture_metrics.component_commit = component_commit
+                        else:
+                            architecture_metrics.commit_str = hash
                     else:
                         architecture_metrics = architecture_metrics[0]
                         # new_metric = False
@@ -761,9 +831,17 @@ def __read_PM_file__(folder, tag_id):
                             architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[
                                 0]
                             architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
-                            if architecture_metrics.delta_rmd != 0 and round(architecture_metrics.delta_rmd,
-                                                                             SCALE) == 0.0:
-                                architecture_metrics.delta_rmd = 0.0
+                    elif previous_commit_str:
+                        previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
+                            directory_id=directory.id, commit_str=previous_commit_str)
+                        if previous_architecture_metrics.count() > 0:
+                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[
+                                0]
+                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
+                            # FIXME: Remove
+                            # if architecture_metrics.delta_rmd != 0 and round(architecture_metrics.delta_rmd,
+                            #                                                  SCALE) == 0.0:
+                            #     architecture_metrics.delta_rmd = 0.0
                     # Ancestor is not compilable
                     elif previous_commit and not previous_commit.compilable:
                         architecture_metrics.delta_rmd = 0.0
@@ -777,9 +855,14 @@ def __read_PM_file__(folder, tag_id):
 
                     if new_metric:
                         # Delta normalization by LOC changed
-                        architecture_metrics.delta_rmd /= commit.u_cloc
-                        architecture_metrics.delta_rmd = 0 if round(architecture_metrics.delta_rmd,
-                                                                    SCALE) == 0.0 else architecture_metrics.delta_rmd
+                        if commit.u_cloc > 0:
+                            architecture_metrics.delta_rmd /= commit.u_cloc
+                        else:
+                            architecture_metrics.delta_rmd = 0
+                            logger.error("arquivo commitado sem linha de impacto (LOC=0) com delta diferentee de zero")
+                        # FIXME: Remove
+                        # architecture_metrics.delta_rmd = 0 if round(architecture_metrics.delta_rmd,
+                        #                                             SCALE) == 0.0 else architecture_metrics.delta_rmd
                         architecture_metrics.save()
                         directory.save()
 
@@ -799,15 +882,22 @@ def __read_PM_file__(folder, tag_id):
                     # Delta calculation
                     if previous_commit is not None and previous_commit.compilable and previous_commit.tag == commit.tag:
                         commit.delta_rmd_components -= previous_commit.mean_rmd_components
-                        if round(commit.delta_rmd_components, SCALE) == 0.0:
-                            commit.delta_rmd_components = 0
+                        # FIXME: Remove
+                        # if round(commit.delta_rmd_components, SCALE) == 0.0:
+                        #     commit.delta_rmd_components = 0
                     else:
                         commit.delta_rmd_components = 0.0
 
                     # Delta normalization by LOC changed
-                    commit.normalized_delta = commit.delta_rmd_components / commit.u_cloc
-                    if round(commit.normalized_delta, SCALE) == 0.0:
-                        commit.normalized_delta = 0.0
+                    if commit.u_cloc > 0:
+                        commit.normalized_delta = commit.delta_rmd_components / commit.u_cloc
+                    else:
+                        commit.normalized_delta = 0
+                        logger.error("commit sem linha de impacto (LOC=0) com delta diferentee de zero")
+
+                    # FIXME: Remove
+                    # if round(commit.normalized_delta, SCALE) == 0.0:
+                    #     commit.normalized_delta = 0.0
 
                     removed_components = [x for x in list(components_db) if x not in components]
                     add_components = [x for x in components if x not in list(components_db)]
@@ -949,6 +1039,11 @@ def list_commits(project, form):
                 files.append(file)
                 my_file.write(form['git_local_repository'].value() + "\n")
                 my_file.write(form['build_path'].value() + "\n")
+            if not commit.has_impact_loc and not commit.children_commit:
+                continue
+            if len(commit.parents) == 0 and commit.parents_str:
+                my_file.write(str(i) + "-" + commit.parents_str + "\n")
+                i += 1
             my_file.write(str(i) + "-" + commit.hash + "\n")
             i += 1
         my_file.closed
@@ -1009,13 +1104,14 @@ def __has_jar_file__(directory):
         for filename in os.listdir(directory):
             if exists:
                 break
-            if filename.endswith(".jar"):
+            if filename.endswith(".jar") or filename.endswith(".csv"):
                 exists = True
     return exists
 
 
 class ProcessException(object):
     pass
+
 
 # Unused
 def execute(command):
@@ -1037,6 +1133,7 @@ def execute(command):
     else:
         raise ProcessException(command, exitCode, output)
 
+
 def __belongs_to_component__(component, directories):
     '''
     Checks whether if a commit belongs to analized commit (in case that project has separate compilated modules, e.g. Hadoop)
@@ -1048,3 +1145,16 @@ def __belongs_to_component__(component, directories):
         if dir.name.startswith(component):
             return True
     return False
+
+# FIXME:
+# def is_impactful_commit(hash, project_id):
+#     try:
+#         project_name = Project.objects.get(id=project_id).project_path
+#         # gr = GitRepository('C:/Users/brasi/Documents/lucene-solr/lucene')
+#         for commit in RepositoryMining(project_name, only_commits=[hash]).traverse_commits():
+#             for mod in commit.modifications:
+#                 return has_impact_loc_calculation_static_method(mod.diff_parsed)
+#             return False
+#     except Exception as e:
+#         print(e)
+#         logger.error("Error in detect impactful commit: " + e)

@@ -13,7 +13,8 @@
     major: True
     core_component: 'src'
     main_directory: 'src/main'
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: ''
 - model: contributions.tag
   pk: 2
@@ -25,7 +26,8 @@
     main_directory: 'src/main'
     previous_tag: 1
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: ''
 - model: contributions.tag
   pk: 3
@@ -37,7 +39,8 @@
     main_directory: 'src/main'
     previous_tag: 2
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: ''
 - model: contributions.tag
   pk: 4
@@ -49,7 +52,8 @@
     main_directory: 'src/main'
     previous_tag: 3
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: 'ANT_141'
 - model: contributions.tag
   pk: 5
@@ -69,7 +73,8 @@
     main_directory: 'src/main'
     previous_tag: 5
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: 'rel/1.5.1,rel/1.5.2,rel/1.5.3,rel/1.5.4'
 - model: contributions.tag
   pk: 7
@@ -89,7 +94,8 @@
     main_directory: 'src/main'
     previous_tag: 7
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: 'rel/1.6.1,rel/1.6.2,rel/1.6.3,rel/1.6.4,rel/1.6.5'
 - model: contributions.tag
   pk: 9
@@ -109,7 +115,8 @@
     main_directory: 'src/main'
     previous_tag: 9
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: 'rel/1.7.1'
 - model: contributions.tag
   pk: 11
@@ -129,7 +136,8 @@
     main_directory: 'src/main'
     previous_tag: 11
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: 'rel/1.8.1,rel/1.8.2,rel/1.8.3,rel/1.8.4'
 - model: contributions.tag
   pk: 13
@@ -149,13 +157,12 @@
     main_directory: 'src/main'
     previous_tag: 13
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
 #    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
 #        rel/1.9.8,*rel/1.10.1,rel/1.9.9,rel/1.9.10,*rel/1.10.2,rel/1.9.11,*rel/1.10.3,rel/1.9.12,*rel/1.10.4,rel/1.9.13,
 #        *rel/1.10.5,rel/1.9.14'
-    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
-    ANT_198_RC1,*rel/1.10.1,rel/1.9.9,*rel/1.10.2,rel/1.9.10,*rel/1.10.3,rel/1.9.11,*rel/1.10.4,rel/1.9.12,*rel/1.10.5,
-    rel/1.9.13,*rel/1.10.6,rel/1.9.14'
+    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7'
 - model: contributions.tag
   pk: 15
   fields:
@@ -173,7 +180,10 @@
     main_directory: 'src/main'
     previous_tag: 15
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    max_minor_version_description: '*rel/1.10.0,
+        ANT_198_RC1,*rel/1.10.1,rel/1.9.9,*rel/1.10.2,rel/1.9.10,*rel/1.10.3,rel/1.9.11,*rel/1.10.4,rel/1.9.12,*rel/1.10.5,
+        rel/1.9.13,*rel/1.10.6,rel/1.9.14'
 - model: contributions.tag
   pk: 17
   fields:
@@ -184,7 +194,8 @@
     main_directory: 'src/main'
     previous_tag: 15
     major: True
-    build_command: './build.bat'
+    build_command: 'build.bat'
+    prepare_build_command: 'ant clean'
     max_minor_version_description: '*rel/1.9.8,rel/1.10.1,*rel/1.9.9,rel/1.10.2,*rel/1.9.10,rel/1.10.3,*rel/1.9.11,
     rel/1.10.4,*rel/1.9.12,rel/1.10.5,*rel/1.9.13,rel/1.10.6,*rel/1.9.14,rel/1.10.7'
 - model: contributions.tag

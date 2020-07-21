@@ -17,11 +17,10 @@ from pydriller import GitRepository
 from common.utils import CommitUtils
 from dataanalysis.models import AnalysisPeriod
 
-
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
                "390398d38e4fd0d195c91a384f6198a1528bb317", "8ca32df08e5021d144ebfa8b85da7879143c01ae",
-               "e2da258a16359a7112669ef27c8510cde3d860c7"]
+               "e2da258a16359a7112669ef27c8510cde3d860c7", "c0c176e89263cfc34705b1c7423aa0528b421959"]
 ANT = 1
 LUCENE = 2
 MAVEN = 3
@@ -30,6 +29,7 @@ CASSANDRA = 5
 HADOOP = 6
 # filter_outliers = {"author__name": ["Peter Donald"], "hash": ["550a4ef1afd7651dc20110c0b079fb03665ca9da"]}
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
+
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -44,6 +44,7 @@ class Project(models.Model):
     project_name = models.CharField(max_length=200)
     project_path = models.CharField(max_length=200)
     main_branch = models.CharField(max_length=80, default='master')
+
     # filters = models.CharField(max_length=80, default='', blank=True)
 
     # @property
@@ -62,7 +63,7 @@ class Project(models.Model):
 class Tag(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
-    real_tag_description = models.CharField(max_length=100,default='')
+    real_tag_description = models.CharField(max_length=100, default='')
     # or stable
     major = models.BooleanField(default=True)
     max_minor_version_description = models.TextField(default='')
@@ -77,7 +78,8 @@ class Tag(models.Model):
 
     @property
     def minors(self):
-        return [x.strip() for x in self.max_minor_version_description.split(',')] if self.max_minor_version_description != '' else []
+        return [x.strip() for x in
+                self.max_minor_version_description.split(',')] if self.max_minor_version_description != '' else []
 
     @staticmethod
     def line_major_versions(project_id):
@@ -109,12 +111,6 @@ class Tag(models.Model):
         commands = self.prepare_build_command.split(',')
         return [c.strip() for c in commands]
 
-    # def save(self, *args, **kwargs):
-    #     if self.alias is None:
-    #         self.alias = self.description
-    #
-    #     super(Tag, self).save(*args, **kwargs)  # Call the "real" save() method.
-
 
 class Directory(models.Model):
     name = models.CharField(max_length=200)
@@ -126,8 +122,10 @@ class Directory(models.Model):
     def __str__(self):
         return self.name + " - Visible: " + str(self.visible)
 
-    def belongs_to_component(self,path):
-        return self.name == path or (self.name.startswith(path) and not Directory.objects.filter(name__exact=path, visible=True).exists())
+    def belongs_to_component(self, path):
+        return self.name == path or (self.name.startswith(path) and not Directory.objects.filter(name__exact=path,
+                                                                                                 visible=True).exists())
+
 
 class NoOutlierCommitManager(models.Manager):
     def get_queryset(self):
@@ -139,10 +137,10 @@ class NoOutlierCommitManager(models.Manager):
             author_db = Developer.objects.get(name=author)
             if author_db:
                 ids.append(author_db.id)
-        # for hash in HASH_FILTER:
-        #     hash_db = Commit.objects.get(hash=hash)
-        #     if hash_db:
-        #         commit_ids.append(hash_db.id)
+        for hash in HASH_FILTER:
+            hash_db = Commit.objects.get(hash=hash)
+            if hash_db:
+                commit_ids.append(hash_db.id)
         return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
         # LUCENE
         # for hash in HASH_FILTER:
@@ -189,7 +187,8 @@ class Commit(models.Model):
     no_outliers_objects = NoOutlierCommitManager()  # The specific manager.
 
     def __str__(self):
-        return str(self.pk) + " - hash: " + self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
+        return str(
+            self.pk) + " - hash: " + self.hash + " - Author: " + self.author.name + " - Tag: " + self.tag.description
 
     @property
     def has_impact_loc(self):
@@ -312,17 +311,17 @@ class Commit(models.Model):
                 if found:
                     self.has_submitted_by = True
 
-
             # previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
-            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id, tag__project=self.tag.project).last()
+            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                    tag__project=self.tag.project).last()
 
-            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id, tag__project=self.tag.project).first()
+            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id,
+                                                 tag__project=self.tag.project).first()
 
             self.total_commits = previous_commit.total_commits if previous_commit is not None else 0
 
             self.cloc_activity = 0
             if previous_commit is not None:
-                self.total_commits += 1
                 self.cloc_activity = previous_commit.cloc_activity
 
             if first_commit is not None:
@@ -333,17 +332,15 @@ class Commit(models.Model):
 
             file_by_authors = Modification.objects.none()
             if self.total_commits > 0:
-                file_by_authors = Modification.objects.filter(commit__author=self.author, commit__tag_id__lte=self.tag.id,
+                file_by_authors = Modification.objects.filter(commit__author=self.author,
+                                                              commit__tag_id__lte=self.tag.id,
                                                               commit__tag__project=self.tag.project,
                                                               commit_id__lte=previous_commit.id)
-
-
-            # cloc_activity = [c.u_cloc for c in file_by_authors]
-            # cloc = sum(cloc_activity)
 
             files = file_by_authors.values("path").distinct().count()
 
             self.author_experience = 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
+            self.total_commits += 1
 
             print('Cadastrando commit: ' + self.hash)
             print('Versao: ' + self.tag.__str__())
@@ -364,19 +361,22 @@ class Commit(models.Model):
     class Meta:
         ordering = ['tag_id', 'id']
 
+
 class ComponentCommit(models.Model):
     component = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='component_commits')
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='component_commits')
     author_experience = models.FloatField(null=True, default=0.0)
     cloc_accumulation = models.IntegerField(default=0)
     commits_accumulation = models.IntegerField(default=0)
+    commit_str = models.CharField(max_length=200, default="", blank=True, null=True)
 
     def __str__(self):
         return self.component.name + ', Commit id: ' + str(self.commit.id) + ', Autor: ' + self.commit.author.name
 
     def calculate_experience(self):
-        previous_component_commit = ComponentCommit.objects.filter(commit__author=self.commit.author, component=self.component,
-                                                                    commit__id__lt=self.commit.id,
+        previous_component_commit = ComponentCommit.objects.filter(commit__author=self.commit.author,
+                                                                   component=self.component,
+                                                                   commit__id__lt=self.commit.id,
                                                                    commit__tag__project=self.commit.tag.project).last()
         file_by_authors = Modification.objects.none()
 
@@ -435,10 +435,6 @@ class Modification(models.Model):
     nloc = models.IntegerField(default=0, null=True)
     complexity = models.IntegerField(null=True)
 
-    # token_count = models.CharField(max_length=200,null=True)
-
-    # def __eq__(self, other):
-    # 	return isinstance(other, self.__class__) and (self.commit.hash == other.commit.hash and self.file == other.file)
 
     def __str__(self):
         return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
@@ -545,7 +541,6 @@ class Modification(models.Model):
             self.commit.save()
 
             super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
-
 
 
 # TODO: Change to a heritage relation. Distinct Types: Project and Directory
@@ -1430,6 +1425,7 @@ def count_uncommented_lines(code):
     return 0 if uncommented_lines < 0 else uncommented_lines
     # return total_lines-count_blank_lines(code)
 
+
 def __detect_impact_loc__(code):
     total_lines = code.count('\n')
     commented_lines = 0
@@ -1440,39 +1436,41 @@ def __detect_impact_loc__(code):
         lines = code.split("\n")
         # In case we should consider commented lines
         for line in lines:
+            found = ''
+            found2 = ''
             m = re.search(r"\u002F/.*", line)
-            found = ''
-            if m:
-                found = m.group(0)
-                if found:
-                    line = re.sub(r'\u002F/.*', '', line)
+            n = re.search(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*', line)
+            if m or n:
+                if m:
+                    found = m.group(0)
+                    line = line.replace(found,'')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
-            elif not line.replace(" ", "").isdigit():
-                return True
-        uncommented_lines -= commented_lines
-
-        for line in lines:
-            m = re.search(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*', line)
-            found = ''
-            if m:
-                found = m.group(0)
-                if found:
-                    line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*', '', line)
+                        continue
+                    else:
+                        return True
+                elif n:
+                    found = n.group(0)
+                    # line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*', '',
+                    #               found)
+                    line = line.replace(found,'')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
-            elif not line.replace(" ", "").isdigit():
+                        continue
+                    else:
+                        return True
+            elif not line.replace(" ", "").isdigit() and (line != '' and line != '\n'):
                 return True
 
     return False
 
 
-
 def count_loc(code):
     total_lines = code.count('\n')
-    return total_lines-count_blank_lines(code)
+    return total_lines - count_blank_lines(code)
+
 
 # FIXME: Test technical debt
 def count_blank_lines(code):
@@ -1484,3 +1482,13 @@ def count_blank_lines(code):
         elif line.replace(" ", "").isdigit():
             blank_lines += 1
     return blank_lines
+
+def prepare_diff_text(text, result, type_symbol):
+    for line in text:
+        result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
+    return result
+
+def has_impact_loc_calculation_static_method(diff):
+    added_text = prepare_diff_text(diff['added'], "", "")
+    deleted_text = prepare_diff_text(diff['deleted'], "", "")
+    return __detect_impact_loc__(added_text) or __detect_impact_loc__(deleted_text)

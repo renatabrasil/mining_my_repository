@@ -2,9 +2,8 @@
   pk: 2
   fields:
     project_name: Apache Lucene
-    project_path: https://github.com/apache/lucene-solr
+    project_path: https://github.com/apache/lucene-solr.git
     main_branch: 'master'
-    filters: 'hash'
 - model: contributions.tag
   pk: 19
   fields:

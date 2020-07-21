@@ -23,7 +23,7 @@ from contributions.models import (
     Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
     DirectoryReport, IndividualContribution, MetricsReport, Modification,
     Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
-    CASSANDRA)
+    CASSANDRA, has_impact_loc_calculation_static_method)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -53,8 +53,11 @@ def index(request):
         if tag.previous_tag is not None:
             commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
             filter.setdefault('from_tag', tag.previous_tag.description)
-            # if commit is not None:
-            #     hash = commit.hash
+            if commit is not None:
+                hash = commit.hash
+                filter.setdefault('from_commit', hash)
+                filter.pop('from_tag', None)
+
 
         #  git log --graph --oneline --decorate --tags *.java
         versions = __go_to_first_tag__(tag)[::-1]
@@ -78,42 +81,64 @@ def index(request):
         #     filter.setdefault('from_commit', hash)
         #     filter.pop('from_tag', None)
 
-        if tag.minors:
-            for minor in list([tag.real_tag_description]+tag.minors):
-                if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                    filter['from_tag'] = minor.replace('*','')
-                    continue
-                filter['to_tag'] = minor
-                # if hash is not None:
-                #     filter['from_commit'] = commit.hash
-                #     filter.pop('from_tag', None)
-                print(" \n************ VERSAO: "+filter['to_tag']+' ***************\n\n')
-                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    commit = __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
+        filter.pop('from_commit', None)
+        filter.pop('from_tag', None)
+        filter.pop('to_tag', None)
+        tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
+        for tag1 in tags:
+            # tag1 = Tag.objects.get(id=tag1)
+            if tag1.minors:
+                if tag1.previous_tag is not None:
+                    if 'from_commit' not in filter:
+                        if 'from_tag' in filter:
+                            filter['from_tag'] = tag1.previous_tag.description
+                        else:
+                            filter.setdefault('from_tag', tag1.previous_tag.description)
+                for minor in list([tag1.real_tag_description]+tag1.minors):
+                    # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                    if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                        filter['from_tag'] = minor.replace('*','')
+                        continue
+                    filter['to_tag'] = minor
+                    # if hash is not None:
+                    #     filter['from_commit'] = commit.hash
+                    #     filter.pop('from_tag', None)
+                    print(" \n************ VERSAO: "+filter['to_tag']+' ***************\n\n')
+                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                        commit = __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
 
-                # if 'from_tag' in filter.keys():
-                filter['from_tag'] = minor
-                filter.pop('from_commit', None)
+                    # if 'from_tag' in filter.keys():
+                    filter['from_tag'] = minor
+                    filter.pop('from_commit', None)
 
-        else:
-            for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-                __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
-        __update_commit__(Commit.objects.filter(tag=tag))
-        # else:
-        #     for tag in versions:
-        #         upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
-        #         filter['to_tag'] = upper_tag
-        #         if tag_aux.previous_tag:
-        #             filter.setdefault('from_tag', tag_aux.previous_tag.description)
-        #             filter.pop('from_commit', None)
-        #
-        #         for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-        #             __build_and_save_commit__(commit_repository, tag_aux)
-        #
-        #         if tag_aux.previous_tag:
-        #             tag_aux = tag_aux.previous_tag
-        #         else:
-        #             tag_is_not_first_tag = False
+            else:
+                if tag1.previous_tag is not None:
+                    if 'from_tag' in filter:
+                        filter['from_tag'] = tag1.previous_tag.description
+                    else:
+                        filter.setdefault('from_tag', tag1.previous_tag.description)
+                if 'to_tag' in filter:
+                    filter['to_tag'] = tag1.real_tag_description
+                else:
+                    filter.setdefault('to_tag', tag1.real_tag_description)
+                for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+                    __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+            __update_commit__(Commit.objects.filter(tag=tag1))
+            # else:
+            #     for tag in versions:
+            #         upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
+            #         filter['to_tag'] = upper_tag
+            #         if tag_aux.previous_tag:
+            #             filter.setdefault('from_tag', tag_aux.previous_tag.description)
+            #             filter.pop('from_commit', None)
+            #
+            #         for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
+            #             __build_and_save_commit__(commit_repository, tag_aux)
+            #
+            #         if tag_aux.previous_tag:
+            #             tag_aux = tag_aux.previous_tag
+            #         else:
+            #             tag_is_not_first_tag = False
 
     url_path = 'contributions/index.html'
     current_developer = None
@@ -397,6 +422,11 @@ def detail(request, commit_id):
         commit.u_cloc
         print(commit.u_cloc)
         print(commit.committer_date)
+        for mod in commit.modifications.all():
+            GR = GitRepository(commit.tag.project.project_path)
+
+            parsed_lines = GR.parse_diff(mod.diff)
+            has_impact_loc_calculation_static_method(parsed_lines)
 
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")

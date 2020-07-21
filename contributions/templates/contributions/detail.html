@@ -110,12 +110,17 @@
             <th style="text-align: right">Cloc (without commented and blank lines):</th>
             <td colspan="2">{{commit.u_cloc}} </td>
         </tr>
+        parents_str
         {% for parent_commit in commit.parents %}
         <tr>
-            <th style="text-align: right">Parent:</th>
+            <th style="text-align: right">Parent (database):</th>
             <td colspan="2"><a href="/contributions/{{ parent_commit.id }}/">{{parent_commit.hash}}</a></td>
         </tr>
         {% endfor %}
+        <tr>
+            <th style="text-align: right">Parent:</th>
+            <td colspan="2">{{commit.parents_str}}</td>
+        </tr>
         <tr>
             <th style="text-align: right">Hash</th>
             <td colspan="2">{{commit.hash}}</td>
