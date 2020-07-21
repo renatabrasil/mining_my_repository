@@ -1,4 +1,5 @@
 # standard library
+import logging
 import os
 import re
 import shutil
@@ -6,12 +7,10 @@ import subprocess
 import sys
 from builtins import object
 from collections import OrderedDict
-import logging
 
 # third-party
 import numpy as np
 import pandas as pd
-
 # Django
 from django.contrib import messages
 from django.core.files import File
@@ -19,18 +18,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template import loader
 from django.urls import reverse
-
 # local Django
 from django.utils import timezone
-from pydriller import GitRepository, RepositoryMining
 
 from architecture.forms import FilesCompiledForm
 from architecture.models import ArchitecturalMetricsByCommit, FileCommits
 from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
-                                  IndividualContribution, Project,
-                                  ProjectIndividualContribution, Tag, ComponentCommit, Modification,
-                                  has_impact_loc_calculation_static_method)
+                                  Project,
+                                  Tag, ComponentCommit)
 from dataanalysis.models import AnalysisPeriod
 
 SCALE = 6
@@ -545,13 +541,6 @@ def calculate_metrics(request, file_id):
     metrics = __read_PM_file__(directory_name, file.tag.id)
     file.metrics_calculated_at = timezone.localtime(timezone.now())
     file.save()
-    directories = metrics.keys()
-    for directory in directories:
-        contributions = __pre_correlation__(metrics, directory)
-        if contributions:
-            my_df = pd.DataFrame(contributions)
-            my_df.columns = ["Developer", "Specific XP", "Global XP", "Degrad Delta"]
-            my_df.to_csv(metrics_directory + '/' + directory.replace('/', '_') + '.csv', index=False, header=True)
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 
@@ -946,53 +935,6 @@ def __create_files__(form, project_id):
     return files
 
 
-def __pre_correlation__(metrics, component):
-    correlation = []
-    # developers = list(metrics[component].keys()).values_list("committer__name", flat=True).distinct()
-    developers = set([d.committer for d in list(metrics[component].keys())])
-    tag = list(metrics[component].keys())[0].tag
-    for developer in developers:
-        # individual_metrics = __get_quality_contribution_by_developer__(metrics, component, developer, tag)
-        individual_metrics = __get_quality_contribution_by_developer__(component, developer, tag)
-        if individual_metrics is not None:
-            correlation.append(individual_metrics)
-    print(correlation)
-    return correlation
-
-
-def __get_quality_contribution_by_developer__(component, developer, tag):
-    # Developer experience in this component
-    full_component = 'src/main/' + component.replace(".", "/")
-    directory = Directory.objects.filter(name__exact=full_component)
-    if directory.count() == 0:
-        return None
-    directory = directory[0]
-    contributor = IndividualContribution.objects.filter(author_id=developer.id, directory_report__directory=directory,
-                                                        directory_report__tag_id=tag.id)
-    global_contributor = ProjectIndividualContribution.objects.filter(author_id=developer.id,
-                                                                      project_report__tag_id=tag.id)
-
-    contributions = []
-    if contributor.count() > 0 and global_contributor.count() > 0:
-        contributor = contributor[0]
-        global_contributor = global_contributor[0]
-    else:
-        return None
-
-    metrics_by_developer = ArchitecturalMetricsByCommit.objects.filter(commit__author=global_contributor.author,
-                                                                       commit__tag=tag, directory=directory)
-    if metrics_by_developer.count() == 0:
-        return None
-
-    metrics_by_developer = metrics_by_developer[0]
-    # Global XP, Specific XP, XP, Degradation, Loc, Degradation/Loc
-    # xp = (8*global_contributor.experience_bf + 2*contributor.experience_bf)/10
-    xp = global_contributor.experience_bf
-
-    return [contributor.author.name, contributor.experience_bf, xp,
-            metrics_by_developer.delta_rmd]
-
-
 def list_commits(project, form):
     # Restricting to commits which has children
     # first_commit = Commit.objects.filter(children_commit__gt=0).first()
@@ -1109,31 +1051,6 @@ def __has_jar_file__(directory):
     return exists
 
 
-class ProcessException(object):
-    pass
-
-
-# Unused
-def execute(command):
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    # Poll process for new output until finished
-    while True:
-        nextline = process.stdout.readline()
-        if nextline == '' and process.poll() is not None:
-            break
-        sys.stdout.write(nextline)
-        sys.stdout.flush()
-
-    output = process.communicate()[0]
-    exitCode = process.returncode
-
-    if (exitCode == 0):
-        return output
-    else:
-        raise ProcessException(command, exitCode, output)
-
-
 def __belongs_to_component__(component, directories):
     '''
     Checks whether if a commit belongs to analized commit (in case that project has separate compilated modules, e.g. Hadoop)
@@ -1145,16 +1062,3 @@ def __belongs_to_component__(component, directories):
         if dir.name.startswith(component):
             return True
     return False
-
-# FIXME:
-# def is_impactful_commit(hash, project_id):
-#     try:
-#         project_name = Project.objects.get(id=project_id).project_path
-#         # gr = GitRepository('C:/Users/brasi/Documents/lucene-solr/lucene')
-#         for commit in RepositoryMining(project_name, only_commits=[hash]).traverse_commits():
-#             for mod in commit.modifications:
-#                 return has_impact_loc_calculation_static_method(mod.diff_parsed)
-#             return False
-#     except Exception as e:
-#         print(e)
-#         logger.error("Error in detect impactful commit: " + e)
