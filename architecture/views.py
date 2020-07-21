@@ -108,8 +108,6 @@ def compiled(request, file_id):
                 local_repository = commit
             elif i == 1:
                 build_path = commit
-            # elif i == 2:
-            #     core_component = commit
             else:
                 try:
                     jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
@@ -130,10 +128,6 @@ def compiled(request, file_id):
                             object_commit = None
 
                         if object_commit is not None:
-                            directories_in_commit = [x.directory for x in object_commit.modifications.all()]
-                            # if not __belongs_to_component__(core_component,directories_in_commit):
-                            #     continue
-
                             if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
                                     object_commit.parents[0].compilable) and not (
                                     object_commit.children_commit is not None) and not object_commit.parents_str:
@@ -420,43 +414,31 @@ def impactful_commits(request):
             if analysis_check == 'geral':
                 name += 't'
 
-            delta_threshold = 0
-            # If delta threshold is used should be uncommented
-            # deltas = [abs(x.normalized_delta) for x in commits]
-            # delta_threshold = np.percentile(deltas, 50)
-            # delta_threshold = 21.62/(10 ** 7)
+            metrics_dict = [
+                [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
+                 x.u_cloc] for x in commits]
 
-            if delta_threshold != 0:
-                metrics_dict = [
-                    [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
-                     x.u_cloc]
-                    for x in commits if abs(x.normalized_delta) < delta_threshold]
-            else:
-                metrics_dict = [
-                    [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
-                     x.u_cloc] for x in commits]
+            components_metrics = []
+            metrics_count = 0
+            for commit in commits:
+                for component in commit.component_commits.all():
+                    component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(
+                        delta_rmd=0).filter(commit=commit,
+                                            directory=component.component)
+                    if component_degradation.exists():
+                        component_degradation = component_degradation[0]
+                        if component_degradation.delta_rmd != 0:
+                            components_metrics.append([component.id, component.author_experience,
+                                                       component_degradation.delta_rmd / commit.u_cloc * ROUDING_SCALE,
+                                                       commit.u_cloc])
+                    else:
+                        metrics_count += 1
+                        print('Component not found when component metrics were calculated. Count: ' + str(
+                            metrics_count))
 
-                components_metrics = []
-                metrics_count = 0
-                for commit in commits:
-                    for component in commit.component_commits.all():
-                        component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(
-                            delta_rmd=0).filter(commit=commit,
-                                                directory=component.component)
-                        if component_degradation.exists():
-                            component_degradation = component_degradation[0]
-                            if component_degradation.delta_rmd != 0:
-                                components_metrics.append([component.id, component.author_experience,
-                                                           component_degradation.delta_rmd / commit.u_cloc * ROUDING_SCALE,
-                                                           commit.u_cloc])
-                        else:
-                            metrics_count += 1
-                            print('Component not found when component metrics were calculated. Count: ' + str(
-                                metrics_count))
-
-                my_df = pd.DataFrame(components_metrics,
-                                     columns=['time', 'experiencia', 'degradacao', 'LOC'])
-                my_df.to_csv('component_metrics_' + name + '.csv', index=False, header=True)
+            my_df = pd.DataFrame(components_metrics,
+                                 columns=['time', 'experiencia', 'degradacao', 'LOC'])
+            my_df.to_csv('component_metrics_' + name + '.csv', index=False, header=True)
 
         if len(metrics_dict) > 0:
             if directory_filter > 0:
@@ -466,9 +448,6 @@ def impactful_commits(request):
                 my_df = pd.DataFrame(metrics_dict,
                                      columns=['commit', 'experiencia', 'degradacao', 'q_commit', 'senioridade', 'LOC'])
 
-            # name += '-maiores'
-            if delta_threshold != 0:
-                name += '-maioria'
             name += '.csv'
 
             my_df.to_csv(name, index=False, header=True)
@@ -700,14 +679,12 @@ def __read_PM_file__(folder, tag_id):
                                                 delta_rmd_components=0.0, normalized_delta=0.0)
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
-    analysis_period = None
     components_evolution = []
     n_commits = 0
 
     # To sort in natural order
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
-    last_architectural_metric = None
     is_commit_db = False
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
@@ -716,6 +693,7 @@ def __read_PM_file__(folder, tag_id):
         print("\n" + os.path.join(folder, subdirectory) + "\n----------------------\n")
         for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
             try:
+                rmd = 0.0
                 f = open(os.path.join(subdirectory, filename), "r")
                 content = f.readlines()
                 hash = f.name.split('\\')[1].split('-')[2]
@@ -727,14 +705,7 @@ def __read_PM_file__(folder, tag_id):
                 # else:
                 #     continue
                 commit_rmds = []
-                previous_commit_str = None
                 new_metric = True
-                if is_commit_db and commit.parents and commit.parents[0] is not None:
-                    previous_commit = commit.parents[0]
-                elif not is_commit_db:
-                    previous_commit_str = commit.parents_str
-                else:
-                    previous_commit = None
 
                 for line in content[1:]:
                     row = line.split(',')
@@ -765,74 +736,11 @@ def __read_PM_file__(folder, tag_id):
                     components.append(directory)
 
                     print(line.replace("\n", ""))
-
-                    architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                        directory__name__exact=directory_str)
-                    if is_commit_db:
-                        architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                            directory__name__exact=directory_str, commit=commit)
-                    else:
-                        architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                            directory__name__exact=directory_str, commit_str=hash)
-                    if architecture_metrics.count() == 0:
-                        # TODO: use delta
-                        architecture_metrics = ArchitecturalMetricsByCommit(directory=directory,
-                                                                            rmd=float(row[5]), rma=float(row[4]),
-                                                                            rmi=float(row[3]), ca=float(row[1]),
-                                                                            ce=float(row[2]))
-                        if is_commit_db:
-                            architecture_metrics.commit = commit
-                            architecture_metrics.component_commit = component_commit
-                        else:
-                            architecture_metrics.commit_str = hash
-                    else:
-                        architecture_metrics = architecture_metrics[0]
-                        # new_metric = False
-                    # Has ancestor and it is compilable
-                    if previous_commit:
-                        previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                            directory_id=directory.id, commit_id=previous_commit.id)
-                        if previous_architecture_metrics.count() > 0:
-                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[
-                                0]
-                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
-                    elif previous_commit_str:
-                        previous_architecture_metrics = ArchitecturalMetricsByCommit.objects.filter(
-                            directory_id=directory.id, commit_str=previous_commit_str)
-                        if previous_architecture_metrics.count() > 0:
-                            architecture_metrics.previous_architecture_quality_metrics = previous_architecture_metrics[
-                                0]
-                            architecture_metrics.delta_rmd = architecture_metrics.rmd - architecture_metrics.previous_architecture_quality_metrics.rmd
-                            # FIXME: Remove
-                            # if architecture_metrics.delta_rmd != 0 and round(architecture_metrics.delta_rmd,
-                            #                                                  SCALE) == 0.0:
-                            #     architecture_metrics.delta_rmd = 0.0
-                    # Ancestor is not compilable
-                    elif previous_commit and not previous_commit.compilable:
-                        architecture_metrics.delta_rmd = 0.0
-                    # It is an orphan commit
-                    else:
-                        # It is the initial commit in this component
-                        if directory.initial_commit == commit:
-                            architecture_metrics.delta_rmd = architecture_metrics.rmd
-                        else:
-                            architecture_metrics.delta_rmd = 0.0
-
-                    if new_metric:
-                        # Delta normalization by LOC changed
-                        if commit.u_cloc > 0:
-                            architecture_metrics.delta_rmd /= commit.u_cloc
-                        else:
-                            architecture_metrics.delta_rmd = 0
-                            logger.error("arquivo commitado sem linha de impacto (LOC=0) com delta diferentee de zero")
-                        # FIXME: Remove
-                        # architecture_metrics.delta_rmd = 0 if round(architecture_metrics.delta_rmd,
-                        #                                             SCALE) == 0.0 else architecture_metrics.delta_rmd
-                        architecture_metrics.save()
-                        directory.save()
+                    rmd = float(row[5])
 
                     commit_rmds.append(
-                        [architecture_metrics.rmd, True if directory.initial_commit == commit else False])
+                        [rmd, True if directory.initial_commit == commit else False])
+
             finally:
                 f.close()
 
@@ -845,8 +753,9 @@ def __read_PM_file__(folder, tag_id):
                         commit.delta_rmd_components = commit.mean_rmd_components
 
                     # Delta calculation
-                    if previous_commit is not None and previous_commit.compilable and previous_commit.tag == commit.tag:
-                        commit.delta_rmd_components -= previous_commit.mean_rmd_components
+                    commit.previous_impactful_commit = retrieve_previous_commit(commit)
+                    if commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag:
+                        commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
                         # FIXME: Remove
                         # if round(commit.delta_rmd_components, SCALE) == 0.0:
                         #     commit.delta_rmd_components = 0
@@ -870,21 +779,6 @@ def __read_PM_file__(folder, tag_id):
                     n_commits += 1
                     if len(diff_components) > 0:
                         components_evolution.append([n_commits, len(diff_components)])
-
-                        if commit.pk != first_commit_id:
-                            # n_commits = 0
-                            commit.changed_architecture = True
-                            if analysis_period is None:
-                                analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
-                            if last_architectural_metric is not None:
-                                analysis_period.end_commit = last_architectural_metric.commit
-                            else:
-                                analysis_period.end_commit = commit
-                            analysis_period.save()
-                            start_commit_analysis_period = commit
-                        analysis_period = AnalysisPeriod(start_commit=start_commit_analysis_period)
-                        analysis_period.save()
-                        commit.analysis_period = analysis_period
                         for a_component in diff_components:
                             if a_component.visible:
                                 a_component.visible = False
@@ -895,7 +789,6 @@ def __read_PM_file__(folder, tag_id):
                         components_evolution.append([n_commits, len(diff_components)])
                     commit.compilable = True
                     commit.save()
-                    last_architectural_metric = architecture_metrics
 
     # my_df = pd.DataFrame(components_evolution, columns=['commits', 'diff_components'])
     # my_df.to_csv('diff_components_' + str(tag_id)+ '.csv', index=False, header=True)
@@ -912,6 +805,11 @@ def __create_files__(form, project_id):
 
 
 def list_commits(project, form):
+    '''
+    Generate list of commits that will be compiled
+    :param project: current project selected
+    :param form: data from form
+    '''
     # Restricting to commits which has children
     # first_commit = Commit.objects.filter(children_commit__gt=0).first()
     FileCommits.objects.filter(tag__project=project).delete()
@@ -959,9 +857,9 @@ def list_commits(project, form):
                 my_file.write(form['build_path'].value() + "\n")
             if not commit.has_impact_loc and not commit.children_commit:
                 continue
-            if len(commit.parents) == 0 and commit.parents_str:
-                my_file.write(str(i) + "-" + commit.parents_str + "\n")
-                i += 1
+            # if len(commit.parents) == 0 and commit.parents_str:
+            #     my_file.write(str(i) + "-" + commit.parents_str + "\n")
+            #     i += 1
             my_file.write(str(i) + "-" + commit.hash + "\n")
             i += 1
         my_file.closed
@@ -1038,3 +936,13 @@ def __belongs_to_component__(component, directories):
         if dir.name.startswith(component):
             return True
     return False
+
+
+def retrieve_previous_commit(commit):
+    if commit:
+        if len(commit.parents) > 0:
+            return commit.parents[0]
+        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id).exists():
+            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id).last()
+
+    return None

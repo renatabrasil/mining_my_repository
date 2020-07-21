@@ -152,6 +152,9 @@ class Commit(models.Model):
     real_tag_description = models.CharField(max_length=300, default="", blank=True, null=True)
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='parent_rel', null=True,
                                         default=None)
+    previous_impactful_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL,
+                                                  related_name='previous_impactful_commit_rel', null=True,
+                                                  default=None, blank=True)
     hash = models.CharField(max_length=180, default="")
     msg = models.CharField(max_length=300, default="")
     parents_str = models.CharField(max_length=180)
@@ -167,7 +170,6 @@ class Commit(models.Model):
 
     # key: tag_id, value: sum of u_cloc of all commits by this author in this tag
     changed_architecture = models.BooleanField(default=False)
-    analysis_period = models.ForeignKey(AnalysisPeriod, on_delete=models.DO_NOTHING, null=True)
     cloc_activity = models.IntegerField(default=0)
     compilable = models.BooleanField(default=False)
     _parents = []
@@ -432,7 +434,6 @@ class Modification(models.Model):
     nloc = models.IntegerField(default=0, null=True)
     complexity = models.IntegerField(null=True)
 
-
     def __str__(self):
         return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
 
@@ -565,11 +566,13 @@ def __detect_impact_loc__(code):
             found = ''
             found2 = ''
             m = re.search(r"\u002F/.*", line)
-            n = re.search(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*', line)
+            n = re.search(
+                r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*',
+                line)
             if m or n:
                 if m:
                     found = m.group(0)
-                    line = line.replace(found,'')
+                    line = line.replace(found, '')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
@@ -580,7 +583,7 @@ def __detect_impact_loc__(code):
                     found = n.group(0)
                     # line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*', '',
                     #               found)
-                    line = line.replace(found,'')
+                    line = line.replace(found, '')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
@@ -609,10 +612,12 @@ def count_blank_lines(code):
             blank_lines += 1
     return blank_lines
 
+
 def prepare_diff_text(text, result, type_symbol):
     for line in text:
         result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
     return result
+
 
 def has_impact_loc_calculation_static_method(diff):
     added_text = prepare_diff_text(diff['added'], "", "")
