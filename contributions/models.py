@@ -452,8 +452,7 @@ class Modification(models.Model):
         diff_text = self.__diff_text__()
         added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
         deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
-        # added_uncommented_lines = count_uncommented_lines(added_text)
-        # deleted_uncommented_lines = count_uncommented_lines(deleted_text)
+
         added_uncommented_lines = count_loc(added_text)
         deleted_uncommented_lines = count_loc(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
@@ -463,8 +462,7 @@ class Modification(models.Model):
         diff_text = self.__diff_text__()
         added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
         deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
-        # added_uncommented_lines = count_uncommented_lines(added_text)
-        # deleted_uncommented_lines = count_uncommented_lines(deleted_text)
+
         added_uncommented_lines = __detect_impact_loc__(added_text)
         deleted_uncommented_lines = __detect_impact_loc__(deleted_text)
         return added_uncommented_lines or deleted_uncommented_lines
@@ -552,43 +550,6 @@ def update_commit(sender, instance, **kwargs):
             parent.children_commit = instance
             instance.parent = parent
             parent.save(update_fields=['children_commit'])
-
-
-# FIXME: Test technical debt
-def count_uncommented_lines(code):
-    total_lines = code.count('\n')
-    commented_lines = 0
-    blank_lines = 0
-    uncommented_lines = 0
-    if total_lines > 0:
-        # FIXME: Put this part on loop below
-        lines = code.split("\n")
-        # In case we should consider commented lines
-        # for line in lines:
-        #     m = re.search(r"\u002F/.*", line)
-        #     found = ''
-        #     if m:
-        #         found = m.group(0)
-        #         if found:
-        #             line = re.sub(r'\u002F/.*', '', line)
-        #             line.replace(' ', '', 1)
-        #             if line.strip().isdigit():
-        #                 commented_lines += 1
-        # uncommented_lines -= commented_lines
-        #
-        # comments = []
-        #
-        # comments = [x.group() for x in
-        #             re.finditer(r"(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}\*[^;][^\r\n]*", code)]
-        # part_without_comment = code
-        # for comment in comments:
-        #     part_without_comment = part_without_comment.replace(comment, '', 1)
-
-        # blank_lines += count_blank_lines(part_without_comment)
-        # uncommented_lines += part_without_comment.count('\n')
-        # uncommented_lines -= blank_lines
-    return 0 if uncommented_lines < 0 else uncommented_lines
-    # return total_lines-count_blank_lines(code)
 
 
 def __detect_impact_loc__(code):

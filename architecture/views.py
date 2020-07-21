@@ -680,30 +680,6 @@ def quality_between_versions(request):
     return HttpResponse(template.render(context, request))
 
 
-# values: [degradation, impactful commits, loc, degrad/loc]
-def metrics_by_developer_csv(request, file_id):
-    file = FileCommits.objects.get(pk=file_id)
-    developers_metrics = ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=file.tag.id)
-    metrics = {}
-    for info_developer in developers_metrics:
-        if info_developer.project_individual_contribution.author not in metrics:
-            metrics.setdefault(info_developer.project_individual_contribution.author,
-                               [info_developer.project_individual_contribution.experience_bf, 0.0, 0, 0])
-        metrics[info_developer.project_individual_contribution.author][1] += info_developer.delta_rmd
-        metrics[info_developer.project_individual_contribution.author][
-            2] += info_developer.architecturally_impactful_commits
-        metrics[info_developer.project_individual_contribution.author][3] += info_developer.architectural_impactful_loc
-        # metrics[info_developer.developer][2] += info_developer.ratio_degrad_loc
-
-    my_df = pd.DataFrame.from_dict(metrics, orient='index',
-                                   columns=['Global XP (BF)', 'Degrad', 'Impactful Commit', 'Loc'])
-    print(my_df)
-    my_df.to_csv(file.directory + '/' + file.name.replace(file.directory, "").replace(".txt", "") + '.csv', index=True,
-                 header=True)
-
-    return HttpResponseRedirect(reverse('architecture:index', ))
-
-
 ################ Auxiliary methods ###################
 
 # return a dictionary
