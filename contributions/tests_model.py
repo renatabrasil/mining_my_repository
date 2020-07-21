@@ -2,18 +2,15 @@
 import datetime
 import math
 
-# third-party
-from model_mommy import mommy
-
 # Django
 from django.test import TestCase
+# third-party
+from model_mommy import mommy
 
 # local Django
 from contributions.models import (
     Commit, Developer, Directory, DirectoryReport, IndividualContribution,
     Modification, Project, ProjectIndividualContribution, ProjectReport, Tag)
-
-
 
 
 class DeveloperModelTests(TestCase):

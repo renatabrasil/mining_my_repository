@@ -2,10 +2,10 @@
 import itertools
 import math
 import unicodedata
-import unidecode
 
 # local Django
 from contributions import models
+
 
 class CommitUtils(object):
 

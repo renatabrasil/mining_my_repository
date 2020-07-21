@@ -2,7 +2,7 @@
 from django.db import models
 
 # local Django
-from contributions.models import Commit, Directory, Tag, Modification, NoOutlierCommitManager, AUTHOR_FILTER, Developer, \
+from contributions.models import Commit, Directory, Tag, AUTHOR_FILTER, Developer, \
     ComponentCommit
 
 

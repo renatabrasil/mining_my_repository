@@ -22,7 +22,7 @@
 
                         <form method="PUT" action="/contributions/{{directory.id}}/change" id="update-directory" novalidate>
                             {% csrf_token %}
-                            <a href="{{request.path}}data_by_directory/{{directory.id}}"><i class="fas fa-arrow-alt-circle-down"></i></a>
+<!--                            <a href="{{request.path}}data_by_directory/{{directory.id}}"><i class="fas fa-arrow-alt-circle-down"></i></a>-->
                             <button type="submit" class="btn btn-link" ><i class="fas fa-eye-slash" alt="Hide"></i></button>
                         </form>
                     </td>

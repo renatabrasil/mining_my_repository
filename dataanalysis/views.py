@@ -1,21 +1,17 @@
 import math
-from collections import OrderedDict
-from itertools import groupby
 
 # third-party
 import numpy as np
 import pandas as pd
 from django.contrib import messages
-
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
 from django.template import loader
 from django.urls import reverse
 from scipy.stats import spearmanr
 
 from architecture.models import ArchitecturalMetricsByCommit
-from architecture.views import ROUDING_SCALE, NO_OUTLIERS
-from contributions.models import Commit, Tag
+from architecture.views import ROUDING_SCALE
+from contributions.models import Tag
 
 # OPERATIONS
 POPULATION_MEANS = 1
