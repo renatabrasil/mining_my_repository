@@ -9,7 +9,6 @@ from django.template import loader
 from django.urls import reverse
 from scipy.stats import spearmanr
 
-from architecture.models import ArchitecturalMetricsByCommit
 from architecture.views import ROUDING_SCALE
 from contributions.models import Tag
 
@@ -476,15 +475,10 @@ def __process_metrics__(type,commit_db,request):
                 if key not in metric_by_dev_by_comp:
                     metric_by_dev_by_comp.setdefault(key,[])
 
-                for component in commit.component_commits.all():
-                    component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(
-                        delta_rmd=0).filter(commit=commit,
-                                            directory=component.component)
-                    if component_degradation.exists():
-                        component_degradation = component_degradation[0]
-                        if component_degradation.delta_rmd != 0:
-                            metric_by_dev_by_comp[key].append([component.author_experience,
-                                                       component_degradation.delta_rmd / commit.u_cloc])
+                for component_degradation in commit.component_commits.all():
+                    if component_degradation.delta_rmd != 0:
+                        metric_by_dev_by_comp[key].append([component_degradation.author_experience,
+                                                   component_degradation.delta_rmd / commit.u_cloc])
 
                 metric_by_dev[key].append([commit.author_experience, commit.normalized_delta])
             elif type == DELTAS_TREND:

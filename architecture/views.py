@@ -4,8 +4,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
-from builtins import object
 from collections import OrderedDict
 
 # third-party
@@ -22,12 +20,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from architecture.forms import FilesCompiledForm
-from architecture.models import ArchitecturalMetricsByCommit, FileCommits
+from architecture.models import FileCommits
 from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   Project,
                                   Tag, ComponentCommit)
-from dataanalysis.models import AnalysisPeriod
 
 SCALE = 6
 ROUDING_SCALE = 10 ** SCALE
@@ -99,7 +96,6 @@ def compiled(request, file_id):
 
         i = 0
         commit_with_errors = []
-        residual_commits = {}
 
         error = False
         for commit in myfile:
@@ -124,24 +120,18 @@ def compiled(request, file_id):
                         if object_commit.exists():
                             object_commit = object_commit[0]
                         else:
-                            print("-- Commit sem java file --\n")
-                            object_commit = None
+                            continue
 
-                        if object_commit is not None:
-                            if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
-                                    object_commit.parents[0].compilable) and not (
-                                    object_commit.children_commit is not None) and not object_commit.parents_str:
-                                object_commit.compilable = True
-                                object_commit.save()
-                                continue
-                            elif not (len(object_commit.parents) > 0 and object_commit.parents[
-                                0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
-                                continue
-                        # elif not is_impactful_commit(hash_commit, request.session['project']):
-                        #     print("é impactante ! oi\n")
-                        # Use when running for parent commits that are not in databse
-                        # else:
-                        #     continue
+                        if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
+                                object_commit.parents[0].compilable) and not (
+                                object_commit.children_commit is not None) and not object_commit.parents_str:
+                            object_commit.compilable = True
+                            object_commit.save()
+                            continue
+                        elif not (len(object_commit.parents) > 0 and object_commit.parents[
+                            0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
+                            continue
+
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
                         checkout.wait()
 
@@ -210,21 +200,14 @@ def compiled(request, file_id):
                             os.chdir(local_repository)
                         else:
                             error = False
-                            if object_commit is not None and not (
-                                    len(object_commit.parents) > 0 and object_commit.parents[
-                                0] is not None) and object_commit.parents_str:
-                                residual_commits.setdefault(str(i - 1) + '-' + object_commit.parents_str,
-                                                            commit)
 
                             if not __generate_csv__(jar_folder):
                                 __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory,
                                                                current_project_path, jar)
-                                if object_commit is not None:
-                                    object_commit.compilable = False
+                                object_commit.compilable = False
                             else:
-                                if object_commit is not None:
-                                    object_commit.compilable = True
-                        if object_commit is not None:
+                                object_commit.compilable = True
+
                             object_commit.save()
 
                         build_path_repository = local_repository + '/' + build_path
@@ -239,23 +222,6 @@ def compiled(request, file_id):
                     print(er)
                     messages.error(request, 'Erro: ' + er)
                 finally:
-                    if len(residual_commits) > 0:
-                        try:
-                            f = open(compiled_directory.replace("jars", "") + "residual_commits.txt", 'w+')
-                            myfile = File(f)
-                            first = True
-                            myfile.write(local_repository + "\n")
-                            myfile.write(build_path + "\n")
-                            for commit in residual_commits.keys():
-                                if first:
-                                    myfile.write(commit)
-                                    first = False
-                                else:
-                                    myfile.write("\n" + commit)
-                        except OSError as e:
-                            print("Error: %s - %s." % (e.filename, e.strerror))
-                        finally:
-                            f.close()
                     os.chdir(local_repository)
             i += 1
     except Exception as e:
@@ -362,9 +328,9 @@ def impactful_commits(request):
 
         if directory_filter > 0:
             if 'delta_rmd__lt' in query or 'delta_rmd__gt' in query:
-                commits = ArchitecturalMetricsByCommit.objects.filter(**query)
+                commits = ComponentCommit.objects.filter(**query)
             else:
-                commits = ArchitecturalMetricsByCommit.objects.exclude(delta_rmd=0).filter(**query)
+                commits = ComponentCommit.objects.exclude(delta_rmd=0).filter(**query)
 
             commits = sorted(commits, key=lambda x: x.commit.author_experience, reverse=False)
         else:
@@ -424,7 +390,7 @@ def impactful_commits(request):
                 for component_degradation in commit.component_commits.all():
                     if component_degradation.delta_rmd != 0:
                         components_metrics.append([component_degradation.id, component_degradation.author_experience,
-                                                   component_degradation.delta_rmd  * ROUDING_SCALE,
+                                                   component_degradation.delta_rmd * ROUDING_SCALE,
                                                    commit.u_cloc])
                     else:
                         metrics_count += 1
@@ -504,6 +470,7 @@ def update_compilable_commits(commits_with_errors):
 
 
 def calculate_metrics(request, file_id):
+    '''Process metrics calculation request from view'''
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
     metrics_directory = directory_name + "/metrics"
@@ -542,12 +509,12 @@ def metrics_by_commits(request):
         directories_filter = int(request.POST.get('directory_id'))
         if request.POST.get('developer_id'):
             developer_id = int(request.POST.get('developer_id'))
-            architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(directory_id=directories_filter,
-                                                                                     commit__author_id=developer_id,
-                                                                                     commit__tag_id=tag)
+            architectural_metrics_list = ComponentCommit.objects.filter(component_id=directories_filter,
+                                                                        commit__author_id=developer_id,
+                                                                        commit__tag_id=tag)
         else:
-            architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(
-                directory_id=int(directories_filter), commit__tag_id=tag)
+            architectural_metrics_list = ComponentCommit.objects.filter(
+                component_id=int(directories_filter), commit__tag_id=tag)
 
     results = OrderedDict()
     for metric in architectural_metrics_list:
@@ -573,8 +540,8 @@ def metrics_by_developer(request):
     if request.POST.get('developer_id'):
         developer_id = int(request.POST.get('developer_id'))
         developer = Developer.objects.get(pk=developer_id)
-        architectural_metrics_list = ArchitecturalMetricsByCommit.objects.filter(commit__author_id=developer_id,
-                                                                                 commit__tag_id=tag.id)
+        architectural_metrics_list = ComponentCommit.objects.filter(commit__author_id=developer_id,
+                                                                    commit__tag_id=tag.id)
     context = {
         'tag': tag,
         'results': architectural_metrics_list,
@@ -658,10 +625,10 @@ def quality_between_versions(request):
 
 
 def __read_PM_file__(folder, tag_id):
+    '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}
     tag = Tag.objects.get(id=tag_id)
     start_commit_analysis_period = Commit.objects.all().first()
-    first_commit_id = start_commit_analysis_period.pk
 
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
                                                 delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
@@ -705,7 +672,7 @@ def __read_PM_file__(folder, tag_id):
                         continue
                     directory = directory[0]
 
-                    # Hypothesis 2
+                    # Hypothesis 2: processing
                     component_commit = h2_calculate_component_degradation(commit, directory, rmd)
 
                     # Change architecture
@@ -719,9 +686,11 @@ def __read_PM_file__(folder, tag_id):
 
             finally:
                 f.close()
-                # Hypothesis 1
+                # Hypothesis 1: processing
                 commit = h1_calculate_commit_degradation(commit, commit_rmds)
 
+                # TODO: delete
+                # To save changes in directories
                 removed_components = [x for x in list(components_db) if x not in components]
                 add_components = [x for x in components if x not in list(components_db)]
                 diff_components = removed_components + add_components
@@ -736,9 +705,6 @@ def __read_PM_file__(folder, tag_id):
                         a_component.save()
                 else:
                     components_evolution.append([n_commits, len(diff_components)])
-
-    # my_df = pd.DataFrame(components_evolution, columns=['commits', 'diff_components'])
-    # my_df.to_csv('diff_components_' + str(tag_id)+ '.csv', index=False, header=True)
 
     print(components_evolution)
 
@@ -893,7 +859,7 @@ def h2_calculate_component_degradation(commit, directory, rmd):
         component_commit = component_commit[0]
         component_commit.rmd = rmd
         previous_component = retrieve_previous_component_commit(commit, directory)
-        component_commit.delta_rmd = rmd-previous_component.rmd if previous_component else rmd
+        component_commit.delta_rmd = rmd - previous_component.rmd if previous_component else rmd
         if component_commit.delta_rmd != 0:
             uloc = commit.non_blank_cloc(component_commit.component)
             if uloc > 0:
