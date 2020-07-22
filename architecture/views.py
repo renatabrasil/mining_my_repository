@@ -388,7 +388,7 @@ def impactful_commits(request):
                  x.commit.author_seniority, x.commit.u_cloc] for x in commits]
 
             del query['directory_id']
-            components = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
+            components = ComponentCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
                 'id')
             components_metrics = [
                 [x.id, x.author_experience, x.delta_rmd / x.commit.u_cloc * ROUDING_SCALE, x.commit.u_cloc] for x in
@@ -421,19 +421,14 @@ def impactful_commits(request):
             components_metrics = []
             metrics_count = 0
             for commit in commits:
-                for component in commit.component_commits.all():
-                    component_degradation = ArchitecturalMetricsByCommit.no_outliers_objects.exclude(
-                        delta_rmd=0).filter(commit=commit,
-                                            directory=component.component)
-                    if component_degradation.exists():
-                        component_degradation = component_degradation[0]
-                        if component_degradation.delta_rmd != 0:
-                            components_metrics.append([component.id, component.author_experience,
-                                                       component_degradation.delta_rmd / commit.u_cloc * ROUDING_SCALE,
-                                                       commit.u_cloc])
+                for component_degradation in commit.component_commits.all():
+                    if component_degradation.delta_rmd != 0:
+                        components_metrics.append([component_degradation.id, component_degradation.author_experience,
+                                                   component_degradation.delta_rmd  * ROUDING_SCALE,
+                                                   commit.u_cloc])
                     else:
                         metrics_count += 1
-                        print('Component not found when component metrics were calculated. Count: ' + str(
+                        print('Component does not degrade. Counter: ' + str(
                             metrics_count))
 
             my_df = pd.DataFrame(components_metrics,
@@ -893,15 +888,19 @@ def __belongs_to_component__(component, directories):
 # return a dictionary key: module (component) value: dictionary key: commit value: metrics (RMD) {"org.apache.ant": {
 # "da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def h2_calculate_component_degradation(commit, directory, rmd):
-    component = ComponentCommit.objects.filter(commit=commit, component=directory)
-    if component.exists():
-        component = component[0]
-        component.rmd = rmd
+    component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
+    if component_commit.exists():
+        component_commit = component_commit[0]
+        component_commit.rmd = rmd
         previous_component = retrieve_previous_component_commit(commit, directory)
-        component.delta_rmd = rmd-previous_component.rmd if previous_component else rmd
+        component_commit.delta_rmd = rmd-previous_component.rmd if previous_component else rmd
+        if component_commit.delta_rmd != 0:
+            uloc = commit.non_blank_cloc(component_commit.component)
+            if uloc > 0:
+                component_commit.delta_rmd /= uloc
 
-        component.save()
-    return component
+        component_commit.save()
+    return component_commit
 
 
 def h1_calculate_commit_degradation(commit, commit_rmds):
@@ -921,8 +920,8 @@ def h1_calculate_commit_degradation(commit, commit_rmds):
     if commit.u_cloc > 0:
         commit.normalized_delta = commit.delta_rmd_components / commit.u_cloc
     else:
-        commit.normalized_delta = 0
-        logger.error("commit sem linha de impacto (LOC=0) com delta diferentee de zero")
+        commit.normalized_delta = commit.delta_rmd_components
+        logger.error("****** CASO ESPECIAL: commit sem linha de impacto (LOC=0) com delta diferentee de zero ******")
 
     commit.compilable = True
     commit.save()

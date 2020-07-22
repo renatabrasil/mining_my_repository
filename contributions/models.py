@@ -196,24 +196,6 @@ class Commit(models.Model):
                 return True
         return False
 
-    def calculate_boosting_factor(self, activity_array):
-        if not activity_array or len(activity_array) == 1:
-            return 0.0
-        elif len(activity_array) == 2:
-            return 0.5
-        mean_value = np.mean(activity_array)
-        min_value = np.min(activity_array)
-        max_value = np.max(activity_array)
-
-        numerator = (mean_value - min_value)
-
-        if numerator == 0.0:
-            return 0.0
-        try:
-            return numerator / (max_value - min_value)
-        except ZeroDivisionError:
-            return 0.0
-
     def has_files_in_this_directory(self, directory):
         for mod in self.modifications.all():
             if mod.directory == directory:
@@ -260,7 +242,7 @@ class Commit(models.Model):
     @property
     def total_delta(self):
         delta = 0.0
-        for metric in self.architectural_metrics.all():
+        for metric in self.component_commits.all():
             delta += metric.delta_rmd
         return delta
 
@@ -268,7 +250,7 @@ class Commit(models.Model):
     def is_author_newcomer(self):
         return (self.author_seniority / 365) <= 1 or self.has_submitted_by
 
-    def cloc_uncommented(self, directory):
+    def non_blank_cloc(self, directory):
         cloc = 0
         for mod in self.modifications.all():
             # if mod.directory == directory:
@@ -360,6 +342,15 @@ class Commit(models.Model):
     class Meta:
         ordering = ['tag_id', 'id']
 
+class NoOutlierMetricManager(models.Manager):
+    def get_queryset(self):
+        ids = []
+        for author in AUTHOR_FILTER:
+            author_db = Developer.objects.get(name=author)
+            if author_db:
+                ids.append(author_db.id)
+        return super().get_queryset().exclude(commit__author_id__in=ids)
+
 
 class ComponentCommit(models.Model):
     component = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='component_commits')
@@ -372,6 +363,9 @@ class ComponentCommit(models.Model):
     rmd = models.FloatField(null=True, default=0.0)
     # delta
     delta_rmd = models.FloatField(null=True, default=0.0)
+
+    objects = models.Manager()  # The default manager.
+    no_outliers_objects = NoOutlierMetricManager()  # The specific manager.
 
     def __str__(self):
         return self.component.name + ', Commit id: ' + str(self.commit.id) + ', Autor: ' + self.commit.author.name
