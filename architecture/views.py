@@ -854,6 +854,7 @@ def __belongs_to_component__(component, directories):
 # return a dictionary key: module (component) value: dictionary key: commit value: metrics (RMD) {"org.apache.ant": {
 # "da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def h2_calculate_component_degradation(commit, directory, rmd):
+    '''Invoked by __read_PM_file__'''
     component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
     if component_commit.exists():
         component_commit = component_commit[0]
@@ -870,6 +871,7 @@ def h2_calculate_component_degradation(commit, directory, rmd):
 
 
 def h1_calculate_commit_degradation(commit, commit_rmds):
+    '''Invoked by __read_PM_file__'''
     if len(commit_rmds) > 0:
         commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
         commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
