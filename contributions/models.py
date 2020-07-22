@@ -368,6 +368,10 @@ class ComponentCommit(models.Model):
     cloc_accumulation = models.IntegerField(default=0)
     commits_accumulation = models.IntegerField(default=0)
     commit_str = models.CharField(max_length=200, default="", blank=True, null=True)
+    # mean rmd
+    rmd = models.FloatField(null=True, default=0.0)
+    # delta
+    delta_rmd = models.FloatField(null=True, default=0.0)
 
     def __str__(self):
         return self.component.name + ', Commit id: ' + str(self.commit.id) + ', Autor: ' + self.commit.author.name

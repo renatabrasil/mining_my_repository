@@ -661,22 +661,15 @@ def quality_between_versions(request):
 
 ################ Auxiliary methods ###################
 
-# return a dictionary
-# key: module (component)
-# value: dictionary
-#   key: commit
-#   value: metrics (RMD)
-# {"org.apache.ant": {"da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
+
 def __read_PM_file__(folder, tag_id):
     metrics = {}
     tag = Tag.objects.get(id=tag_id)
-    previous_commit = None
     start_commit_analysis_period = Commit.objects.all().first()
     first_commit_id = start_commit_analysis_period.pk
 
-    ArchitecturalMetricsByCommit.objects.filter(commit__tag_id=tag_id).delete()
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
-                                                delta_rmd_components=0.0, normalized_delta=0.0)
+                                                delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
     components_evolution = []
@@ -705,7 +698,6 @@ def __read_PM_file__(folder, tag_id):
                 # else:
                 #     continue
                 commit_rmds = []
-                new_metric = True
 
                 for line in content[1:]:
                     row = line.split(',')
@@ -718,19 +710,8 @@ def __read_PM_file__(folder, tag_id):
                         continue
                     directory = directory[0]
 
-                    if is_commit_db:
-                        component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
-                    else:
-                        component_commit = ComponentCommit.objects.filter(commit_str=hash, component=directory)
-
-                    if component_commit.exists():
-                        component_commit = component_commit[0]
-                    else:
-                        if is_commit_db:
-                            component_commit = ComponentCommit.objects.filter(component=directory,
-                                                                              commit_id__lte=commit.id,
-                                                                              commit__author=commit.author).last()
-                        # Pensar
+                    # Hypothesis 2
+                    component_commit = h2_calculate_component_degradation(commit, directory, rmd)
 
                     # Change architecture
                     components.append(directory)
@@ -743,52 +724,23 @@ def __read_PM_file__(folder, tag_id):
 
             finally:
                 f.close()
+                # Hypothesis 1
+                commit = h1_calculate_commit_degradation(commit, commit_rmds)
 
-                if new_metric:
-
-                    # FIXME: to prevent error. Shoud be fixed as soon as posible. It is not the right behaviour in all cases
-                    if len(commit_rmds) > 0:
-                        commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
-                        commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
-                        commit.delta_rmd_components = commit.mean_rmd_components
-
-                    # Delta calculation
-                    commit.previous_impactful_commit = retrieve_previous_commit(commit)
-                    if commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag:
-                        commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
-                        # FIXME: Remove
-                        # if round(commit.delta_rmd_components, SCALE) == 0.0:
-                        #     commit.delta_rmd_components = 0
-                    else:
-                        commit.delta_rmd_components = 0.0
-
-                    # Delta normalization by LOC changed
-                    if commit.u_cloc > 0:
-                        commit.normalized_delta = commit.delta_rmd_components / commit.u_cloc
-                    else:
-                        commit.normalized_delta = 0
-                        logger.error("commit sem linha de impacto (LOC=0) com delta diferentee de zero")
-
-                    # FIXME: Remove
-                    # if round(commit.normalized_delta, SCALE) == 0.0:
-                    #     commit.normalized_delta = 0.0
-
-                    removed_components = [x for x in list(components_db) if x not in components]
-                    add_components = [x for x in components if x not in list(components_db)]
-                    diff_components = removed_components + add_components
-                    n_commits += 1
-                    if len(diff_components) > 0:
-                        components_evolution.append([n_commits, len(diff_components)])
-                        for a_component in diff_components:
-                            if a_component.visible:
-                                a_component.visible = False
-                            else:
-                                a_component.visible = True
-                            a_component.save()
-                    else:
-                        components_evolution.append([n_commits, len(diff_components)])
-                    commit.compilable = True
-                    commit.save()
+                removed_components = [x for x in list(components_db) if x not in components]
+                add_components = [x for x in components if x not in list(components_db)]
+                diff_components = removed_components + add_components
+                n_commits += 1
+                if len(diff_components) > 0:
+                    components_evolution.append([n_commits, len(diff_components)])
+                    for a_component in diff_components:
+                        if a_component.visible:
+                            a_component.visible = False
+                        else:
+                            a_component.visible = True
+                        a_component.save()
+                else:
+                    components_evolution.append([n_commits, len(diff_components)])
 
     # my_df = pd.DataFrame(components_evolution, columns=['commits', 'diff_components'])
     # my_df.to_csv('diff_components_' + str(tag_id)+ '.csv', index=False, header=True)
@@ -938,6 +890,46 @@ def __belongs_to_component__(component, directories):
     return False
 
 
+# return a dictionary key: module (component) value: dictionary key: commit value: metrics (RMD) {"org.apache.ant": {
+# "da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
+def h2_calculate_component_degradation(commit, directory, rmd):
+    component = ComponentCommit.objects.filter(commit=commit, component=directory)
+    if component.exists():
+        component = component[0]
+        component.rmd = rmd
+        previous_component = retrieve_previous_component_commit(commit, directory)
+        component.delta_rmd = rmd-previous_component.rmd if previous_component else rmd
+
+        component.save()
+    return component
+
+
+def h1_calculate_commit_degradation(commit, commit_rmds):
+    if len(commit_rmds) > 0:
+        commit.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
+        commit.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
+        commit.delta_rmd_components = commit.mean_rmd_components
+
+    # Delta calculation
+    commit.previous_impactful_commit = retrieve_previous_commit(commit)
+    if commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag:
+        commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
+    else:
+        commit.delta_rmd_components = 0.0
+
+    # Delta normalization by LOC changed
+    if commit.u_cloc > 0:
+        commit.normalized_delta = commit.delta_rmd_components / commit.u_cloc
+    else:
+        commit.normalized_delta = 0
+        logger.error("commit sem linha de impacto (LOC=0) com delta diferentee de zero")
+
+    commit.compilable = True
+    commit.save()
+
+    return commit
+
+
 def retrieve_previous_commit(commit):
     if commit:
         if len(commit.parents) > 0:
@@ -945,4 +937,12 @@ def retrieve_previous_commit(commit):
         elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id).exists():
             return Commit.objects.filter(tag=commit.tag, id__lt=commit.id).last()
 
+    return None
+
+
+def retrieve_previous_component_commit(commit, directory):
+    component = ComponentCommit.objects.filter(component=directory, commit_id__lt=commit.id,
+                                               commit__author=commit.author, commit__tag=commit.tag)
+    if component.exists():
+        return component.last()
     return None
