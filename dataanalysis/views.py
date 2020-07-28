@@ -202,8 +202,22 @@ def descriptive_statistics(request, type):
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que degradam'])
             my_df.to_csv(file_name5, index=False, header=True)
 
+            #
+            file_name6 = 'compilable_commits_statistics.csv'
+            stats = []
+            non_compilable = len(set([x.id for x in all_commits if not x.compilable]))
+            non_compilable_commits = non_compilable / total_commits
+            compilable_commits = 1 - non_compilable_commits
+
+            stats.append(['Commits compilados', compilable_commits])
+            stats.append(['Commits que nao compilaram', non_compilable_commits])
+
+            my_df = pd.DataFrame(stats, columns=['legenda','Total de commits'])
+            my_df.to_csv(file_name6, index=False, header=True)
+
+
             file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 +\
-                        '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5
+                        '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5 + '</strong> e <strong>(6) ' + file_name6
             print("Informações gerais")
 
 

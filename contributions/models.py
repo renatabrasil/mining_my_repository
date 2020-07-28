@@ -135,9 +135,12 @@ class NoOutlierCommitManager(models.Manager):
             if author_db:
                 ids.append(author_db.id)
         for hash in HASH_FILTER:
-            hash_db = Commit.objects.get(hash=hash)
-            if hash_db:
-                commit_ids.append(hash_db.id)
+            try:
+                hash_db = Commit.objects.get(hash=hash)
+                if hash_db:
+                    commit_ids.append(hash_db.id)
+            except Commit.DoesNotExist:
+                pass
         return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
         # LUCENE
         # for hash in HASH_FILTER:
@@ -394,7 +397,7 @@ class ComponentCommit(models.Model):
                                  0.4 * self.cloc_accumulation
 
         self.commits_accumulation += 1
-        self.cloc_accumulation += self.commit.cloc_uncommented(self.component)
+        self.cloc_accumulation += self.commit.non_blank_cloc(self.component)
         self.save()
 
 
@@ -570,6 +573,7 @@ def __detect_impact_loc__(code):
             if m or n:
                 if m:
                     found = m.group(0)
+                    # line = re.sub(r'\u002F/.*', '', line)
                     line = line.replace(found, '')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
@@ -579,9 +583,10 @@ def __detect_impact_loc__(code):
                         return True
                 elif n:
                     found = n.group(0)
-                    # line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*', '',
-                    #               found)
                     line = line.replace(found, '')
+                    # line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*',
+                    #               '',
+                    #               line)
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1

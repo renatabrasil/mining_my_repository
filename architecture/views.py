@@ -122,14 +122,17 @@ def compiled(request, file_id):
                         else:
                             continue
 
-                        if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
-                                object_commit.parents[0].compilable) and not (
-                                object_commit.children_commit is not None) and not object_commit.parents_str:
-                            object_commit.compilable = True
-                            object_commit.save()
-                            continue
-                        elif not (len(object_commit.parents) > 0 and object_commit.parents[
-                            0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
+                        # if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
+                        #         object_commit.parents[0].compilable) and not (
+                        #         object_commit.children_commit is not None) and not object_commit.parents_str:
+                        #     object_commit.compilable = True
+                        #     object_commit.save()
+                        #     continue
+                        # elif not (len(object_commit.parents) > 0 and object_commit.parents[
+                        #     0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
+                        #     continue
+
+                        if not object_commit.has_impact_loc:
                             continue
 
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
@@ -173,7 +176,7 @@ def compiled(request, file_id):
                         jar = jar_file.replace(current_project_path, "").replace("/", "", 1).replace("\"", "")
                         # 100 KB
 
-                        if os.path.getsize(jar) < 1438400 or error:
+                        if os.path.getsize(jar) < 3072000 or error:
                             error = False
                             # 1.1 76800
                             # 1.2 194560
@@ -223,29 +226,30 @@ def compiled(request, file_id):
                     messages.error(request, 'Erro: ' + er)
                 finally:
                     os.chdir(local_repository)
+
             i += 1
     except Exception as e:
         print(e)
         messages.error(request, 'Could not create compiled.')
     finally:
         os.chdir(current_project_path)
-    if len(commit_with_errors) > 0:
-        try:
-            f = open(compiled_directory.replace("jars", "") + "log-compilation-errors.txt", 'w+')
-            myfile = File(f)
-            first = True
-            myfile.write(local_repository + "\n")
-            myfile.write(build_path + "\n")
-            for commit in commit_with_errors:
-                if first:
-                    myfile.write(commit)
-                    first = False
-                else:
-                    myfile.write("\n" + commit)
-        except OSError as e:
-            print("Error: %s - %s." % (e.filename, e.strerror))
-        finally:
-            f.close()
+        if len(commit_with_errors) > 0:
+            try:
+                f = open(compiled_directory.replace("jars", "") + "log-compilation-errors.txt", 'w+')
+                myfile = File(f)
+                first = True
+                myfile.write(local_repository + "\n")
+                myfile.write(build_path + "\n")
+                for commit in commit_with_errors:
+                    if first:
+                        myfile.write(commit)
+                        first = False
+                    else:
+                        myfile.write("\n" + commit)
+            except OSError as e:
+                print("Error: %s - %s." % (e.filename, e.strerror))
+            finally:
+                f.close()
     file.has_compileds = True
     file.save()
 
@@ -881,6 +885,7 @@ def h1_calculate_commit_degradation(commit, commit_rmds):
     commit.previous_impactful_commit = retrieve_previous_commit(commit)
     if commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag:
         commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
+    # elif commit.previous_impactful_commit is not None and not commit.previous_impactful_commit.compilable:
     else:
         commit.delta_rmd_components = 0.0
 
