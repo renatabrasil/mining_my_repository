@@ -601,7 +601,7 @@ def quality_between_versions(request):
                 # ANT
                 name_version = version.replace('rel#', '').replace('-', '', 1).replace('_', '.').replace('#', '-')
                 # Lucene
-                name_version = version.replace('_', '.').replace('#', '/')
+                name_version = version.replace('_', '.').replace('#', '-')
                 architectural_quality = np.mean(components_mean)
                 metrics.append([name_version, architectural_quality])
 

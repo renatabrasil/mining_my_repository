@@ -1,5 +1,5 @@
 from architecture.views import NO_OUTLIERS
-from contributions.models import Commit
+from contributions.models import Commit, Project
 
 
 class SetupMiddleware:
@@ -16,6 +16,8 @@ class SetupMiddleware:
         if request.POST.get('project_base_id') is not None:
             request.project_base = request.POST.get('project_base_id')
             request.session['project'] = request.POST.get('project_base_id')
+        # else:
+        #     request.session['project'] = Project.objects.all().first().id
 
         commit_db = Commit.objects
         if NO_OUTLIERS and NO_OUTLIERS==1:
