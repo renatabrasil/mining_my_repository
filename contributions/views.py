@@ -1,43 +1,38 @@
 # standard library
-import csv
 import json
 import re
 import time
-from collections import OrderedDict
 
 # third-party
-import pandas as pd
-from pydriller import RepositoryMining
-from pydriller.git_repository import GitRepository
-
 # Django
 from django.core.paginator import Paginator
 from django.http import (Http404, HttpResponse)
 from django.shortcuts import render
 from django.template import loader
 from django.template.loader import render_to_string
+from pydriller import RepositoryMining
+from pydriller.git_repository import GitRepository
 
 # local Django
 from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
-    Commit, ContributionByAuthorReport, Contributor, Developer, Directory,
-    DirectoryReport, IndividualContribution, MetricsReport, Modification,
-    Project, ProjectIndividualContribution, ProjectReport, Tag, ComponentCommit, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
-    CASSANDRA)
+    Commit, Developer, Directory, Modification,
+    Project, Tag, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
+    CASSANDRA, has_impact_loc_calculation_static_method)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
 
+# Evolution path
+# git log --no-walk --tags --pretty="%h %d %s" --decorate=full --reverse
 
 # TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
-    # tag_text = 'rel/1.2'
     start = time.time()
 
     title_description = 'Contribuições - Commits'
 
     project = Project.objects.get(id=request.session['project'])
-
 
     tag = ViewUtils.load_tag(request)
     tag_description = tag.description
@@ -53,11 +48,12 @@ def index(request):
         if tag.previous_tag is not None:
             commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
             filter.setdefault('from_tag', tag.previous_tag.description)
-            # if commit is not None:
-            #     hash = commit.hash
+            if commit is not None:
+                hash = commit.hash
+                filter.setdefault('from_commit', hash)
+                filter.pop('from_tag', None)
 
         #  git log --graph --oneline --decorate --tags *.java
-        versions = __go_to_first_tag__(tag)[::-1]
         tag_aux = tag.description
 
         # filter.setdefault('only_in_branch', 'master')
@@ -67,7 +63,7 @@ def index(request):
         i = 0
         if tag.real_tag_description.find('*'):
             tag_aux = tag
-            i+=1
+            i += 1
         filter.setdefault('to_tag', tag.real_tag_description)
 
         # if tag.previous_tag:
@@ -78,42 +74,49 @@ def index(request):
         #     filter.setdefault('from_commit', hash)
         #     filter.pop('from_tag', None)
 
-        if tag.minors:
-            for minor in list([tag.real_tag_description]+tag.minors):
-                if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                    filter['from_tag'] = minor.replace('*','')
-                    continue
-                filter['to_tag'] = minor
-                # if hash is not None:
-                #     filter['from_commit'] = commit.hash
-                #     filter.pop('from_tag', None)
-                print(" \n************ VERSAO: "+filter['to_tag']+' ***************\n\n')
+        filter.pop('from_commit', None)
+        filter.pop('from_tag', None)
+        filter.pop('to_tag', None)
+        tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
+        for tag1 in tags:
+            # tag1 = Tag.objects.get(id=tag1)
+            if tag1.minors:
+                if tag1.previous_tag is not None:
+                    if 'from_commit' not in filter:
+                        if 'from_tag' in filter:
+                            filter['from_tag'] = tag1.previous_tag.description
+                        else:
+                            filter.setdefault('from_tag', tag1.previous_tag.description)
+                for minor in list([tag1.real_tag_description] + tag1.minors):
+                    # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                    if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                        filter['from_tag'] = minor.replace('*', '')
+                        continue
+                    filter['to_tag'] = minor
+                    # if hash is not None:
+                    #     filter['from_commit'] = commit.hash
+                    #     filter.pop('from_tag', None)
+                    print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
+                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                        commit = __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+
+                    # if 'from_tag' in filter.keys():
+                    filter['from_tag'] = minor
+                    filter.pop('from_commit', None)
+
+            else:
+                if tag1.previous_tag is not None:
+                    if 'from_tag' in filter:
+                        filter['from_tag'] = tag1.previous_tag.description
+                    else:
+                        filter.setdefault('from_tag', tag1.previous_tag.description)
+                if 'to_tag' in filter:
+                    filter['to_tag'] = tag1.real_tag_description
+                else:
+                    filter.setdefault('to_tag', tag1.real_tag_description)
                 for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    commit = __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
-
-                # if 'from_tag' in filter.keys():
-                filter['from_tag'] = minor
-                filter.pop('from_commit', None)
-
-        else:
-            for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-                __build_and_save_commit__(commit_repository, tag, filter['to_tag'])
-        __update_commit__(Commit.objects.filter(tag=tag))
-        # else:
-        #     for tag in versions:
-        #         upper_tag = tag_aux.description if tag_aux.max_minor_version_description == '' else tag.max_minor_version_description
-        #         filter['to_tag'] = upper_tag
-        #         if tag_aux.previous_tag:
-        #             filter.setdefault('from_tag', tag_aux.previous_tag.description)
-        #             filter.pop('from_commit', None)
-        #
-        #         for commit_repository in RepositoryMining(project.project_path,**filter).traverse_commits():
-        #             __build_and_save_commit__(commit_repository, tag_aux)
-        #
-        #         if tag_aux.previous_tag:
-        #             tag_aux = tag_aux.previous_tag
-        #         else:
-        #             tag_is_not_first_tag = False
+                    __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+            __update_commit__(Commit.objects.filter(tag=tag1))
 
     url_path = 'contributions/index.html'
     current_developer = None
@@ -123,23 +126,6 @@ def index(request):
     if request.GET.get('commits'):
         title_description = 'Contributions - Detalhes do commit'
         url_path = 'developers/detail.html'
-    elif request.GET.get('directories'):
-        title_description = 'Contributions - Detalhes das contribuições por diretórios'
-        latest_commit_list = process_commits_by_directories(request,load_commits_from_tags(tag))
-        url_path = 'contributions/detail_by_directories.html'
-    elif request.GET.get('project'):
-        title_description = 'Contributions - Detalhes das contribuições por Projeto'
-        latest_commit_list = process_commits_by_project(request, load_commits_from_tags(tag))
-
-        url_path = 'contributions/detail_by_project.html'
-    elif request.GET.get('author'):
-        developer_id = request.POST.get("developer_id")
-        if not developer_id:
-            developer_id = Developer.objects.all().order_by("name").first().id
-        current_developer = Developer.objects.get(pk=developer_id)
-        latest_commit_list = process_commits_by_author(developer_id)
-
-        url_path = 'contributions/detail_by_author.html'
     elif request.GET.get('directory_data'):
         latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
         url_path = 'contributions/directories.html'
@@ -154,12 +140,12 @@ def index(request):
                 if latest_commit_list:
                     latest_commit_list = latest_commit_list & Commit.objects.filter(tag_id=current_tag_filter.id)
                 else:
-                    latest_commit_list= Commit.objects.filter(tag_id=current_tag_filter.id)
-            latest_commit_list=latest_commit_list.order_by("tag_id", "author__name")
+                    latest_commit_list = Commit.objects.filter(tag_id=current_tag_filter.id)
+            latest_commit_list = latest_commit_list.order_by("tag_id", "author__name")
         elif tag:
             latest_commit_list = load_commits_from_tags(tag)
         else:
-            latest_commit_list = Commit.objects.all().order_by("tag_id","author__name", "committer_date")
+            latest_commit_list = Commit.objects.all().order_by("tag_id", "author__name", "committer_date")
         paginator = Paginator(latest_commit_list, 100)
 
         page = request.GET.get('page')
@@ -231,7 +217,6 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                         email = CommitUtils.get_email(email_found)
                         commit.hasSubmittedBy = True
                 login = email.split("@")[0].lower()
-
 
         author_name = author_name.strip()
 
@@ -305,7 +290,7 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                         msg=commit_repository.msg,
                         author=author, author_date=commit_repository.author_date,
                         committer=committer,
-                        committer_date=commit_repository.committer_date,real_tag_description=real_tag)
+                        committer_date=commit_repository.committer_date, real_tag_description=real_tag)
         total_modification = 0
         for modification_repo in commit_repository.modifications:
             # Save only commits with java file and not in test directory
@@ -335,10 +320,10 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                 except Exception as e:
                     # raise  # reraises the exceptio
                     print(str(e))
-    # else:
-    #     # for mod in commit[0].modifications.all():
-    #     #     mod.save()
-    #     commit[0].save()
+        # else:
+        #     # for mod in commit[0].modifications.all():
+        #     #     mod.save()
+        #     commit[0].save()
         if commit.pk is not None:
             commit.update_component_commits()
     return commit
@@ -359,20 +344,6 @@ def visible_directory(request, directory_id):
     request.GET['directory_data'] = True
     return index(request)
 
-def data_by_directory(request, directory_id):
-    response = HttpResponse(content_type='text/csv')
-
-    directory = Directory.objects.filter(id=directory_id)[0]
-    directories_report = DirectoryReport.objects.filter(directory_id=directory_id).order_by('tag__id')
-
-    response['Content-Disposition'] = 'attachment; filename='+ directory.name +'.csv'
-    writer = csv.writer(response)
-
-    writer.writerow(['Version', 'Experience', 'Mean', 'Median','Standard deviation'])
-    for report in directories_report:
-
-        writer.writerow([report.tag.description, report.experience, report.mean, report.median, report.standard_deviation])
-    return response
 
 def detail_by_hash(request):
     hash = request.POST.get('hash')
@@ -389,7 +360,9 @@ def detail_by_hash(request):
         commit = commit[0]
     else:
         commit = None
-    return render(request, 'contributions/detail.html', {'commit': commit, 'current_commit_hash': hash, 'title': 'Detalhes do commit'})
+    return render(request, 'contributions/detail.html',
+                  {'commit': commit, 'current_commit_hash': hash, 'title': 'Detalhes do commit'})
+
 
 def detail(request, commit_id):
     try:
@@ -397,6 +370,11 @@ def detail(request, commit_id):
         commit.u_cloc
         print(commit.u_cloc)
         print(commit.committer_date)
+        for mod in commit.modifications.all():
+            GR = GitRepository(commit.tag.project.project_path)
+
+            parsed_lines = GR.parse_diff(mod.diff)
+            has_impact_loc_calculation_static_method(parsed_lines)
 
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")
@@ -413,7 +391,8 @@ def detail_in_committer(request, committer_id):
         tag = ViewUtils.load_tag(request)
 
         latest_commit_list = list(Commit.objects.filter(committer_id=committer_id, tag_id__lte=tag.id,
-                                                        modifications__in=Modification.objects.filter(directory_id=int(path))).distinct())
+                                                        modifications__in=Modification.objects.filter(
+                                                            directory_id=int(path))).distinct())
         context = {
             'latest_commit_list': latest_commit_list,
             'project': project,
@@ -423,414 +402,21 @@ def detail_in_committer(request, committer_id):
     return render(request, 'contributions/index.html', context)
 
 
-def export_to_csv(request):
-    # Create the HttpResponse object with the appropriate CSV header.
-    response = HttpResponse(content_type='text/csv')
-    project = Project.objects.get(project_name="Apache Ant")
-    tag = ViewUtils.load_tag(request)
-
-    # Making data frame from the csv file
-    df = pd.read_csv("directory_ownership_metrics - rel_1.1.csv")
-    df[:10]
-    p = df.corr(method='pearson')
-    p.style.background_gradient(cmap='coolwarm')
-    # plt.matshow(p)
-    # plt.show()
-
-
-    file_name = "directory_ownership_metrics - " + tag.description
-    response['Content-Disposition'] = 'attachment; filename='+file_name+'.csv'
-
-    writer = csv.writer(response)
-
-    commits_by_directory = {}
-    if tag:
-        commits_by_directory = process_commits_by_directories(request,load_commits_from_tags(tag))
-        writer.writerow(["Tag:", tag.description])
-    for directory, infos in commits_by_directory.items():
-        i = 1
-
-        writer.writerow(
-            ["##################################################################################", "", "", "", "", ""])
-        writer.writerow([directory.directory.name, "", "", "", "", ""])
-        writer.writerow(["","    Bird metrics", "", "", "", ""])
-        writer.writerow(["","    Minor contributors:", directory.minor, "", "", ""])
-        writer.writerow(["","    Major contributors:", directory.major, "", "", ""])
-        writer.writerow(["","    Ownership:", directory.ownership, "", "", ""])
-        writer.writerow(["--", "", "", "", ""])
-        writer.writerow(["","    Metricas usadas para classificar tipos de desenvolvedores (JOBLIN et al., 2017)", "", "", "", ""])
-        writer.writerow(["","    Threshold (experience): ", directory.experience_threshold])
-
-        writer.writerow(["---------------------------------------------------------------------------------"])
-        writer.writerow(["","Classificacao de desenvolvedores por experiencia"])
-        writer.writerow([""])
-        writer.writerow(["","Core developers"])
-        i = 1
-        for core_dev in directory.core_developers_experience:
-            row = [i]
-            row.append(core_dev.name)
-            writer.writerow(row)
-            i = i + 1
-        writer.writerow([""])
-        writer.writerow(["","Peripheral developers"])
-        i = 1
-        for author in directory.peripheral_developers_experience:
-            row = [i]
-            row.append(author.name)
-            writer.writerow(row)
-            i = i + 1
-
-        writer.writerow([""])
-        writer.writerow(['#', 'Author', 'Commit count', 'File count', 'LOC count',
-                         'Ownership (commits)', 'Ownership (files)', 'Ownership (loc)', 'Experience', " ",
-                         "Mean", "Median", "Standard deviation"])
-        i = 1
-        for info_contribution in infos:
-            row = [i]
-            row.append(info_contribution.author.name)
-            row.append(info_contribution.commits)
-            row.append(info_contribution.files)
-            row.append(info_contribution.cloc)
-            row.append(info_contribution.ownership_commits)
-            row.append(info_contribution.ownership_files)
-            row.append(info_contribution.ownership_cloc)
-            row.append(info_contribution.experience)
-            if i == 1:
-                row.append(" ")
-                row.append(directory.mean)
-                row.append(directory.median)
-                row.append(directory.standard_deviation)
-            writer.writerow(row)
-            i = i + 1
-        writer.writerow(
-            ["", "Total", directory.total_commits, directory.total_files, directory.total_cloc,
-             1, 1, 1, 1])
-
-    return response
-
-def export_to_csv_commit_by_author(request):
-    # Create the HttpResponse object with the appropriate CSV header.
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="estatisticas_projeto.csv"'
-    writer = csv.writer(response)
-
-    project = Project.objects.get(project_name="Apache Ant")
-    tag = ViewUtils.load_tag(request)
-
-    commits_by_author = {}
-    if tag:
-        commits_by_author = process_commits_by_project(request, load_commits_from_tags(tag))
-        writer.writerow(["Tag:", tag.description])
-    # commits_by_author = request.session['commits']
-
-
-
-
-    writer.writerow(["Parametros", "", "", "", "", ""])
-    writer.writerow([" | Threshold (file): ", commits_by_author.core_developers_threshold_file, " | Threshold (commit):",
-                     commits_by_author.core_developers_threshold_commit, " | Threshold (experience): ",
-                     commits_by_author.core_developers_threshold_experience , ""])
-    writer.writerow(["Classificacao de desenvolvedores por experiencia"])
-    writer.writerow([""])
-    writer.writerow(["Core developers"])
-    i = 1
-    for author in commits_by_author.core_developers_experience:
-        row = [i]
-        row.append(author.name)
-        writer.writerow(row)
-        i = i + 1
-    writer.writerow([""])
-    writer.writerow(["Peripheral developers"])
-    i = 1
-    for author in commits_by_author.peripheral_developers_experience:
-        row = [i]
-        row.append(author.name)
-        writer.writerow(row)
-        i = i + 1
-
-    writer.writerow([""])
-
-    writer.writerow(['#', 'Author', 'Commit count', 'File count', 'LOC count',
-                     'Ownership (commits)', 'Ownership (files)', 'Ownership (loc)', 'Experience'])
-    i = 1
-    for commits in commits_by_author.commits_by_author.items():
-        row = [i]
-        row.append(commits[0].name)
-        row.append(commits[1].commit_count)
-        row.append(commits[1].file_count)
-        row.append(commits[1].loc_count)
-        row.append(commits[1].commit_percentage)
-        row.append(commits[1].file_percentage)
-        row.append(commits[1].loc_percentage)
-        row.append(commits[1].experience)
-        writer.writerow(row)
-        i = i + 1
-    writer.writerow(
-        ["", "Total", commits_by_author.total_java_files, commits_by_author.total_commits, commits_by_author.total_loc,
-         1, 1, 1, 1])
-
-    return response
-
-
-""" Load all commits including all previous tag of current tag
+''' Load all commits including all previous tag of current tag
 param: current tag
-return all commits up to current tag """
+return all commits up to current tag '''
+
+
 def load_commits_from_tags(tag):
-   commits = Commit.objects.filter(tag__description=tag.description).distinct()
-   if len(commits) == 0:
-       return commits
-   tag = tag.previous_tag
-   while tag:
-       commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
-       # (Commit.objects.filter(tag__description=tag.description, modifications__in=
-       # Modification.objects.filter(
-       #     path__contains=".java")).distinct())
-       tag = tag.previous_tag
-   return commits
+    commits = Commit.objects.filter(tag__description=tag.description).distinct()
+    if len(commits) == 0:
+        return commits
+    tag = tag.previous_tag
+    while tag:
+        commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
+        tag = tag.previous_tag
+    return commits
 
-
-# Other methods (most auxiliary)
-# returns: dictionary = key: directory
-#               ContributionByAuthorReport
-#                     - dict: commits_by_author(Developer, Contributor)
-#                     - integer: total_commits
-#                     - integer: total_java_files
-#                     - list: peripheral_developers
-#                     - list: core_developers_commits
-#                     - float: core_developers_threshold_loc
-#                     - float: core_developers_threshold_file
-#                     - float: core_developers_threshold_commit
-def process_commits_by_directories(request,commits):
-   report = OrderedDict()
-   answer = OrderedDict()
-   directories_report = list()
-   review_modification = []
-
-   forced_refresh = request.POST.get("refresh") if request.POST.get("refresh") else False
-
-   tag=ViewUtils.load_tag(request)
-
-   directories = Directory.objects.filter(visible=True).order_by("id")
-   if forced_refresh:
-       IndividualContribution.objects.filter(
-           directory_report__in=DirectoryReport.objects.filter(tag_id=tag.id)).delete()
-       DirectoryReport.objects.filter(tag_id=tag.id).delete()
-
-   for directory in directories:
-       directory_report = DirectoryReport.objects.filter(directory_id=directory.pk, tag_id=tag.pk)
-       if len(directory_report) == 0:
-           report.setdefault(directory, ContributionByAuthorReport())
-       else:
-           directories_report.append(directory_report[0])
-
-   if forced_refresh or report:
-       files = []
-       for commit in commits:
-           if commit.u_cloc > 0:
-               for modification in commit.modifications.all():
-                   if modification.u_cloc > 0 and modification.is_java_file:
-                       if modification.directory in report:
-                           # Second hierarchy
-                           if commit.author not in report[modification.directory].commits_by_author:
-                               report[modification.directory].commits_by_author.setdefault(commit.author,
-                                                                                           Contributor(commit.author))
-                           if commit not in report[modification.directory].commits_by_author[commit.author].commits:
-                               report[modification.directory].commits_by_author[commit.author].commits.append(commit)
-                               report[modification.directory].commits_by_author[commit.author].commit_count += 1
-                               report[modification.directory].commits_by_author[commit.author].total_commit += 1
-                           # to avoid duplicate (should be fixed soon)
-                           if modification not in review_modification:
-                               if modification.file not in report[modification.directory].commits_by_author[commit.author].files:
-                                   report[modification.directory].commits_by_author[commit.author].file_count += 1
-                                   report[modification.directory].commits_by_author[commit.author].files.append(
-                                       modification.file)
-                                   report[modification.directory].commits_by_author[commit.author].total_file += 1
-                               if modification.file not in files:
-                                   # report[modification.directory].commits_by_author[commit.author].total_file += 1
-                                   files.append(modification.file)
-                               report[modification.directory].commits_by_author[commit.author].loc_count += modification.u_cloc
-                               report[modification.directory].commits_by_author[commit.author].total_loc += modification.u_cloc
-
-                           review_modification.append(modification)
-
-   for directory,author_report in report.items():
-       total_commit = 0
-       total_file = 0
-       total_loc = 0
-       for developer, contributor in author_report.commits_by_author.items():
-           total_file += contributor.total_file
-           total_commit += contributor.total_commit
-           total_loc += contributor.total_loc
-       author_report.total_java_files += total_file
-       author_report.total_commits += total_commit
-       author_report.total_loc += total_loc
-       print(author_report.core_developers_threshold_commit)
-
-   for directory, contributions in report.items():
-       report_repo = []
-       if len(contributions.commits_by_author) > 0:
-           directory_report = DirectoryReport(tag=tag, directory=directory, total_cloc=contributions.total_loc,
-                                          total_files=contributions.total_java_files, total_commits=contributions.total_commits,
-                                          cloc_threshold=0.0, file_threshold=contributions.core_developers_threshold_file,
-                                          commit_threshold=contributions.core_developers_threshold_commit,
-                                          experience_threshold=contributions.core_developers_threshold_experience)
-           directory_report.save()
-
-
-           for author, contribution in contributions.commits_by_author.items():
-               contribution_repo = IndividualContribution.objects.filter(author_id=author.pk,
-                                                                         directory_report_id=directory_report.pk)
-               if not contribution_repo:
-                   contribution_repo = IndividualContribution(author=author, directory_report=directory_report,
-                                                     cloc=contribution.loc_count, files=contribution.file_count,
-                                                    commits=contribution.commit_count,
-                                                    ownership_cloc=contribution.loc_percentage,
-                                                    ownership_files = contribution.file_percentage,
-                                                    ownership_commits=contribution.commit_percentage,
-                                                    experience=contribution.experience)
-                   contribution_repo.save()
-               report_repo.append(contribution_repo)
-           directory_report.calculate_statistical_metrics()
-           if len(report_repo) > 0:
-               report_repo = sorted(report_repo, key=lambda x: x.experience_bf, reverse=True)
-               answer.setdefault(directory_report, report_repo)
-
-   for directory_report in directories_report:
-       report_repo = []
-       for author in directory_report.authors.all():
-           report_repo.append(IndividualContribution.objects.filter(author_id=author.pk,
-                                                                         directory_report_id=directory_report.pk)[0])
-       report_repo = sorted(report_repo, key=lambda x: x.experience_bf, reverse=True)
-       if len(report_repo) > 0:
-           answer.setdefault(directory_report, report_repo)
-
-   return answer
-
-# TODO: Create ProjectReport model to save its state
-# returns: ContributionByAuthorReport
-#                     - dict: commits_by_author(Developer, Contributor)
-#                     - integer: total_commits
-#                     - integer: total_java_files
-#                     - list: peripheral_developers
-#                     - list: core_developers_commits
-#                     - float: core_developers_threshold_loc
-#                     - float: core_developers_threshold_file
-#                     - float: core_developers_threshold_commit
-def process_commits_by_project(request, commits):
-   answer_report = list()
-   report = ContributionByAuthorReport()
-   project_reports = list()
-
-   forced_refresh = request.POST.get("refresh") if request.POST.get("refresh") else False
-   tag = ViewUtils.load_tag(request)
-
-   if forced_refresh:
-       ProjectIndividualContribution.objects.filter(
-           project_report__in=ProjectReport.objects.filter(tag_id=tag.id)).delete()
-       ProjectReport.objects.filter(tag_id=tag.id).delete()
-
-   project_report = ProjectReport.objects.filter(tag_id=tag.pk)
-   contributions = ProjectIndividualContribution.objects.filter(project_report__in=ProjectReport.objects.filter(tag_id=tag.id))
-
-   for developer in contributions:
-       report.commits_by_author.setdefault(developer.author, None)
-
-   total_commits = 0
-   total_java_files = 0
-   total_loc = 0
-   for commit in commits:
-       if commit.u_cloc > 0 and commit.number_of_java_files > 0:
-           if not __author_is_in_project_report__(report, commit.author):
-               if commit.author not in report.commits_by_author:
-                   report.commits_by_author.setdefault(commit.author, Contributor(commit.author))
-               report.commits_by_author[commit.author].commit_count += 1
-               for modification in commit.modifications.all():
-                   if modification.u_cloc > 0:
-                       if modification.is_java_file:
-                           if modification.file not in report.commits_by_author[commit.author].files:
-                               report.commits_by_author[commit.author].file_count += 1
-                               total_java_files += 1
-                               report.commits_by_author[commit.author].files.append(modification.file)
-                           report.commits_by_author[commit.author].loc_count += modification.u_cloc
-                           total_loc += modification.u_cloc
-               total_commits += 1
-   if contributions.count() == 0:
-       report.total_commits = total_commits
-       report.total_java_files = total_java_files
-       report.total_loc = total_loc
-       report.commits_by_author = OrderedDict(sorted(report.commits_by_author.items(),
-                                                     key=lambda x: x[1].experience, reverse=True))
-
-   if project_report.count() > 0:
-       project_report = project_report[0]
-   if len(report.commits_by_author) > 0:
-       if not project_report:
-           project_report = ProjectReport(tag=tag, total_cloc=report.total_loc, total_files=report.total_java_files,
-                                          total_commits=report.total_commits, commit_threshold=report.core_developers_threshold_commit,
-                                                                 file_threshold=report.core_developers_threshold_file,
-                                                                 cloc_threshold=0.0,
-                                                                experience_threshold=report.core_developers_threshold_experience)
-           project_report.save()
-       answer_report.append(project_report)
-       report_repo = []
-       for author, author_report in report.commits_by_author.items():
-           contribution_repo = ProjectIndividualContribution.objects.filter(author_id=author.pk,
-                                                                     project_report_id=project_report.pk)
-           if not contribution_repo:
-               contribution_repo = ProjectIndividualContribution(author=author, project_report=project_report,
-                                                                 cloc=author_report.loc_count, files=author_report.file_count,
-                                                                 commits=author_report.commit_count)
-               contribution_repo.save()
-           else:
-               contribution_repo = contribution_repo[0]
-           report_repo.append(contribution_repo)
-       project_report.calculate_statistical_metrics()
-
-       report_repo = sorted(report_repo, key=lambda x: x.experience_bf, reverse=True)
-
-       answer_report.append(report_repo)
-
-   return answer_report
-
-def process_commits_by_author(developer_id):
-    contributions = list(IndividualContribution.objects.filter(author_id=developer_id).order_by("directory_report__tag_id"))
-    answer = OrderedDict()
-    for contribution in contributions:
-        if contribution not in answer:
-            directory_report = contribution.directory_report
-            first_report = None
-            if contribution.directory_report.tag.previous_tag:
-                first_report = DirectoryReport.objects.filter(tag_id__lte=contribution.directory_report.tag.previous_tag.id, directory_id=contribution.directory_report.directory.id).order_by(
-                "tag_id").first()
-            answer.setdefault(directory_report.directory, OrderedDict())
-            if first_report:
-                i = 1
-                while i <= first_report.tag.id:
-                    metrics = MetricsReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-                    metrics.empty = True
-                    answer[directory_report.directory].setdefault(Tag.objects.get(pk=i), metrics)
-                    i = i + 1
-
-        metrics = MetricsReport(contribution.ownership_commits_in_this_tag, contribution.ownership_files_in_this_tag,
-                                                                    contribution.ownership_cloc_in_this_tag,
-                                                                    contribution.bf_commit, contribution.bf_file,
-                                                                    contribution.bf_cloc,
-                                                                    contribution.commit_exp, contribution.file_exp,
-                                                                    contribution.cloc_exp, contribution.experience,
-                                                                    contribution.experience_bf)
-        answer[directory_report.directory].setdefault(directory_report.tag, metrics)
-
-    return answer
-
-
-def __go_to_first_tag__(tag):
-    if tag.previous_tag:
-        return [tag.previous_tag]+__go_to_first_tag__(tag.previous_tag)
-    else:
-        return []
-
-def __author_is_in_project_report__(report, developer):
-    return developer in report.commits_by_author and report.commits_by_author[developer] is None
 
 def __update_commit__(commits):
     for commit in commits:
@@ -843,7 +429,8 @@ def __update_commit__(commits):
                 commit.parent = parent
                 parent.save(update_fields=['children_commit'])
 
-def __no_commits_constraints__(modification,tag):
+
+def __no_commits_constraints__(modification, tag):
     path = CommitUtils.true_path(modification)
     directory_str = CommitUtils.directory_to_str(path)
 
@@ -860,10 +447,12 @@ def __no_commits_constraints__(modification,tag):
     if tag.project.id == LUCENE:
         lucene_conditions = str.lower(directory_str).find('/demo/') == -1
         lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or (
-                str.lower(directory_str).startswith('lucene') and str.lower(directory_str).find('src/java') > -1)) and str.lower(directory_str).find('solr') == -1
-                                                   # or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
+                str.lower(directory_str).startswith('lucene') and str.lower(directory_str).find(
+            'src/java') > -1)) and str.lower(directory_str).find('solr') == -1
+        # or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
     if tag.project.id == MAVEN:
-        maven_conditions = str.lower(directory_str).startswith('maven-core') and str.lower(directory_str).find('maven-core-') == -1
+        maven_conditions = str.lower(directory_str).startswith('maven-core') and str.lower(directory_str).find(
+            'maven-core-') == -1
     if tag.project.id == OPENJPA:
         openjpa_conditions = str.lower(directory_str).startswith('openjpa-kernel/')
         # version4 = Tag.objects.filter(description='releases/lucene-solr/4.0.0').first().id

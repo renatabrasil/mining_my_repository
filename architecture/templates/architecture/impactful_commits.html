@@ -128,23 +128,23 @@
 
         <tr>
             <td><span class="text-muted">Commit anterior:</span>
-                {{metric.parents.0.hash}}
+                {{metric.previous_impactful_commit.hash}} - Tem linha de código: {{metric.previous_impactful_commit.has_impact_loc}}
             </td>
-            <td>{{metric.parents.0.author.name}}</td>
-            <td style="text-align:right">{{metric.parents.0.author_experience|floatformat:2}}</td>
+            <td>{{metric.previous_impactful_commit.author.name}}</td>
+            <td style="text-align:right">{{metric.previous_impactful_commit.author_experience|floatformat:2}}</td>
             <td style="text-align:right">
-                {% if not metric.parents.0 %}
+                {% if not metric.previous_impactful_commit %}
                     Commit orfão (introduziu novos comp)
-                {% elif not metric.parents.0.compilable %}
+                {% elif not metric.previous_impactful_commit.compilable %}
                     Não compilou
                 {% else %}
-                    {{metric.parents.0.mean_rmd_components|mul:1000000|floatformat:2}}
+                    {{metric.previous_impactful_commit.mean_rmd_components|mul:1000000|floatformat:2}}
                 {% endif %}
             </td>
             <td></td>
         </tr>
         <tr style="border-bottom: solid 2px">
-            <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> </td>
+            <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> - Tem linha de codigo: {{metric.has_impact_loc}}</td>
             <td>{{metric.author.name}}</td>
             <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
             <td style="text-align:right;">{{metric.mean_rmd_components|mul:1000000|floatformat:2}}</td>

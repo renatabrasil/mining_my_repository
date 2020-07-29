@@ -1,20 +1,16 @@
 import math
-from collections import OrderedDict
-from itertools import groupby
 
 # third-party
 import numpy as np
 import pandas as pd
 from django.contrib import messages
-
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
 from django.template import loader
 from django.urls import reverse
 from scipy.stats import spearmanr
 
-from architecture.views import ROUDING_SCALE, NO_OUTLIERS
-from contributions.models import Commit, Tag
+from architecture.views import ROUDING_SCALE
+from contributions.models import Tag
 
 # OPERATIONS
 POPULATION_MEANS = 1
@@ -50,9 +46,9 @@ def index(request):
 def descriptive_statistics(request, type):
 
     if type == DELTAS_TREND:
-        commits, metric_by_dev = __process_metrics__(type,request.commit_db,request)
+        commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type,request.commit_db,request)
     else:
-        commits, metric_by_dev = __process_metrics__(type,request.commit_db,request)
+        commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type,request.commit_db,request)
     file_name = 'undefined'
 
     try:
@@ -89,6 +85,13 @@ def descriptive_statistics(request, type):
         elif type == CORRELATION_BY_DEV:
 
             correlation_list, file_name = __correlation_by_dev__(file_name, metric_by_dev, commits)
+
+            my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'r texto'])
+            my_df.to_csv(file_name, index=None, header=True)
+
+
+
+            correlation_list, file_name = __correlation_by_dev_by_component__(file_name, metric_by_dev_by_comp, commits)
 
             my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'r texto'])
             my_df.to_csv(file_name, index=None, header=True)
@@ -199,8 +202,22 @@ def descriptive_statistics(request, type):
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits que degradam'])
             my_df.to_csv(file_name5, index=False, header=True)
 
+            #
+            file_name6 = 'compilable_commits_statistics.csv'
+            stats = []
+            non_compilable = len(set([x.id for x in all_commits if not x.compilable]))
+            non_compilable_commits = non_compilable / total_commits
+            compilable_commits = 1 - non_compilable_commits
+
+            stats.append(['Commits compilados', compilable_commits])
+            stats.append(['Commits que nao compilaram', non_compilable_commits])
+
+            my_df = pd.DataFrame(stats, columns=['legenda','Total de commits'])
+            my_df.to_csv(file_name6, index=False, header=True)
+
+
             file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 +\
-                        '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5
+                        '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5 + '</strong> e <strong>(6) ' + file_name6
             print("Informações gerais")
 
 
@@ -355,6 +372,21 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev,commit_db):
         mean_list.append([freq, np.mean(means[0]), np.mean(means[1])])
     return file_name, mean_list
 
+def __correlation_by_dev_by_component__(file_name, metric_by_dev, commits):
+    file_name = 'correlation_dev_comp.csv'
+    correlation_list = []
+    for dev in metric_by_dev:
+        impactful_commits = 0
+        if len(metric_by_dev[dev]) == 0:
+            continue
+        my_df = pd.DataFrame(metric_by_dev[dev], columns=['x', 'y'])
+        r = my_df.corr(method='spearman').values[0][1]
+        p = my_df.corr(method=spearmanr_pval).values[0][1]
+        if not math.isnan(r) and not math.isnan(p):
+            impactful_commits = len(set([x.id for x in commits if x.author == dev]))
+            correlation_list.append([dev.name, r, p, str(round(r,4))+(' ('+str(impactful_commits)+')')])
+    return correlation_list, file_name
+
 
 def __correlation_by_dev__(file_name, metric_by_dev, commits):
     file_name = 'correlation_dev.csv'
@@ -415,6 +447,7 @@ def __process_metrics__(type,commit_db,request):
     # commits = [x for x in commits if abs(x.delta_rmd_components) < 21.62/(10 ** 7)]
     # values = set(map(lambda x: x.author, commits))
     metric_by_dev = {}
+    metric_by_dev_by_comp = {}
 
     if type == CORRELATION_BY_VERSION:
         metric_by_dev = {key: [[c.author_experience, c.normalized_delta*ROUDING_SCALE] for c in commits if c.tag==key] for key in set([c.tag for c in commits])}
@@ -453,6 +486,14 @@ def __process_metrics__(type,commit_db,request):
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [])
 
+                if key not in metric_by_dev_by_comp:
+                    metric_by_dev_by_comp.setdefault(key,[])
+
+                for component_degradation in commit.component_commits.all():
+                    if component_degradation.delta_rmd != 0:
+                        metric_by_dev_by_comp[key].append([component_degradation.author_experience,
+                                                   component_degradation.delta_rmd / commit.u_cloc])
+
                 metric_by_dev[key].append([commit.author_experience, commit.normalized_delta])
             elif type == DELTAS_TREND:
                 key = commit.tag
@@ -474,7 +515,7 @@ def __process_metrics__(type,commit_db,request):
     except Exception as e:
         raise e
 
-    return commits, metric_by_dev
+    return commits, metric_by_dev, metric_by_dev_by_comp
 
 def spearmanr_pval(x,y):
     return spearmanr(x,y)[1]

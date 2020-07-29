@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 
 '''
     Script para calcular o tamanho de todos os jars dentro de um repositorio

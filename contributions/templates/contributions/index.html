@@ -40,7 +40,8 @@
                     <th width="5%" style="text-align:center">#</th>
                     <th>hash</th>
                     <th style="text-align: center;">Tag</th>
-                    <th style="text-align: center;" width="12%">CLOC (no blank and commented lines)</th>
+                    <th style="text-align: center;" width="12%">Tem LOC de código:</th>
+                    <th style="text-align: center;" width="12%">CLOC (no blank lines)</th>
                     <th style="text-align: center;" width="12%">delta</th>
                     <th width="15%">Committer</th>
                     <th>Autor</th>
@@ -56,6 +57,8 @@
                         </th>
                         <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
                         <td style="text-align: center;">{{commit.tag.description}}</td>
+
+                        <td style="text-align: center;">{{commit.has_impact_loc}}</td>
                         <td style="text-align: center;">{{commit.u_cloc}}</td>
                         <td style="text-align: center;" class="{% if commit.normalized_delta > 0 %} text-danger {% elif commit.normalized_delta < 0 %} text-success {% endif %}">
                             <strong>{{commit.normalized_delta|floatformat:8}}</strong>
@@ -74,7 +77,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="8" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
+                        <td colspan="9" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
                     </tr>
                 {% endif %}
             </tbody>

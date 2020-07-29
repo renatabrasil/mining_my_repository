@@ -1,12 +1,5 @@
-from django.test import Client, TestCase
-from django.urls import reverse
-from django.views import generic
-
-from architecture.models import FileCommits
 #     time = timezone.now() + datetime.timedelta(days=days)
 #     return Question.objects.create(question_text=question_text, pub_date=time)
-from common.utils import ViewUtils
-from contributions.models import Project, Tag
 
 # def create_question(question_text, days):
 #     """

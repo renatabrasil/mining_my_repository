@@ -44,11 +44,13 @@
                 Design evaluation: {{commit.mean_rmd_components|floatformat:8}} <br/>
                 Delta: {{commit.delta_rmd_components|floatformat:8}} <br/>
                 Delta normalizado: {{commit.normalized_delta|floatformat:8}} <br/>
-                {% for metric in commit.architectural_metrics.all %}
+
+                {% for metric in commit.component_commits.all %}
                     {% if metric.delta_rmd != 0.0 %}
-                * {{metric.delta_rmd|floatformat:8}} ({{metric.directory.name}}) - <strong>Exp especializada:</strong> {{metric.author_experience|floatformat:2}}<br/>
+                * {{metric.delta_rmd|floatformat:8}} ({{metric.component.name}}) - <strong>Exp especializada:</strong> {{metric.author_experience|floatformat:2}}<br/>
                     {% endif %}
                 {% endfor %}
+
                 <hr style="border: 0.5px solid"/>
               <p class="{% if commit.total_delta > 0 %} text-danger {% elif commit.total_delta < 0 %} text-success {% endif %}">
                   <strong>{{commit.total_delta|floatformat:8}}</strong>
@@ -73,6 +75,10 @@
                 {% endif %}
             </strong>
             </td>
+        </tr>
+        <tr>
+            <th style="text-align: right">Tem linhas de código:</th>
+            <td colspan="2">{{commit.has_impact_loc}}</td>
         </tr>
         <tr>
             <th style="text-align: right">Tag:</th>
@@ -106,12 +112,17 @@
             <th style="text-align: right">Cloc (without commented and blank lines):</th>
             <td colspan="2">{{commit.u_cloc}} </td>
         </tr>
+        parents_str
         {% for parent_commit in commit.parents %}
         <tr>
-            <th style="text-align: right">Parent:</th>
+            <th style="text-align: right">Parent (real):</th>
             <td colspan="2"><a href="/contributions/{{ parent_commit.id }}/">{{parent_commit.hash}}</a></td>
         </tr>
         {% endfor %}
+        <tr>
+            <th style="text-align: right">Parent:</th>
+            <td colspan="2"><a href="/contributions/{{ commit.previous_impactful_commit.id }}/">{{commit.previous_impactful_commit.hash}}</a></td>
+        </tr>
         <tr>
             <th style="text-align: right">Hash</th>
             <td colspan="2">{{commit.hash}}</td>

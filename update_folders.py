@@ -1,7 +1,5 @@
-import sys
 import re
-import shutil
-import os
+import sys
 
 # python update_folders.py source_file dest_file
 
