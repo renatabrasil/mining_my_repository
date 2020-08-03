@@ -798,7 +798,7 @@ def __generate_csv__(folder):
                 # print(os.path.join(directory, filename))
                 try:
                     arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
-                                                     ' -p ' + folder + ' -out ' + folder + ' -pm -folderOfJars',
+                                                     ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
                                                      cwd=current_project_path)
                     arcan_metrics.wait()
                 except Exception as er:
@@ -845,7 +845,7 @@ def __has_jar_file__(directory):
 
 def __belongs_to_component__(component, directories):
     '''
-    Checks whether if a commit belongs to analized commit (in case that project has separate compilated modules, e.g. Hadoop)
+    Checks whether a commit belongs to analized commit (in case that project has separate compilated modules, e.g. Hadoop)
     :param component:
     :param directories:
     :return: whether belongs or not
@@ -907,8 +907,8 @@ def retrieve_previous_commit(commit):
     if commit:
         if len(commit.parents) > 0:
             return commit.parents[0]
-        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id).exists():
-            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id).last()
+        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id, has_impact_loc=True).exists():
+            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id, has_impact_loc=True).last()
 
     return None
 

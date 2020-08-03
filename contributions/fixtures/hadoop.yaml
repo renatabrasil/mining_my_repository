@@ -118,7 +118,7 @@
     build_command: 'mvn -Dhttps.protocols=TLSv1.2 compile package install -Drat.skip=true -Dmaven.javadoc.skip=true -DskipTests -Pdist,native-win -Dtar'
     # Small
     #    build_command: 'mvn -Dhttps.protocols=TLSv1.2 compile -Drat.skip=true -DskipTests -Dmaven.javadoc.skip=true -Pnative-win'
-    prepare_build_command: 'python prepare_build.py C:/Users/brasi/Documents/hadoop/hadoop-project/pom.xml,python prepare_build.py pom.xml,mvn -Dhttps.protocols=TLSv1.2 clean,dos2unix C:/Users/brasi/Documents/repo_aux/hadoop/dev-support/bin/dist-copynativelibs'
+    prepare_build_command: 'python prepare_build.py C:/hadoop/hadoop-project/pom.xml,python prepare_build.py pom.xml,mvn -Dhttps.protocols=TLSv1.2 clean,dos2unix C:/hadoop/dev-support/bin/dist-copynativelibs'
     max_minor_version_description: '*release-2.1.1-rc0,*release-2.2.1-rc0,*release-0.23.10-rc0,*release-0.23.10,*release-2.3.0-rc0,
     release-2.3.0,*release-2.4.0-rc0,release-2.4.0,*release-2.4.1-rc0,*release-0.23.11-rc0,*release-2.4.1-rc1,
     *release-0.23.11,release-2.4.1,*release-2.5.0-rc0,*release-2.5.0-rc1,*release-2.5.0-rc2,release-2.5.0,release-2.5.1,

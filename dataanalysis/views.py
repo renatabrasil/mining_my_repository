@@ -113,7 +113,7 @@ def descriptive_statistics(request, type):
             file_name1 = 'worsening_contributions_by_author.csv'
             pioram_contributions_list = []
             melhoram_contributions_list = []
-            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions(request.session['project']))
+            all_commits = request.commit_db.exclude(tag_id__in=[71,16]).filter(tag_id__in=Tag.line_major_versions(request.session['project']))
             for dev in metric_by_dev:
                 loc = sum([x.u_cloc for x in all_commits if x.author == dev])
                 if metric_by_dev[dev][0] != 0.0:
@@ -136,7 +136,7 @@ def descriptive_statistics(request, type):
             commits_by_dev = []
             file_name = 'overview_by_dev.csv'
             for dev in metric_by_dev:
-                commits_by_dev.append([dev.name, request.commit_db.filter(author=dev, tag_id__in=Tag.line_1_10_x()).count(), metric_by_dev[dev]])
+                commits_by_dev.append([dev.name, request.commit_db.exclude(tag_id__in=[71,16]).filter(author=dev, tag_id__in=Tag.line_1_10_x()).count(), metric_by_dev[dev]])
             my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'total_commits', 'contributions'])
             my_df.to_csv(file_name, index=None, header=True)
             print('overview by dev')
@@ -152,7 +152,7 @@ def descriptive_statistics(request, type):
 
             # About commits
             file_name1 = 'general_commits_statistics.csv'
-            all_commits = request.commit_db.filter(tag_id__in=Tag.line_major_versions(request.session['project']))
+            all_commits = request.commit_db.exclude(tag_id__in=[71,16]).filter(tag_id__in=Tag.line_major_versions(request.session['project']))
             total_commits = all_commits.count()
 
             relative_impactul_commits = len(commits)/total_commits
@@ -345,7 +345,7 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev,commit_db):
             len(metric_by_dev[dev_contributions]) >= threshold]
     means = []
     # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
-    commits = commit_db.exclude(normalized_delta=0).filter(
+    commits = commit_db.exclude(tag_id__in=[71,16],normalized_delta=0).filter(
         tag_id__in=Tag.line_1_10_x())
     # Com todos
     # commits = Commit.objects.exclude(normalized_delta=0).filter(tag_id__in=Tag.line_1_10_x())
@@ -428,10 +428,10 @@ def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author
         degrad_arr = arrays[1]
         if by_author:
             population_means_list.append(
-                [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.filter(author=key).count()])
+                [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.exclude(tag_id__in=[71,16]).filter(author=key).count()])
             if len(exp_arr) >= threshold:
                 devs.append(
-                    [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.filter(author=key).count()])
+                    [key.name, np.mean(exp_arr), np.mean(degrad_arr), commit_db.exclude(tag_id__in=[71,16]).filter(author=key).count()])
         else:
             population_means_list.append(
                 [key.description.replace('rel/',''), np.mean(exp_arr), np.mean(degrad_arr)])
@@ -441,7 +441,7 @@ def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author
 
 
 def __process_metrics__(type,commit_db,request):
-    commits = commit_db.exclude(normalized_delta=0).filter(tag_id__in=Tag.line_major_versions(request.session['project']))
+    commits = commit_db.exclude(normalized_delta=0,tag_id__in=[71,16]).filter(tag_id__in=Tag.line_major_versions(request.session['project']))
     # commits = [x for x in commits if x.author_experience <= 10000]
     # commits = [x for x in commits if x.author_experience <= 10000 and x.normalized_delta > 0]
     # commits = [x for x in commits if abs(x.delta_rmd_components) < 21.62/(10 ** 7)]
