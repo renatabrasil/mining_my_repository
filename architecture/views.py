@@ -907,8 +907,8 @@ def retrieve_previous_commit(commit):
     if commit:
         if len(commit.parents) > 0:
             return commit.parents[0]
-        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id, has_impact_loc=True).exists():
-            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id, has_impact_loc=True).last()
+        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id).exists():
+            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id).last()
 
     return None
 
