@@ -411,7 +411,7 @@ def __process_metrics__(type, commit_db, request):
     metric_by_dev = {}
     commits = []
 
-    if CORRELATION_BY_COMPONENT:
+    if type == CORRELATION_BY_COMPONENT:
         commits = ComponentCommit.objects.exclude(delta_rmd=0).exclude(commit__tag_id__in=[71, 16]).filter(
             commit__tag_id__in=Tag.line_major_versions(request.session['project']))
         for component_commit in commits:

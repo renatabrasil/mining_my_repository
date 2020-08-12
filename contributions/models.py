@@ -17,7 +17,12 @@ from dataanalysis.models import AnalysisPeriod
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
                "390398d38e4fd0d195c91a384f6198a1528bb317", "8ca32df08e5021d144ebfa8b85da7879143c01ae",
-               "e2da258a16359a7112669ef27c8510cde3d860c7", "c0c176e89263cfc34705b1c7423aa0528b421959"]
+               "e2da258a16359a7112669ef27c8510cde3d860c7", "c0c176e89263cfc34705b1c7423aa0528b421959",
+               "7002aa3c760699ccac9f90d63fbbbf912a033b0b", "6b3f22f56b81ba6471a9405b78600b3bb7cfcf1f",
+               "c07bd866840a1757f03ed57c5e376b9c5af4ed52", "21de7add9a935c4ae61716cce269f58db26e949a",
+               "538b7c9ffee7a18064f7726c8b20faf681adb218", "7a6d765e011398468e4b755b4b5acba0fc6ef41f",
+               "1de4dfa58f198e1590294951183ff61210d48549", "0c4f5b1b629f96ffda3d4aca672e10c40b55bf0b",
+               "ba9a8832d043d876fd18b2027cc933fc6689ca9c", "2e84be2474b10adb04c13fc622483be04ee3be4d"]
 ANT = 1
 LUCENE = 2
 MAVEN = 3
@@ -344,6 +349,7 @@ class Commit(models.Model):
 
     class Meta:
         ordering = ['tag_id', 'id']
+
 
 class NoOutlierMetricManager(models.Manager):
     def get_queryset(self):

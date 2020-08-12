@@ -637,6 +637,7 @@ def __read_PM_file__(folder, tag_id):
 
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
                                                 delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
+    ComponentCommit.objects.filter(commit__tag_id=tag_id).update(delta_rmd=0.0,rmd=0.0)
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
     components_evolution = []
@@ -884,7 +885,8 @@ def h1_calculate_commit_degradation(commit, commit_rmds):
 
     # Delta calculation
     commit.previous_impactful_commit = retrieve_previous_commit(commit)
-    if commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag:
+
+    if commit.has_impact_loc and (commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag):
         commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
     # elif commit.previous_impactful_commit is not None and not commit.previous_impactful_commit.compilable:
     else:
