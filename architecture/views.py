@@ -637,7 +637,7 @@ def __read_PM_file__(folder, tag_id):
 
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
                                                 delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
-    ComponentCommit.objects.filter(commit__tag_id=tag_id).update(delta_rmd=0.0,rmd=0.0)
+    ComponentCommit.objects.filter(commit__tag_id=tag_id).update(delta_rmd=0.0, rmd=0.0)
     Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
     Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
     components_evolution = []
@@ -886,7 +886,8 @@ def h1_calculate_commit_degradation(commit, commit_rmds):
     # Delta calculation
     commit.previous_impactful_commit = retrieve_previous_commit(commit)
 
-    if commit.has_impact_loc and (commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag):
+    if commit.has_impact_loc and (
+            commit.previous_impactful_commit is not None and commit.previous_impactful_commit.compilable and commit.previous_impactful_commit.tag == commit.tag):
         commit.delta_rmd_components -= commit.previous_impactful_commit.mean_rmd_components
     # elif commit.previous_impactful_commit is not None and not commit.previous_impactful_commit.compilable:
     else:
@@ -909,15 +910,18 @@ def retrieve_previous_commit(commit):
     if commit:
         if len(commit.parents) > 0:
             return commit.parents[0]
-        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id).exists():
-            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id).last()
+        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id,
+                                   tag__real_tag_description__iexact=commit.tag.real_tag_description).exists():
+            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id,
+                                         tag__real_tag_description__iexact=commit.tag.real_tag_description).last()
 
     return None
 
 
 def retrieve_previous_component_commit(commit, directory):
     component = ComponentCommit.objects.filter(component=directory, commit_id__lt=commit.id,
-                                               commit__author=commit.author, commit__tag=commit.tag)
+                                               commit__author=commit.author, commit__tag=commit.tag,
+                                               commit__tag__real_tag_description__iexact=commit.tag.real_tag_description)
     if component.exists():
         return component.last()
     return None

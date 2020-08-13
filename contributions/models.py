@@ -22,7 +22,8 @@ HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207
                "c07bd866840a1757f03ed57c5e376b9c5af4ed52", "21de7add9a935c4ae61716cce269f58db26e949a",
                "538b7c9ffee7a18064f7726c8b20faf681adb218", "7a6d765e011398468e4b755b4b5acba0fc6ef41f",
                "1de4dfa58f198e1590294951183ff61210d48549", "0c4f5b1b629f96ffda3d4aca672e10c40b55bf0b",
-               "ba9a8832d043d876fd18b2027cc933fc6689ca9c", "2e84be2474b10adb04c13fc622483be04ee3be4d"]
+               "ba9a8832d043d876fd18b2027cc933fc6689ca9c", "2e84be2474b10adb04c13fc622483be04ee3be4d",
+               "6fcbf9b848c63465d26a40387a9be212e708f80b"]
 ANT = 1
 LUCENE = 2
 MAVEN = 3
