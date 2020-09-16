@@ -46,7 +46,7 @@
 
         <form class="form-inline my-12 my-lg-0" href="" method="POST">{% csrf_token %}
 
-        <select class="form-control mr-sm-16 mb-16" id="tag2_selector" placeholder="Selecione o projeto" name="project_base_id" >
+        <select class="form-control mr-sm-16 mb-16" style="padding:2px;" id="tag2_selector" placeholder="Selecione o projeto" name="project_base_id" >
           <option selected value="{{project.id}}">Selecione o projeto</option>
           {% for project in projects %} {{current_project}}
             <option value="{{project.id}}"
@@ -72,25 +72,6 @@
         {% block sidebar %}
         <div class="sidebar-sticky">
             <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link active" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                  Dashboard <span class="sr-only">(current)</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                  O que falta fazer
-                </a>
-              </li>
-
-              <li class="nav-item">
-                <a class="nav-link" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-bar-chart-2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                  Reports
-                </a>
-              </li>
             <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
               <span>Análise dos Dados</span>
               <a class="d-flex align-items-center text-muted" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
@@ -100,7 +81,7 @@
               <li class="nav-item">
                 <a class="nav-link" href="/data_analysis">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-layers"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                  Estatística Descritiva
+                  Análise Estatística
                 </a>
               </li>
 
@@ -124,18 +105,7 @@
                   Commits impactantes
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/architecture/metrics_by_commits">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-layers"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                  Métricas por commit
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/architecture/metrics_by_developer">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-layers"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                  Métricas por desenvolvedor
-                </a>
-              </li>
+
             <li class="nav-item">
                 <a class="nav-link" href="/architecture/quality_between_versions">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-layers"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
@@ -205,15 +175,15 @@
           <strong>Projeto:</strong> {{ project.project_name}}
       </p>
       <p class="card-text">
-          <strong>Tag:</strong> {{tag.description}}
+          <strong>Versão:</strong> {{tag.description}}
       </p>
         <p class="card-text">
             <form action="{{request_path}}" method="post">{% csrf_token %}
                   <div class="form-row align-items-center">
                     <div class="col-auto">
-                        <label for="tag_selector" class="sr-only">Tag</label>
+                        <label for="tag_selector" class="sr-only">Versão</label>
                       <select class="form-control mb-2" id="tag_selector" placeholder="Selecione a tag" name="tag">
-                          <option selected value="{{tag.id}}">Selecione a tag</option>
+                          <option selected value="{{tag.id}}">Selecione a versão</option>
                           {% for tag in tags %}
                             <option value="{{tag.id}}"
                                {% if tag.id == current_tag.id %}selected="selected"{% endif %}>

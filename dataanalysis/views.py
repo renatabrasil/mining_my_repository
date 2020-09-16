@@ -38,7 +38,7 @@ def index(request):
         print("oi")
 
     context = {
-        'title': 'Estatística Descritiva',
+        'title': 'Análise Estatística',
     }
     return HttpResponse(template.render(context, request))
 
