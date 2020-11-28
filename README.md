@@ -1,5 +1,13 @@
 # Mining my repository
 
+
+**Next steps:**
+
+- Clear the code and prepare the first release
+- Implement the infrastructure for testing
+- Implement unit tests
+- Set up test and production environment
+
 Pre-requisites:
 - Python 3.7.4
 - GitPython (3.1.3): https://pypi.org/project/GitPython/3.0.2/
