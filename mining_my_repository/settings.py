@@ -9,14 +9,15 @@ https://docs.djangoproject.com/en/2.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
 """
-
+import logging
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+import sys
+
 from django.contrib import messages
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -28,7 +29,6 @@ SECRET_KEY = '+!liss*sn3t_p+73@s(zsro^(x+^$jk1ls1)6i9h3t+2+t&4in'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'mathfilters',
     'django.contrib.humanize',
+    'tests',
 ]
 
 MIDDLEWARE = [
@@ -64,7 +65,7 @@ ROOT_URLCONF = 'mining_my_repository.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [(os.path.join(BASE_DIR, 'templates')),],
+        'DIRS': [(os.path.join(BASE_DIR, 'templates')), ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,7 +81,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mining_my_repository.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
@@ -90,7 +90,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -110,7 +109,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
@@ -124,7 +122,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-THOUSAND_SEPARATOR='.',
+THOUSAND_SEPARATOR = '.',
 # USE_THOUSAND_SEPARATOR=True
 
 
@@ -154,3 +152,23 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
+
+class DisableMigrations(object):
+
+    def __contains__(self, item):
+        return True
+
+    def __getitem__(self, item):
+        return None
+
+
+TESTS_IN_PROGRESS = False
+if 'test' in sys.argv[1:] or 'jenkins' in sys.argv[1:]:
+    logging.disable(logging.CRITICAL)
+    PASSWORD_HASHERS = (
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    )
+    DEBUG = False
+    TEMPLATE_DEBUG = False
+    TESTS_IN_PROGRESS = True
+    MIGRATION_MODULES = DisableMigrations()
