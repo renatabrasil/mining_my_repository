@@ -1,6 +1,8 @@
 # Mining my repository
 
 
+Main functionalities: it collects the individual contributions of the developers and analyzes the impact of commits in Java projects.
+
 **Next steps:**
 
 - Clear the code and prepare the first release
@@ -8,7 +10,16 @@
 - Implement unit tests
 - Set up test and production environment
 
-Pre-requisites:
+## Getting Started
+
+Choose a local directory and clone this repository using:
+```
+git clone https://github.com/renatabrasil/mining_my_repository.git
+```
+
+### Prerequisites
+
+
 - Python 3.7.4
 - GitPython (3.1.3): https://pypi.org/project/GitPython/3.0.2/
 - PyDriller (1.9.2): https://pydriller.readthedocs.io/en/latest/intro.html
@@ -21,23 +32,42 @@ Pre-requisites:
 - matplotlib: https://matplotlib.org/users/installing.html
 - pandas: https://pandas.pydata.org/
 
+## Running
 
-Run:
+Instructions for running the application and testing.
 
-- python manage.py migrate
-- python manage.py loaddata init.yaml
-- python manage.py runserver
+### Application
 
-Tests:
+```
+python manage.py migrate
+python manage.py loaddata init.yaml
+python manage.py runserver
+```
 
-- python -m coverage run manage.py test contributions
-- python -m coverage run manage.py test architecture
+
+### Tests
+
+```
+python -m coverage run manage.py test contributions
+python -m coverage run manage.py test architecture
+```
 
 ou
 
-- python -m coverage run --source '.' --omit 'manage.py,mining_my_repository/*,*/migrations/*,*__init__*' manage.py test contributions
-- python -m coverage run --source '.' --omit '*/migrations/*,*__init__*' manage.py test contributions architecture
+```
+python -m coverage run --source '.' --omit 'manage.py,mining_my_repository/,/migrations/,init*' manage.py test contributions
+python -m coverage run --source '.' --omit '/migrations/,init' manage.py test contributions architecture
+```
 
----
+## Built With
 
-- coverage html
+* [PyDriller](https://github.com/ishepard/pydriller/) - Python Framework to analyse Git repositories
+
+
+## Authors
+
+* **Renata Brasil** - *Initial work*
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details
