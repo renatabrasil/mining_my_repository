@@ -12,7 +12,6 @@ from pydriller import GitRepository
 
 # local Django
 from common.utils import CommitUtils
-from dataanalysis.models import AnalysisPeriod
 
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",

@@ -5,8 +5,10 @@ import math
 # Django
 from unittest.mock import patch, Mock
 
-from django.test import TestCase
+from unittest import TestCase, mock
+# from django.test import TestCase
 # third-party
+from django.db.models.signals import post_save
 from model_mommy import mommy
 
 # local Django
@@ -15,15 +17,16 @@ from contributions.models import (
     Modification, Project, Tag)
 
 
-# class DeveloperModelTests(TestCase):
-#     @classmethod
-#     def create_developer(self, name="Renata B", email="renata@gmail.com"):
-#         return Developer.objects.create(name=name, email=email)
-#
-#     def test_developer_name(self):
-#         dev = self.create_developer()
-#
-#         self.assertEqual(dev.__str__(), "Renata B (renata@gmail.com)")
+class DeveloperModelTests(TestCase):
+    @classmethod
+    def create_developer(self, name="Renata B", email="renata@gmail.com"):
+        return Developer.objects.create(name=name, email=email, login='renatabrasil')
+
+    def test_developer_name(self):
+        dev = self.create_developer()
+        expectedResult = "Renata B (login: renatabrasil, email: renata@gmail.com)"
+
+        self.assertEqual(expectedResult, dev.__str__())
 
 
 # class ProjectModelTests(TestCase):
@@ -67,17 +70,15 @@ from contributions.models import (
 
 
 class CommitModelTests(TestCase):
-    @patch('main.models.update_commit')
+
     def test_calculate_general_experience_successfully(self):
+        with mock.patch('contributions.models.update_commit') as mocked_handler:
+            post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
+
         au = Mock(Developer)
         author = mommy.make(Developer)
         committer = mommy.make(Developer)
         tag = mommy.make(Tag)
-
-        Commit.objects.filter(hash=any())
-
-        Mock
-
 
         commit = Commit(author=author, committer=committer, tag=tag)
 

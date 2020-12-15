@@ -16,8 +16,9 @@ class SetupMiddleware:
         if request.POST.get('project_base_id') is not None:
             request.project_base = request.POST.get('project_base_id')
             request.session['project'] = request.POST.get('project_base_id')
-        # else:
-        #     request.session['project'] = Project.objects.all().first().id
+        else:
+            request.project_base = Project.objects.all().first().id
+            request.session['project'] = Project.objects.all().first().id
 
         commit_db = Commit.objects
         if NO_OUTLIERS and NO_OUTLIERS==1:
