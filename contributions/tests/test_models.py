@@ -1,20 +1,22 @@
 # standard library
-import datetime
-import math
 
+from unittest import mock
 # Django
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, MagicMock
 
-from unittest import TestCase, mock
-# from django.test import TestCase
 # third-party
 from django.db.models.signals import post_save
-from model_mommy import mommy
+from django.test import TestCase
 
 # local Django
+from model_mommy import mommy
+
 from contributions.models import (
-    Commit, Developer, Directory,
-    Modification, Project, Tag)
+    Commit, Developer, Project, Tag)
+
+
+# from model_mommy.generators import gen_string
+# mommy.generators.add('localflavor.us.models.PhoneNumberField', gen_string)
 
 
 class DeveloperModelTests(TestCase):
@@ -24,28 +26,39 @@ class DeveloperModelTests(TestCase):
 
     def test_developer_name(self):
         dev = self.create_developer()
-        expectedResult = "Renata B (login: renatabrasil, email: renata@gmail.com)"
+        expected_result = "Renata B (login: renatabrasil, email: renata@gmail.com)"
 
-        self.assertEqual(expectedResult, dev.__str__())
+        self.assertEqual(expected_result, dev.__str__())
 
 
-# class ProjectModelTests(TestCase):
-#     @classmethod
-#     def create_project(self, name="Project 1", path="https://github.com/project_1"):
-#         return Project.objects.create(project_name=name, project_path=path)
-#
-#     def test_project_name(self):
-#         proj = self.create_project()
-#
-#         self.assertEqual(proj.__str__(), "Project 1")
-#
-#     def test_first_tag(self):
-#         project = mommy.make(Project)
-#         tag = mommy.make(Tag, description='rel/1.1', previous_tag=None, project=project)
-#         tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=project)
-#         tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=project)
-#
-#         self.assertEqual(project.first_tag, tag)
+class ProjectModelTests(TestCase):
+    def setUp(self):
+        """
+        Set up all the tests
+        """
+
+    @classmethod
+    def create_project(self, name="Project 1", path="https://github.com/project_1"):
+        return Project.objects.create(project_name=name, project_path=path)
+
+    def test_project_name(self):
+        proj = self.create_project()
+
+        self.assertEqual(proj.__str__(), "Project 1")
+
+    # @patch()
+    def test_first_tag(self):
+
+
+        project1 = mommy.make(Project, project_name="Project 1")
+
+        # project1 = mommy.make(Project)
+        tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=project1)
+        # tag = mommy.make(Tag, description='rel/1.1', previous_tag=None, project=project)
+        # tag2 = mommy.make(Tag, description='rel/1.2', previous_tag=tag, project=project)
+        # tag3 = mommy.make(Tag, description='rel/1.3', previous_tag=tag2, project=project)
+
+        self.assertEqual(project1.first_tag, tag)
 
 
 # class TagModelTests(TestCase):
@@ -69,23 +82,22 @@ class DeveloperModelTests(TestCase):
 #         self.assertEqual(directory.__str__(), "main - Visible: True")
 
 
-class CommitModelTests(TestCase):
-
-    def test_calculate_general_experience_successfully(self):
-        with mock.patch('contributions.models.update_commit') as mocked_handler:
-            post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
-
-        au = Mock(Developer)
-        author = mommy.make(Developer)
-        committer = mommy.make(Developer)
-        tag = mommy.make(Tag)
-
-        commit = Commit(author=author, committer=committer, tag=tag)
-
-        commit.save()
-
-        self.assertIsNone(commit)
-
+# class CommitModelTests(TestCase):
+#
+#     def test_calculate_general_experience_successfully(self):
+#         with mock.patch('contributions.models.update_commit') as mocked_handler:
+#             post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
+#
+#         au = Mock(Developer)
+#         author = mommy.make(Developer)
+#         committer = mommy.make(Developer)
+#         tag = mommy.make(Tag)
+#
+#         commit = Commit(author=author, committer=committer, tag=tag)
+#
+#         commit.save()
+#
+#         self.assertIsNone(commit)
 
 # # FIXME: cloc uncommented lines test
 # class ModifiModelTests(TestCase):
