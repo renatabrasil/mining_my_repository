@@ -432,7 +432,7 @@ def __update_commit__(commits):
 
 def __no_commits_constraints__(modification, tag):
     path = CommitUtils.true_path(modification)
-    directory_str = CommitUtils.directory_to_str(path)
+    directory_str = CommitUtils.extract_directory_name_from_full_file_name(path)
 
     ant_conditions = True
     lucene_conditions = True
@@ -471,6 +471,6 @@ def __no_commits_constraints__(modification, tag):
     # FIXME: Fix the others
     # shiro_conditions = str.lower(directory_str).startswith(tag.main_directory)
 
-    return CommitUtils.modification_is_java_file(path) and str.lower(directory_str).find('test') == -1 and \
+    return CommitUtils.is_java_file(path) and str.lower(directory_str).find('test') == -1 and \
            ant_conditions and lucene_conditions and maven_conditions and openjpa_conditions and cassandra_conditions and \
            hadoop_conditions and shiro_conditions

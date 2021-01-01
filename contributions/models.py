@@ -12,7 +12,6 @@ from pydriller import GitRepository
 
 # local Django
 from common.utils import CommitUtils
-from dataanalysis.models import AnalysisPeriod
 
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
@@ -48,13 +47,6 @@ class Project(models.Model):
     project_path = models.CharField(max_length=200)
     main_branch = models.CharField(max_length=80, default='master')
 
-    # filters = models.CharField(max_length=80, default='', blank=True)
-
-    # @property
-    # def filters(self):
-    #     filter = self.filters.split(',')
-    #     return [c.strip() for c in filter]
-
     def __str__(self):
         return self.project_name
 
@@ -76,7 +68,6 @@ class Tag(models.Model):
     prepare_build_command = models.CharField(max_length=800, null=True)
     core_component = models.CharField(max_length=280, default='')
     main_directory = models.CharField(max_length=280, default='')
-    # alias = models.CharField(max_length=40, null=True)
     v1_1 = 1
 
     @property
@@ -301,7 +292,6 @@ class Commit(models.Model):
                 if found:
                     self.has_submitted_by = True
 
-            # previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id).last()
             previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
                                                     tag__project=self.tag.project).last()
 
@@ -335,15 +325,7 @@ class Commit(models.Model):
             print('Cadastrando commit: ' + self.hash)
             print('Versao: ' + self.tag.__str__())
             print('Autor: ' + self.author.name)
-            # print('Senioridade: ' + str(self.author_seniority))
-            # print('Resumo experiência:')
-            # print('--------------------------------')
-            # print('Total de commits: ' + str(self.total_commits))
-            # print('Total de arquivos distintos modificados: ' + str(files))
-            # print('Total de linhas modificadas ate o commit: ' + str(self.cloc_activity))
-            # print('-')
-            # print('Experiência: 0.2*' + str(self.total_commits)+ " + 0.4*"+str(files) + " + 0.4*"+str(self.cloc_activity))
-            # print('Experiência= '+str(self.author_experience))
+
             print('\n')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
@@ -438,7 +420,7 @@ class Modification(models.Model):
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
     has_impact_loc = models.BooleanField(default=False)
-    # FIXME
+
     nloc = models.IntegerField(default=0, null=True)
     complexity = models.IntegerField(null=True)
 
@@ -465,7 +447,6 @@ class Modification(models.Model):
         added_uncommented_lines = count_loc(added_text)
         deleted_uncommented_lines = count_loc(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
-        # return 0
 
     def has_impact_loc_calculation(self):
         diff_text = self.__diff_text__()
@@ -504,7 +485,7 @@ class Modification(models.Model):
 
     @property
     def is_java_file(self):
-        return CommitUtils.modification_is_java_file(self.path)
+        return CommitUtils.is_java_file(self.path)
 
     def save(self, *args, **kwargs):
 
@@ -564,15 +545,11 @@ def update_commit(sender, instance, **kwargs):
 def __detect_impact_loc__(code):
     total_lines = code.count('\n')
     commented_lines = 0
-    blank_lines = 0
-    uncommented_lines = 0
     if total_lines > 0:
         # FIXME: Put this part on loop below
         lines = code.split("\n")
         # In case we should consider commented lines
         for line in lines:
-            found = ''
-            found2 = ''
             m = re.search(r"\u002F/.*", line)
             n = re.search(
                 r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*',
@@ -580,7 +557,6 @@ def __detect_impact_loc__(code):
             if m or n:
                 if m:
                     found = m.group(0)
-                    # line = re.sub(r'\u002F/.*', '', line)
                     line = line.replace(found, '')
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
