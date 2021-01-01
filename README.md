@@ -48,15 +48,12 @@ python manage.py runserver
 ### Tests
 
 ```
-python -m coverage run manage.py test contributions
-python -m coverage run manage.py test architecture
+coverage run manage.py test <module - or empty to run tests for all Apps>
 ```
-
-ou
+To generate test coverage report:
 
 ```
-python -m coverage run --source '.' --omit 'manage.py,mining_my_repository/,/migrations/,init*' manage.py test contributions
-python -m coverage run --source '.' --omit '/migrations/,init' manage.py test contributions architecture
+coverage html
 ```
 
 ## Built With
@@ -66,8 +63,8 @@ python -m coverage run --source '.' --omit '/migrations/,init' manage.py test co
 
 ## Authors
 
-* **Renata Brasil** - *Initial work*
+* **Renata Brasil**
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details
