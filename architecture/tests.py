@@ -1,6 +1,4 @@
 from django.test import TestCase
-
-from django.test import TestCase
 # Create your tests here.
 from model_mommy.recipe import Recipe, foreign_key
 

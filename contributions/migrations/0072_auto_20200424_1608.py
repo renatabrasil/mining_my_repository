@@ -12,44 +12,44 @@ class Migration(migrations.Migration):
         Project = apps.get_model('contributions', 'Project')
 
 
-        apache=Project.objects.get(project_name='Apache Ant')
-
-        Tag.objects.filter(description='ANT_141').update(major=False)
-        Tag.objects.filter(description='rel/1.5.4').update(major=False)
-        Tag.objects.filter(description='rel/1.6.5').update(major=False)
-        Tag.objects.filter(description='rel/1.7.1').update(major=False)
-        Tag.objects.filter(description='rel/1.8.4').update(major=False)
-        Tag.objects.filter(description='rel/1.9.7').update(major=False)
-        Tag.objects.filter(description='rel/1.10.7').update(major=False)
-        Tag.objects.filter(id__gte=18).delete()
-
-        tag = Tag(project=apache, description='rel/1.9.x',
-                  max_minor_version_description='rel/1.9.8,rel/1.9.9,rel/1.9.10,rel/1.9.11,'
-                                                'rel/1.9.12,rel/1.9.13,rel/1.9.14,rel/1.9.14',
-                  previous_tag=Tag.objects.get(description='rel/1.9.7'), major=True)
-        tag.save()
-
-        Tag.objects.filter(description='rel/1.4').update(max_minor_version_description='ANT_141')
-
-
-        for tag in Tag.objects.all():
-            if tag.description == 'rel/1.4':
-                tag.max_minor_version_description = 'ANT_141'
-            elif tag.description == 'rel/1.5':
-                tag.max_minor_version_description = 'rel/1.5.1,rel/1.5.2,rel/1.5.3,rel/1.5.4'
-            elif tag.description == 'rel/1.6.0':
-                tag.max_minor_version_description = 'rel/1.6.1,rel/1.6.2,rel/1.6.3,rel/1.6.4,rel/1.6.5'
-            elif tag.description == 'rel/1.7.0':
-                tag.max_minor_version_description = 'rel/1.7.1'
-            elif tag.description == 'rel/1.8.0':
-                tag.max_minor_version_description = 'rel/1.8.1,rel/1.8.2,rel/1.8.3,rel/1.8.4'
-            elif tag.description == 'rel/1.9.0':
-                tag.max_minor_version_description = 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,' \
-                                                    'rel/1.9.7'
-            elif tag.description == 'rel/1.10.0':
-                tag.max_minor_version_description = 'rel/1.10.1,rel/1.10.2,rel/1.10.3,rel/1.10.4,rel/1.10.5,' \
-                                                    'rel/1.10.6,rel/1.10.7'
-            tag.save()
+        # apache=Project.objects.get(project_name='Apache Ant')
+        #
+        # Tag.objects.filter(description='ANT_141').update(major=False)
+        # Tag.objects.filter(description='rel/1.5.4').update(major=False)
+        # Tag.objects.filter(description='rel/1.6.5').update(major=False)
+        # Tag.objects.filter(description='rel/1.7.1').update(major=False)
+        # Tag.objects.filter(description='rel/1.8.4').update(major=False)
+        # Tag.objects.filter(description='rel/1.9.7').update(major=False)
+        # Tag.objects.filter(description='rel/1.10.7').update(major=False)
+        # Tag.objects.filter(id__gte=18).delete()
+        #
+        # tag = Tag(project=apache, description='rel/1.9.x',
+        #           max_minor_version_description='rel/1.9.8,rel/1.9.9,rel/1.9.10,rel/1.9.11,'
+        #                                         'rel/1.9.12,rel/1.9.13,rel/1.9.14,rel/1.9.14',
+        #           previous_tag=Tag.objects.get(description='rel/1.9.7'), major=True)
+        # tag.save()
+        #
+        # Tag.objects.filter(description='rel/1.4').update(max_minor_version_description='ANT_141')
+        #
+        #
+        # for tag in Tag.objects.all():
+        #     if tag.description == 'rel/1.4':
+        #         tag.max_minor_version_description = 'ANT_141'
+        #     elif tag.description == 'rel/1.5':
+        #         tag.max_minor_version_description = 'rel/1.5.1,rel/1.5.2,rel/1.5.3,rel/1.5.4'
+        #     elif tag.description == 'rel/1.6.0':
+        #         tag.max_minor_version_description = 'rel/1.6.1,rel/1.6.2,rel/1.6.3,rel/1.6.4,rel/1.6.5'
+        #     elif tag.description == 'rel/1.7.0':
+        #         tag.max_minor_version_description = 'rel/1.7.1'
+        #     elif tag.description == 'rel/1.8.0':
+        #         tag.max_minor_version_description = 'rel/1.8.1,rel/1.8.2,rel/1.8.3,rel/1.8.4'
+        #     elif tag.description == 'rel/1.9.0':
+        #         tag.max_minor_version_description = 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,' \
+        #                                             'rel/1.9.7'
+        #     elif tag.description == 'rel/1.10.0':
+        #         tag.max_minor_version_description = 'rel/1.10.1,rel/1.10.2,rel/1.10.3,rel/1.10.4,rel/1.10.5,' \
+        #                                             'rel/1.10.6,rel/1.10.7'
+        #     tag.save()
 
     dependencies = [
         ('contributions', '0071_auto_20200424_1312'),

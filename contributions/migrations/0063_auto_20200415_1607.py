@@ -23,6 +23,8 @@ class Migration(migrations.Migration):
             metric.save()
 
     dependencies = [
+        ('architecture', '0001_initial'),
+        ('architecture', '0012_auto_20200107_1703'),
         ('contributions', '0061_auto_20200411_2206'),
     ]
 

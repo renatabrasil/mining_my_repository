@@ -2,7 +2,6 @@
 import re
 
 # third-party
-import numpy as np
 # Django
 from django.db import models
 from django.db.models.signals import post_save
@@ -29,7 +28,7 @@ MAVEN = 3
 OPENJPA = 4
 CASSANDRA = 5
 HADOOP = 6
-# filter_outliers = {"author__name": ["Peter Donald"], "hash": ["550a4ef1afd7651dc20110c0b079fb03665ca9da"]}
+
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
 
@@ -117,7 +116,7 @@ class Directory(models.Model):
         return self.name + " - Visible: " + str(self.visible)
 
     def belongs_to_component(self, path):
-        return self.name == path or (self.name.startswith(path) and not Directory.objects.filter(name__exact=path,
+        return self.name == path or (path.startswith(self.name) and not Directory.objects.filter(name__exact=self.name,
                                                                                                  visible=True).exists())
 
 
@@ -567,9 +566,6 @@ def __detect_impact_loc__(code):
                 elif n:
                     found = n.group(0)
                     line = line.replace(found, '')
-                    # line = re.sub(r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*',
-                    #               '',
-                    #               line)
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1

@@ -12,11 +12,11 @@ class Migration(migrations.Migration):
         Commit = apps.get_model('contributions', 'Commit')
 
 
-        apache=Project.objects.get(id=5)
-
-        for commit in Commit.objects.filter(tag__project=apache):
-            commit.compilable = False
-            commit.save()
+        # apache=Project.objects.get(id=5)
+        #
+        # for commit in Commit.objects.filter(tag__project=apache):
+        #     commit.compilable = False
+        #     commit.save()
 
     dependencies = [
         ('contributions', '0083_auto_20200517_1149'),

@@ -24,7 +24,7 @@ class SetupMiddleware:
         if NO_OUTLIERS and NO_OUTLIERS==1:
             commit_db = Commit.no_outliers_objects
 
-        request.commit_db = commit_db.exclude(tag_id__in=[71,16])
+        request.commit_db = commit_db
 
         response = self.get_response(request)
 
