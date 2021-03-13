@@ -48,7 +48,7 @@ python manage.py runserver
 ### Tests
 
 ```
-coverage run manage.py test <module - or empty to run for all Apps)
+coverage run manage.py test <module - or empty to run for all Apps>
 ```
 To generate test coverage report:
 
