@@ -26,7 +26,6 @@ class CommitUtils(object):
         '''
 
         array_email = full_email.split(" ")
-        # email = email[0]+"@"+email[2]+"."+email[4]
         email = ''
         for part in array_email:
             if part.lower() == 'at':
@@ -149,7 +148,6 @@ class ViewUtils(object):
             try:
                 tag_id = request.session['tag']
             except Exception as e:
-                # raise  # reraises the exceptio
                 print(str(e))
                 tag_id = models.Tag.objects.filter(project=request.session['project']).first().id
         query = models.Tag.objects.filter(pk=tag_id)

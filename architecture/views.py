@@ -258,13 +258,12 @@ def compiled(request, file_id):
 
 # Using overall design evaluation
 def impactful_commits(request):
-    tag = ViewUtils.load_tag(request)
     export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
 
     full_tag = request.POST.get('until_tag')
-    if not full_tag:
-        if request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on':
-            full_tag = 'on'
+
+    if not full_tag and (request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on'):
+        full_tag = 'on'
 
     directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by("name")
     developers = Developer.objects.all().order_by("name")
@@ -483,7 +482,6 @@ def calculate_metrics(request, file_id):
     if os.path.exists(directory_name + "/log-compilation-errors.txt"):
         update_compilable_commits(directory_name + "/log-compilation-errors.txt")
     directory_name = directory_name + "/jars"
-    metrics = __read_PM_file__(directory_name, file.tag.id)
     file.metrics_calculated_at = timezone.localtime(timezone.now())
     file.save()
     return HttpResponseRedirect(reverse('architecture:index', ))
@@ -594,7 +592,6 @@ def quality_between_versions(request):
                     if version in value:
                         components_mean.append(float(value[version]))
 
-                # components_mean = np.mean([float(c[version]) for c in list(metrics_by_directories.values())])
                 # ANT
                 name_version = version.replace('rel#', '').replace('-', '', 1).replace('_', '.').replace('#', '-')
                 # Lucene
@@ -613,7 +610,6 @@ def quality_between_versions(request):
                 # Lucene
                 # Tag.objects.filter(description__endswith=name_version,project=request.session['project']).update(delta_rmd_components=architectural_quality)
 
-        # my_df_metrics = pd.DataFrame.from_dict(metrics, orient='index', columns=['version', 'y'])
         my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
@@ -633,7 +629,6 @@ def __read_PM_file__(folder, tag_id):
     '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}
     tag = Tag.objects.get(id=tag_id)
-    start_commit_analysis_period = Commit.objects.all().first()
 
     Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
                                                 delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
@@ -646,7 +641,6 @@ def __read_PM_file__(folder, tag_id):
     # To sort in natural order
     arr = os.listdir(folder)
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
-    is_commit_db = False
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
         components_db = Directory.objects.filter(visible=True)
@@ -660,9 +654,7 @@ def __read_PM_file__(folder, tag_id):
                 hash = f.name.split('\\')[1].split('-')[2]
                 if Commit.objects.filter(hash=hash).count() > 0:
                     commit = Commit.objects.filter(hash=hash)[0]
-                    is_commit_db = True
-                else:
-                    is_commit_db = False
+
                 # else:
                 #     continue
                 commit_rmds = []
@@ -677,9 +669,6 @@ def __read_PM_file__(folder, tag_id):
                     if directory.count() == 0:
                         continue
                     directory = directory[0]
-
-                    # Hypothesis 2: processing
-                    component_commit = h2_calculate_component_degradation(commit, directory, rmd)
 
                     # Change architecture
                     components.append(directory)
@@ -734,7 +723,6 @@ def list_commits(project, form):
     FileCommits.objects.filter(tag__project=project).delete()
     folder = form['directory'].value()
 
-    # commits = [i for i in list(Commit.objects.filter(id__gte=first_commit.id).order_by("id"))]
     commits = [i for i in list(Commit.objects.filter(tag__project=project).order_by("id"))]
     first_commit = commits[0]
 
@@ -776,9 +764,6 @@ def list_commits(project, form):
                 my_file.write(form['build_path'].value() + "\n")
             if not commit.has_impact_loc and not commit.children_commit:
                 continue
-            # if len(commit.parents) == 0 and commit.parents_str:
-            #     my_file.write(str(i) + "-" + commit.parents_str + "\n")
-            #     i += 1
             my_file.write(str(i) + "-" + commit.hash + "\n")
             i += 1
         my_file.closed
@@ -805,7 +790,6 @@ def __generate_csv__(folder):
                 except Exception as er:
                     print(er)
                     return False
-                continue
             else:
                 continue
     return True

@@ -161,7 +161,6 @@ class ViewUtilsTests(TestCase):
     # @mock.patch('Project.objects.all().first()', return_value=None)
     def test_current_project_successfully(self):
         project1 = mommy.make(Project)
-        project2 = mommy.make(Project)
 
         result = ViewUtils.get_current_project(request)
 

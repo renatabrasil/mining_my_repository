@@ -569,7 +569,6 @@ def __detect_impact_loc__(code):
                     line.replace(' ', '', 1)
                     if line.strip().isdigit():
                         commented_lines += 1
-                        continue
                     else:
                         return True
             elif not line.replace(" ", "").isdigit() and (line != '' and line != '\n'):

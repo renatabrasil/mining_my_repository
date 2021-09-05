@@ -75,11 +75,7 @@ def descriptive_statistics(request, type):
             correlation_list, file_name = __correlation_version__(file_name, metric_by_dev)
 
             my_df = pd.DataFrame(correlation_list, columns=['versao', 'r', 'p-value'])
-            # writer = pd.ExcelWriter('correlation_version.xlsx')
-            # my_df.to_excel(writer, 'Sheet1', index=None, header=True)
             my_df.to_csv(file_name, index=None, header=True)
-            # my_df.to_excel(writer, 'Sheet2')
-            # writer.save()
             print('Correlation by version')
 
         elif type == CORRELATION_BY_DEV:
@@ -170,8 +166,6 @@ def descriptive_statistics(request, type):
             file_name2 = 'authors_commits_statistics.csv'
             stats = []
 
-            # continuaram_a_fazer_commits_apos_um_ano = len(set([x.author for x in all_commits if x.author_seniority > 365]))
-
             all_impactful_authors = len(set([x.author for x in commits]))
             all_authors = len(set([x.author for x in all_commits]))
 
@@ -203,9 +197,6 @@ def descriptive_statistics(request, type):
             my_df = pd.DataFrame(stats, columns=['legenda', 'Total de commits'])
             my_df.to_csv(file_name6, index=False, header=True)
 
-            # FIXME: delete
-            # file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 +\
-            #             '</strong>, <strong>(4) ' + file_name4 + '</strong> e <strong>(5) ' + file_name5 + '</strong> e <strong>(6) ' + file_name6
             file_name = '(1) ' + file_name1 + '</strong>, <strong> (2) ' + file_name2 + '</strong>, <strong>(3) ' + file_name3 + \
                         '</strong> e <strong>(4) ' + file_name6
 
@@ -233,8 +224,6 @@ def __impactful_commits_statistics__(commits, type=0):
         commits = [x for x in commits if x.delta_rmd_components > 0.0]
     elif type == IMPROVEMENT:
         commits = [x for x in commits if x.delta_rmd_components < 0.0]
-
-    by_period = {}
 
     commits_by_period = len(set([x.id for x in commits if x.author_seniority <= 30 or x.has_submitted_by]))
     commits_by_period /= len(commits)
@@ -280,10 +269,7 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev, commit_db):
     last_key = '>'
     a.append(last_key)
     frequencies = {el: [[], []] for el in a}
-    # frequencies = OrderedDict({'100':[[],[]],'200':[[],[]],'300':[[],[]],'400':[[],[]],'500':[[],[]],'600':[[],[]],'700':[[],[]],'> 800':[[],[]]})
-    # frequencies = OrderedDict({'5': [[], []], '25': [[], []], '45': [[], []], '65': [[], []], '85': [[], []],
-    #                            '105': [[], []], '125': [[], []], '145': [[], []], '165': [[], []], '185': [[], []],
-    #                            '225': [[], []], '245': [[], []], last_key: [[], []]})
+
     deltas = [len(author_exp) for author_exp in metric_by_dev.values()]
     threshold = np.percentile(deltas, 80)
     # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
@@ -312,8 +298,7 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev, commit_db):
             if not find:
                 frequencies[last_key][0].append(commit.author_experience)
                 frequencies[last_key][1].append(commit.normalized_delta)
-    # devs = [[dev_contributions.name, metric_by_dev[dev_contributions][0], metric_by_dev[dev_contributions][1], metric_by_dev[dev_contributions][2]] for
-    #         dev_contributions in metric_by_dev.keys() if len(metric_by_dev[dev_contributions]) >= threshold]
+
     mean_list = []
     for freq, means in frequencies.items():
         mean_list.append([freq, np.mean(means[0]), np.mean(means[1])])
@@ -354,7 +339,6 @@ def __correlation_h2_by_component__(file_name, metric_by_component, commits):
     file_name = 'correlation_h2_by_comp.csv'
     correlation_list = []
     for component in metric_by_component:
-        impactful_commits = 0
         if len(metric_by_component[component]) == 0:
             continue
         my_df = pd.DataFrame(metric_by_component[component], columns=['x', 'y'])

@@ -43,62 +43,44 @@ def index(request):
             load_commits = True
 
     if load_commits:
-        hash = None
+        hash_commit = None
         filter = {}
         if tag.previous_tag is not None:
             commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
             filter.setdefault('from_tag', tag.previous_tag.description)
             if commit is not None:
-                hash = commit.hash
-                filter.setdefault('from_commit', hash)
+                hash_commit = commit.hash
+                filter.setdefault('from_commit', hash_commit)
                 filter.pop('from_tag', None)
 
-        #  git log --graph --oneline --decorate --tags *.java
-        tag_aux = tag.description
-
-        # filter.setdefault('only_in_branch', 'master')
         filter.setdefault('only_in_branch', project.main_branch)
         filter.setdefault('only_modifications_with_file_types', ['.java'])
         filter.setdefault('only_no_merge', True)
         i = 0
         if tag.real_tag_description.find('*'):
-            tag_aux = tag
             i += 1
         filter.setdefault('to_tag', tag.real_tag_description)
-
-        # if tag.previous_tag:
-        #     filter.setdefault('from_tag', tag.previous_tag.description)
-        tag_is_not_first_tag = True
-        # filter.pop('from_commit', None)
-        # if hash:
-        #     filter.setdefault('from_commit', hash)
-        #     filter.pop('from_tag', None)
 
         filter.pop('from_commit', None)
         filter.pop('from_tag', None)
         filter.pop('to_tag', None)
         tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
         for tag1 in tags:
-            # tag1 = Tag.objects.get(id=tag1)
             if tag1.minors:
-                if tag1.previous_tag is not None:
-                    if 'from_commit' not in filter:
-                        if 'from_tag' in filter:
-                            filter['from_tag'] = tag1.previous_tag.description
-                        else:
-                            filter.setdefault('from_tag', tag1.previous_tag.description)
+                if tag1.previous_tag is not None and 'from_commit' not in filter:
+                    if 'from_tag' in filter:
+                        filter['from_tag'] = tag1.previous_tag.description
+                    else:
+                        filter.setdefault('from_tag', tag1.previous_tag.description)
                 for minor in list([tag1.real_tag_description] + tag1.minors):
                     # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                     if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                         filter['from_tag'] = minor.replace('*', '')
                         continue
                     filter['to_tag'] = minor
-                    # if hash is not None:
-                    #     filter['from_commit'] = commit.hash
-                    #     filter.pop('from_tag', None)
                     print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
                     for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                        commit = __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+                        __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
 
                     # if 'from_tag' in filter.keys():
                     filter['from_tag'] = minor
@@ -161,13 +143,10 @@ def index(request):
         'current_developer': current_developer,
         'current_tag_filter': current_tag_filter,
     }
-    json_response = []
     if request.is_ajax():
         result = {'html': render_to_string(url_path, {'latest_commit_list': latest_commit_list})}
         return HttpResponse(json.dumps(result, ensure_ascii=False),
                             content_type='application/json')
-        # return HttpResponse(json.dumps(json_response),
-        #                     content_type='application/json')
     end = time.time()
 
     print("Tempo total: " + str(end - start))
@@ -300,10 +279,7 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                     nloc = modification_repo.nloc
                 else:
                     nloc = None
-                # diff = GitRepository.parse_diff(modification.diff)
                 try:
-                    # if total_modification == 1:
-                    #     commit.save()
                     modification = Modification(commit=commit, old_path=modification_repo.old_path,
                                                 new_path=modification_repo.new_path,
                                                 change_type=modification_repo.change_type,
@@ -318,7 +294,6 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                     # time.sleep(.200)
                     modification.save()
                 except Exception as e:
-                    # raise  # reraises the exceptio
                     print(str(e))
         # else:
         #     # for mod in commit[0].modifications.all():
@@ -339,29 +314,28 @@ def visible_directory(request, directory_id):
         return HttpResponse(json.dumps(result, ensure_ascii=False),
                             content_type='application/json')
 
-    # return HttpResponseRedirect(reverse("?directory_data=true"))
     request.GET = request.GET.copy()
     request.GET['directory_data'] = True
     return index(request)
 
 
 def detail_by_hash(request):
-    hash = request.POST.get('hash')
-    if hash:
-        request.session['hash'] = hash
+    hash_commit = request.POST.get('hash')
+    if hash_commit:
+        request.session['hash'] = hash_commit
     else:
         if 'hash' in request.session:
-            hash = request.session['hash']
+            hash_commit = request.session['hash']
         else:
-            hash = None
+            hash_commit = None
 
-    commit = Commit.objects.filter(hash=hash)
+    commit = Commit.objects.filter(hash=hash_commit)
     if commit.count() > 0:
         commit = commit[0]
     else:
         commit = None
     return render(request, 'contributions/detail.html',
-                  {'commit': commit, 'current_commit_hash': hash, 'title': 'Detalhes do commit'})
+                  {'commit': commit, 'current_commit_hash': hash_commit, 'title': 'Detalhes do commit'})
 
 
 def detail(request, commit_id):
@@ -455,14 +429,10 @@ def __no_commits_constraints__(modification, tag):
             'maven-core-') == -1
     if tag.project.id == OPENJPA:
         openjpa_conditions = str.lower(directory_str).startswith('openjpa-kernel/')
-        # version4 = Tag.objects.filter(description='releases/lucene-solr/4.0.0').first().id
-        # if tag.id >= version4:
-        #     lucene_conditions = lucene_conditions and str.lower(directory_str).startswith('lucene/core')
 
     if tag.project.id == CASSANDRA:
         cassandra_conditions = str.lower(directory_str).startswith(tag.main_directory)
     if tag.project.id == HADOOP:
-        # hadoop_conditions = str.lower(directory_str).startswith('src/java')
         dirs = [x.strip() for x in tag.core_component.split(',')]
         hadoop_conditions = False
         for dir in dirs:

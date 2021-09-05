@@ -3,11 +3,9 @@ from django import forms
 
 
 class FilesCompiledForm(forms.Form):
-    # directory = forms.CharField(label='Diretorio', max_length=100)
     git_local_repository = forms.CharField(label='Local repository', max_length=200)
     directory = forms.CharField(label='Diretorio', max_length=100)
     build_path = forms.CharField(label='Build path', max_length=100)
-    # widget = forms.TextInput(attrs={'class': 'myfieldclass'})
     project_id = forms.IntegerField(widget = forms.HiddenInput(), required = False)
 
     def __init__(self, *args, **kwargs):
