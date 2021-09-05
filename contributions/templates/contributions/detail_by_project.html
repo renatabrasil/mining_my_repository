@@ -8,26 +8,29 @@
 <h3>Commits por autor</h3>
 <br>
 <div class="card" style="width: 25rem;">
-  <div class="card-body">
-    <h5 class="card-title">Parâmetros do Projeto</h5>
-      <p class="card-text"><strong>Threshold (file)
-          <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de arquivos"></i></strong>:
-    {{latest_commit_list.0.file_threshold|floatformat:3}}</p>
+    <div class="card-body">
+        <h5 class="card-title">Parâmetros do Projeto</h5>
+        <p class="card-text"><strong>Threshold (file)
+            <em class="fas fa-info-circle" data-toggle="tooltip" data-placement="top"
+               title="usado para definir core developers baseado na métrica de contagem de arquivos"></em></strong>:
+            {{latest_commit_list.0.file_threshold|floatformat:3}}</p>
 
-      <p class="card-text"><strong>Threshold (commit)
-          <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="top" title="usado para definir core developers baseado na métrica de contagem de commits"></i></strong>:
-    {{latest_commit_list.0.commit_threshold|floatformat:3}}</p>
+        <p class="card-text"><strong>Threshold (commit)
+            <em class="fas fa-info-circle" data-toggle="tooltip" data-placement="top"
+               title="usado para definir core developers baseado na métrica de contagem de commits"></em></strong>:
+            {{latest_commit_list.0.commit_threshold|floatformat:3}}</p>
 
-      <li>Threshold (experience_bf): {{latest_commit_list.0.experience_threshold|floatformat:3}}</li>
-  </div>
+        <li>Threshold (experience_bf): {{latest_commit_list.0.experience_threshold|floatformat:3}}</li>
+    </div>
 </div>
 
 <input type="hidden" name="refresh" value="False">
 <div class="float-right">
     <form action="{{request_path}}?project=true" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="/contributions/authors_to_csv"><i class="fas sm fa-arrow-alt-circle-down"></i> CSV</a>
+        <a class="btn btn-primary" href="/contributions/authors_to_csv"><em class="fas sm fa-arrow-alt-circle-down"></em>
+            CSV</a>
         <input type="hidden" name="refresh" value="True">
-        <button type="submit" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Métricas</button>
+        <button type="submit" class="btn btn-secondary"><em class="fas fa-sync-alt"></em> Métricas</button>
     </form>
 
 </div>
@@ -39,21 +42,21 @@
     <table class="table table-striped table-sm col-md-8">
         <caption>Core developers por commits ({{latest_commit_list.0.core_developers_experience|length}})</caption>
         <thead class="thead-dark">
-            <tr>
-                <th></th>
-                <th>Nome</th>
-            </tr>
+        <tr>
+            <th></th>
+            <th>Nome</th>
+        </tr>
         </thead>
         <tbody>
         {% if latest_commit_list %}
-            {% if latest_commit_list.0.core_developers_experience %}
-                {% for author in latest_commit_list.0.core_developers_experience %}
-                    <tr>
-                        <td>{{forloop.counter}}</td>
-                        <td>{{author.name}}</td>
-                    </tr>
-                {% endfor %}
-            {% endif %}
+        {% if latest_commit_list.0.core_developers_experience %}
+        {% for author in latest_commit_list.0.core_developers_experience %}
+        <tr>
+            <td>{{forloop.counter}}</td>
+            <td>{{author.name}}</td>
+        </tr>
+        {% endfor %}
+        {% endif %}
         {% endif %}
         </tbody>
     </table>
@@ -62,21 +65,21 @@
     <table class="table table-striped table-sm col-md-8">
         <caption>Peripheral developers ({{latest_commit_list.0.peripheral_developers_experience|length}})</caption>
         <thead class="thead-dark">
-            <tr>
-                <th></th>
-                <th>Nome</th>
+        <tr>
+            <th></th>
+            <th>Nome</th>
 
-            </tr>
+        </tr>
         </thead>
         <tbody>
-            {% if latest_commit_list.0.peripheral_developers_experience %}
-                {% for author in latest_commit_list.0.peripheral_developers_experience %}
-                    <tr>
-                        <td>{{forloop.counter}}</td>
-                        <td>{{author.name}}</td>
-                    </tr>
-                {% endfor %}
-            {% endif %}
+        {% if latest_commit_list.0.peripheral_developers_experience %}
+        {% for author in latest_commit_list.0.peripheral_developers_experience %}
+        <tr>
+            <td>{{forloop.counter}}</td>
+            <td>{{author.name}}</td>
+        </tr>
+        {% endfor %}
+        {% endif %}
 
         </tbody>
 
@@ -88,61 +91,70 @@
     <table class="table table-striped table-sm" style="font-size: small;">
         <caption>Commits</caption>
         <thead class="thead-dark">
-            <tr>
-                <th></th>
-                <th>Author</th>
-                <th style="text-align:right">Commit count</th>
-                <th style="text-align:right">File count</th>
-                <th style="text-align:right">Loc count</th>
-                <th style="text-align:right">Ownership (commits)</th>
-                <th style="text-align:right">Ownership (files)</th>
-                <th style="text-align:right">Ownership (loc)</th>
-                <th style="text-align:right" width="10%">Exp</th>
-                <th style="text-align:right" width="10%">Exp (BF)</th>
-                <th style="text-align:right" width="10%">Exp (cloc) com BF</th>
-            </tr>
+        <tr>
+            <th></th>
+            <th>Author</th>
+            <th style="text-align:right">Commit count</th>
+            <th style="text-align:right">File count</th>
+            <th style="text-align:right">Loc count</th>
+            <th style="text-align:right">Ownership (commits)</th>
+            <th style="text-align:right">Ownership (files)</th>
+            <th style="text-align:right">Ownership (loc)</th>
+            <th style="text-align:right" width="10%">Exp</th>
+            <th style="text-align:right" width="10%">Exp (BF)</th>
+            <th style="text-align:right" width="10%">Exp (cloc) com BF</th>
+        </tr>
         </thead>
         <tbody>
-            {% if latest_commit_list %}
-                <tr class="p-3 mb-2 bg-secondary text-white">
+        {% if latest_commit_list %}
+        <tr class="p-3 mb-2 bg-secondary text-white">
 
-                        <td colspan="5"></td>
-                        <td style="text-align:right" colspan="2" nowrap><small>Media: {{latest_commit_list.0.mean|floatformat:5}}</small></td>
-                        <td style="text-align:right" colspan="2" nowrap><small>Mediana: {{latest_commit_list.0.median|floatformat:5}}</small></td>
-                        <td style="text-align:right" colspan="3"><small>Desvio padrão: {{latest_commit_list.0.standard_deviation|floatformat:5}}</small></td>
-                    </tr>
-                {% for contribution in latest_commit_list.1 %}
-                    <tr>
-                        <td>{{forloop.counter}}</td>
-                        <td nowrap="">{{contribution.author.name}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.commits}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.files}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.cloc}}</td>
-                        <td style="text-align:right" nowrap>({{contribution.bf_commit|floatformat:2}}) - {{contribution.ownership_commits|percentage}}</td>
-                        <td style="text-align:right" nowrap>({{contribution.bf_file|floatformat:2}}) - {{contribution.ownership_files|percentage}}</td>
-                        <td style="text-align:right" nowrap>({{contribution.bf_cloc|floatformat:2}}) - {{contribution.ownership_cloc|percentage}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.experience|floatformat:5}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.experience_bf|floatformat:5}}</td>
-                        <td style="text-align:right" nowrap>{{contribution.cloc_exp|floatformat:5}}</td>
-                    </tr>
-                {% endfor %}
-            <tfoot>
-                <tr>
-                    <th>Total:</th>
-                    <td></td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_commits}}</td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_files}}</td>
-                    <td style="text-align:right">{{latest_commit_list.0.total_cloc}}</td>
-                    <td colspan="5">
-                    </td>
-                </tr>
-            </tfoot>
-            {% else %}
-                <tr>
-                    <td colspan="6" style="text-align:center;">No commits are available.</td>
-                </tr>
-            {% endif %}
+            <td colspan="5"></td>
+            <td style="text-align:right" colspan="2" nowrap><small>Media:
+                {{latest_commit_list.0.mean|floatformat:5}}</small></td>
+            <td style="text-align:right" colspan="2" nowrap><small>Mediana:
+                {{latest_commit_list.0.median|floatformat:5}}</small></td>
+            <td style="text-align:right" colspan="3"><small>Desvio padrão:
+                {{latest_commit_list.0.standard_deviation|floatformat:5}}</small></td>
+        </tr>
+        {% for contribution in latest_commit_list.1 %}
+        <tr>
+            <td>{{forloop.counter}}</td>
+            <td nowrap="">{{contribution.author.name}}</td>
+            <td style="text-align:right" nowrap>{{contribution.commits}}</td>
+            <td style="text-align:right" nowrap>{{contribution.files}}</td>
+            <td style="text-align:right" nowrap>{{contribution.cloc}}</td>
+            <td style="text-align:right" nowrap>({{contribution.bf_commit|floatformat:2}}) -
+                {{contribution.ownership_commits|percentage}}
+            </td>
+            <td style="text-align:right" nowrap>({{contribution.bf_file|floatformat:2}}) -
+                {{contribution.ownership_files|percentage}}
+            </td>
+            <td style="text-align:right" nowrap>({{contribution.bf_cloc|floatformat:2}}) -
+                {{contribution.ownership_cloc|percentage}}
+            </td>
+            <td style="text-align:right" nowrap>{{contribution.experience|floatformat:5}}</td>
+            <td style="text-align:right" nowrap>{{contribution.experience_bf|floatformat:5}}</td>
+            <td style="text-align:right" nowrap>{{contribution.cloc_exp|floatformat:5}}</td>
+        </tr>
+        {% endfor %}
+        <tfoot>
+        <tr>
+            <th>Total:</th>
+            <td></td>
+            <td style="text-align:right">{{latest_commit_list.0.total_commits}}</td>
+            <td style="text-align:right">{{latest_commit_list.0.total_files}}</td>
+            <td style="text-align:right">{{latest_commit_list.0.total_cloc}}</td>
+            <td colspan="5">
+            </td>
+        </tr>
+        </tfoot>
+        {% else %}
+        <tr>
+            <td colspan="6" style="text-align:center;">No commits are available.</td>
+        </tr>
+        {% endif %}
 
         </tbody>
     </table>
-{% endblock %}
+    {% endblock %}

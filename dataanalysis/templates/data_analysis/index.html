@@ -7,8 +7,8 @@
 
 <div class="alert bg-info shadow p-3 mb-5 bg-white rounded" role="alert">
 
-  <p>Todos os arquivos <i class="fas fa-file-csv"></i> baixados serão salvos na pasta raiz do projeto.</p>
-  <hr>
+    <p>Todos os arquivos <em class="fas fa-file-csv"></em> baixados serão salvos na pasta raiz do projeto.</p>
+    <hr>
 
 </div>
 
@@ -21,8 +21,8 @@
 <p class="alert {{ message.tags }} alert-dismissible fade show w-50 p-3" role="alert">{{ message|safe }}
 
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-    <span aria-hidden="true">&times;</span>
-  </button>
+        <span aria-hidden="true">&times;</span>
+    </button>
 </p>
 
 
@@ -35,7 +35,9 @@
 <div class="row">
 
     <ul class="list-group w-50 p-3">
-        <li class="list-group-item">Estatísticas gerais do projeto <a href="/data_analysis/descriptive_statistics/7" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+        <li class="list-group-item">Estatísticas gerais do projeto <a href="/data_analysis/descriptive_statistics/7"
+                                                                      class="text-decoration-none"><em
+                class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">
                 -> general_commits_statistics.csv</br>
                 -> authors_commits_statistics.csv </br>
@@ -46,34 +48,41 @@
             </p>
         </li>
         <li class="list-group-item"><strong>H1:</strong> Correlação por versão
-            <a href="/data_analysis/descriptive_statistics/2" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/2" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">-> correlation_version.csv</p>
         </li>
         <li class="list-group-item"><strong>H1:</strong> Correlação por desenvolvedor
-            <a href="/data_analysis/descriptive_statistics/3" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/3" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">-> correlation_dev.csv</p>
         </li>
         <li class="list-group-item"><strong>H2:</strong> Correlação por componente
-            <a href="/data_analysis/descriptive_statistics/9" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/9" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">-> correlation_h2_by_comp.csv</p>
         </li>
         <li class="list-group-item">Tendência do delta (delta e delta normalizado) e da degradação
-            <a href="/data_analysis/descriptive_statistics/4" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/4" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">-> delta_trend.csv</p>
         </li>
         <li class="list-group-item"><strong>Coeficiente Gini:</strong> Piora e melhora da arquitetura por autor
-            <a href="/data_analysis/descriptive_statistics/8" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/8" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">
                 -> worsening_contributions_by_author.csv</br>
                 -> contributions_that_improve_by_author.csv
             </p>
         </li>
         <li class="list-group-item">Commits impactantes por desenvolvedor
-            <a href="/data_analysis/descriptive_statistics/5" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/5" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">-> overview_by_dev.csv</p>
         </li>
         <li class="list-group-item">Média da experiência e da degradação por desenvolvedor
-            <a href="/data_analysis/descriptive_statistics/1" class="text-decoration-none"><i class="fas fa-download"></i> Baixar</a>
+            <a href="/data_analysis/descriptive_statistics/1" class="text-decoration-none"><em
+                    class="fas fa-download"></em> Baixar</a>
             <p class="font-weight-light">
                 -> population_means.csv</br>
                 -> dev_media.csv
@@ -82,8 +91,6 @@
     </ul>
 
 </div>
-
-
 
 
 {% endblock %}

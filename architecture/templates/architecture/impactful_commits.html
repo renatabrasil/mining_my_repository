@@ -103,7 +103,7 @@
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
         <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analysis_check}}">
-            <i class="fas sm fa-arrow-alt-circle-down"></i> CSV
+            <em class="fas sm fa-arrow-alt-circle-down"></em> CSV
         </a>
     </form>
 
@@ -111,6 +111,7 @@
 
 <div class="table-responsive" id="metrics">
     <table class="table table-sm" id="headingOne" style="font-size: small;">
+        <caption>Dados de commits</caption>
         <tr>
             <th>Commit (autor)</th>
             <th>Author</th>

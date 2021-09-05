@@ -4,8 +4,8 @@
 {% block content %}
 
 <div>
-  <p>O objetivo desta seção é calcular as métricas para a degradação da arquitetura. Essa é uma das etapas
-  da análise de impacto de commits.</p>
+    <p>O objetivo desta seção é calcular as métricas para a degradação da arquitetura. Essa é uma das etapas
+        da análise de impacto de commits.</p>
 
 </div>
 
@@ -14,25 +14,34 @@
 <p>Arquivos no diretório acima:</p>
 <div class="alert alert-info" role="alert">
 
-  <p>Para configurar os projetos é necessário:</p>
-  <ol>
-    <li>Gerar lista de commits infomando abaixo o (1) <strong>diretório</strong> para salvar os compilados,
-    (2) <strong>repositório local</strong> no qual está localizado o projeto a ser analisado e que deve ter sido clonado
-    e (3) <strong>diretório dentro do repositório local</strong> onde estão localizadas as classes quando elas são compiladas.
-    Essas informações variam de projeto para projeto.</li>
-    <li>Gerar compiláveis clicando em 'Gerar Compiláveis' na lista abaixo.</li>
-    <li>Calcular métricas clicando em 'Calcular métricas' na lista abaixo. As métricas só serão calculadas se houver os
-      arquivos CSV gerados pela ferramenta que analisa a arquitetura, portanto clique em 'Calcular métricas da arquitetura'
-      para garantir que isso foi realizado.</li>
-  </ol>
-  <p>Todas essas ações podem demorar vários minutos.</p>
+    <p>Para configurar os projetos é necessário:</p>
+    <ol>
+        <li>Gerar lista de commits infomando abaixo o (1) <strong>diretório</strong> para salvar os compilados,
+            (2) <strong>repositório local</strong> no qual está localizado o projeto a ser analisado e que deve ter sido
+            clonado
+            e (3) <strong>diretório dentro do repositório local</strong> onde estão localizadas as classes quando elas
+            são compiladas.
+            Essas informações variam de projeto para projeto.
+        </li>
+        <li>Gerar compiláveis clicando em 'Gerar Compiláveis' na lista abaixo.</li>
+        <li>Calcular métricas clicando em 'Calcular métricas' na lista abaixo. As métricas só serão calculadas se houver
+            os
+            arquivos CSV gerados pela ferramenta que analisa a arquitetura, portanto clique em 'Calcular métricas da
+            arquitetura'
+            para garantir que isso foi realizado.
+        </li>
+    </ol>
+    <p>Todas essas ações podem demorar vários minutos.</p>
 
-  <p>É importante ter um arquivo de configuração que especifique:</p>
+    <p>É importante ter um arquivo de configuração que especifique:</p>
 
-  <p>Lembrando que é preciso ter configurado <a href="https://ant.apache.org/manual/install.html">Apache Ant</a> e
-    <a href="https://maven.apache.org/download.cgi">Apache Maven</a>.
-    e ter colocado a variavel de ambiente <strong>ANT_HOME</strong>, <strong>M2_HOME</strong> e <strong>JAVA_HOME</strong> nas variáveis de ambiente.</p>
-  <p>Configurar a variavel de ambiente <strong>JAVA_HOME</strong> e selecionar a versão correta do JDK. É necessário descobrir qual a versão utilizada na versão do software a ser analisado. Esse tipo de informação deve estar em arquivos de configuração.</p>
+    <p>Lembrando que é preciso ter configurado <a href="https://ant.apache.org/manual/install.html">Apache Ant</a> e
+        <a href="https://maven.apache.org/download.cgi">Apache Maven</a>.
+        e ter colocado a variavel de ambiente <strong>ANT_HOME</strong>, <strong>M2_HOME</strong> e
+        <strong>JAVA_HOME</strong> nas variáveis de ambiente.</p>
+    <p>Configurar a variavel de ambiente <strong>JAVA_HOME</strong> e selecionar a versão correta do JDK. É necessário
+        descobrir qual a versão utilizada na versão do software a ser analisado. Esse tipo de informação deve estar em
+        arquivos de configuração.</p>
 </div>
 
 <hr>
@@ -40,11 +49,11 @@
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 {% if messages %}
 <div class="alert alert-info alert-dismissible fade show" role="alert">
-{% for message in messages %}
-<p><strong>{{ message }}</strong></p>
+    {% for message in messages %}
+    <p><strong>{{ message }}</strong></p>
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-    <span aria-hidden="true">&times;</span>
-  </button>
+        <span aria-hidden="true">&times;</span>
+    </button>
 </div>
 
 {% endfor %}
@@ -52,66 +61,73 @@
 {% endif %}
 
 <form action="{% url 'architecture:index' %}" method="post">{% csrf_token %}
-  <div class="form-row">
-    <div class="col-md-4 mb-3">
-      <label>Diretório para salvar os commits e os compilados</label>
-      {{ form.directory }}
+    <div class="form-row">
+        <div class="col-md-4 mb-3">
+            <label>Diretório para salvar os commits e os compilados</label>
+            {{ form.directory }}
+        </div>
     </div>
-  </div>
-  <div class="form-row">
-    <div class="col-md-5 mb-3">
-      <label>Local do repositório local</label>
-      {{ form.git_local_repository }}
+    <div class="form-row">
+        <div class="col-md-5 mb-3">
+            <label>Local do repositório local</label>
+            {{ form.git_local_repository }}
+        </div>
+        <div class="col-md-5 mb-3">
+            <label>Diretorio de arquivos compilados no repositório local</label>
+            {{ form.build_path }}
+        </div>
     </div>
-    <div class="col-md-5 mb-3">
-      <label>Diretorio de arquivos compilados no repositório local</label>
-      {{ form.build_path }}
-    </div>
-  </div>
-  <input type="hidden" value="1" name="project_id">
-  <button class="btn btn-primary" type="submit">Gerar lista de commits</button>
+    <input type="hidden" value="1" name="project_id">
+    <button class="btn btn-primary" type="submit">Gerar lista de commits</button>
 </form>
 
 
-
 <div class="table-responsive">
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col" style="text-align:center">#</th>
-      <th scope="col">Arquivo</th>
-      <th scope="col">Compilados?</th>
-      <th scope="col">Métricas calculadas</th>
-      <th scope="col" style="text-align:center">Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% if files %}
-  {% for file in files %}
-  <tr>
-    <td scope="row" style="text-align:center">{{forloop.counter}}</td>
-    <td>{{file}}</td>
-    <td>{{file.has_compileds}}</td>
-    <td>{{file.metrics_calculated_at|date:'d/m/Y H:i'}}</td>
-    <td style="text-align:center">
-      <a href="{% url 'architecture:compileds' file.id %}"><i class="icon ion-md-bug" data-toggle="tooltip" data-placement="right" title="Gerar compiláveis"></i></a> |
-      <a href="{% url 'architecture:calculate_architecture_metrics' file.id %}"><i class="fas fa-file-csv" data-toggle="tooltip" data-placement="right" title="Calcular métricas da arquitetura"></i></a> |
-      <a href="{% url 'architecture:calculate_metrics' file.id %}"><i class="fas fa-calculator" data-toggle="tooltip" data-placement="right" title="Calcular métricas"></i></a>
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col" style="text-align:center">#</th>
+            <th scope="col">Arquivo</th>
+            <th scope="col">Compilados?</th>
+            <th scope="col">Métricas calculadas</th>
+            <th scope="col" style="text-align:center">Ações</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if files %}
+        {% for file in files %}
+        <tr>
+            <td scope="row" style="text-align:center">{{forloop.counter}}</td>
+            <td>{{file}}</td>
+            <td>{{file.has_compileds}}</td>
+            <td>{{file.metrics_calculated_at|date:'d/m/Y H:i'}}</td>
+            <td style="text-align:center">
+                <a href="{% url 'architecture:compileds' file.id %}"><em class="icon ion-md-bug" data-toggle="tooltip"
+                                                                         data-placement="right"
+                                                                         title="Gerar compiláveis"></em></a> |
+                <a href="{% url 'architecture:calculate_architecture_metrics' file.id %}"><em class="fas fa-file-csv"
+                                                                                              data-toggle="tooltip"
+                                                                                              data-placement="right"
+                                                                                              title="Calcular métricas da arquitetura"></em></a>
+                |
+                <a href="{% url 'architecture:calculate_metrics' file.id %}"><em class="fas fa-calculator"
+                                                                                 data-toggle="tooltip"
+                                                                                 data-placement="right"
+                                                                                 title="Calcular métricas"></em></a>
 
-    </td>
-  </tr>
-  {% endfor %}
-  {% else %}
-    <tr>
-      <th scope="row" colspan="3"style="text-align:center">Nenhum arquivo criado neste diretório.</th>
-    </tr>
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <th scope="row" colspan="3" style="text-align:center">Nenhum arquivo criado neste diretório.</th>
+        </tr>
 
-  {% endif %}
+        {% endif %}
 
-  </tbody>
-</table>
+        </tbody>
+    </table>
 </div>
-
 
 
 {% endblock %}
