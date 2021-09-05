@@ -2,8 +2,7 @@
 from django.db import models
 
 # local Django
-from contributions.models import Commit, Directory, Tag, AUTHOR_FILTER, Developer, \
-    ComponentCommit
+from contributions.models import Tag, AUTHOR_FILTER, Developer
 
 
 class FileCommits(models.Model):
@@ -27,4 +26,3 @@ class NoOutlierMetricManager(models.Manager):
             if author_db:
                 ids.append(author_db.id)
         return super().get_queryset().exclude(commit__author_id__in=ids)
-

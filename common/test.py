@@ -3,15 +3,11 @@
 # Django
 
 # third-party
-from unittest import mock
-from unittest.mock import patch
 
-from django.core.handlers.base import BaseHandler
 from django.http import request
-from django.test import TestCase, RequestFactory
+from django.test import TestCase
 from model_mommy import mommy
 from pydriller.domain.commit import ModificationType
-from requests import Session
 
 from common.utils import CommitUtils, ViewUtils
 # local Django
@@ -154,6 +150,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.is_java_file(file_path)
         # Then
         self.assertFalse(result)
+
 
 ###### ViewUtils tests
 

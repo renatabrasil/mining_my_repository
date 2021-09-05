@@ -23,6 +23,7 @@ from contributions.models import (
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
 
+
 # Evolution path
 # git log --no-walk --tags --pretty="%h %d %s" --decorate=full --reverse
 
