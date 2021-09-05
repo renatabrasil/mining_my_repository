@@ -1,5 +1,6 @@
 # Mining my repository
-
+[![Maintainability](https://api.codeclimate.com/v1/badges/a831076e1130f16dfada/maintainability)](https://codeclimate.com/github/renatabrasil/mining_my_repository/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/a831076e1130f16dfada/test_coverage)](https://codeclimate.com/github/renatabrasil/mining_my_repository/test_coverage)
 
 Main functionalities: it collects the individual contributions of the developers and analyzes the impact of commits in Java projects.
 
