@@ -543,8 +543,8 @@ def update_commit(sender, instance, **kwargs):
 
 def __detect_impact_loc__(code):
     total_lines = code.count('\n')
-    commented_lines = 0
     if total_lines > 0:
+        commented_lines = 0
         # FIXME: Put this part on loop below
         lines = code.split("\n")
         # In case we should consider commented lines

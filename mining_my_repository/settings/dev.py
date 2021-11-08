@@ -11,7 +11,7 @@ LOGGING = {
             'datefmt': "%d/%b/%Y %H:%M:%S"
         },
         'simple': {
-            'format': '%(levelname)s %(message)s'
+            'format': '[%(levelname)s] %(message)s'
         },
     },
     'handlers': {
@@ -24,11 +24,15 @@ LOGGING = {
             'backupCount': 10,  # how many backup file to keep, 10 days
             'formatter': 'verbose',
         },
-
+        'console': {
+            'level': 'INFO',
+            'formatter': 'simple',
+            'class': 'logging.StreamHandler',
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
         },
         '': {

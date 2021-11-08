@@ -210,9 +210,9 @@ def compiled(request, file_id):
                             shutil.rmtree(build_path_repository)
 
                 except OSError as e:
-                    print("Error: %s - %s." % (e.filename, e.strerror))
+                    logger.error("Error: %s - %s." % (e.filename, e.strerror))
                 except Exception as er:
-                    print(er)
+                    logger.exception(er)
                     messages.error(request, 'Erro: ' + er)
                 finally:
                     os.chdir(local_repository)

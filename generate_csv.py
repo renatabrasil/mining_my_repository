@@ -23,6 +23,5 @@ for folder in sorted_files:
                     rc = os.system('java -jar Arcan-1.2.1-SNAPSHOT.jar -p ' + '"' + folder + '"'+ ' -out ' + '"' + folder + '"' +' -pm -folderOfJars')
                 except Exception as er:
                     print(er)
-                continue
             else:
                 continue

@@ -27,146 +27,142 @@ report_directories = None
 logger = logging.getLogger(__name__)
 
 
-# Evolution path
-# git log --no-walk --tags --pretty="%h %d %s" --decorate=full --reverse
-
-# TODO: carregar algumas informações uma vez só. Por exemplo: nos relatorios eu carrego alguns valores varias vezes (toda vez que chamo)
 def index(request):
-    start = time.time()
+    try:
+        start = time.time()
 
-    title_description = 'Contribuições - Commits'
+        title_description = 'Contribuições - Commits'
 
-    tag = ViewUtils.load_tag(request)
+        tag = ViewUtils.load_tag(request)
 
+        __load_commits_by_request_and_tag(request, tag)
+
+        url_path = 'contributions/index.html'
+        current_developer = None
+        current_tag_filter = None
+        developer_id = request.POST.get("developer_filter_id")
+        tag_id = request.POST.get("tag_filter_id")
+        if request.GET.get('commits'):
+            title_description = 'Contributions - Detalhes do commit'
+            url_path = 'developers/detail.html'
+        elif request.GET.get('directory_data'):
+            latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
+            url_path = 'contributions/directories.html'
+        else:
+            if developer_id or tag_id:
+                latest_commit_list = Commit.objects.none()
+                if developer_id:
+                    current_developer = Developer.objects.get(pk=int(developer_id))
+                    latest_commit_list = latest_commit_list | Commit.objects.filter(author_id=current_developer.id)
+                if tag_id:
+                    current_tag_filter = Tag.objects.get(pk=int(tag_id))
+                    if latest_commit_list:
+                        latest_commit_list = latest_commit_list & Commit.objects.filter(tag_id=current_tag_filter.id)
+                    else:
+                        latest_commit_list = Commit.objects.filter(tag_id=current_tag_filter.id)
+                latest_commit_list = latest_commit_list.order_by("tag_id", "author__name")
+            elif tag:
+                latest_commit_list = load_commits_from_tags(tag)
+            else:
+                latest_commit_list = Commit.objects.all().order_by("tag_id", "author__name", "committer_date")
+            paginator = Paginator(latest_commit_list, 100)
+
+            page = request.GET.get('page')
+            latest_commit_list = paginator.get_page(page)
+
+        # list_commits(request)
+
+        template = loader.get_template(url_path)
+        context = {
+            'title': title_description,
+            'latest_commit_list': latest_commit_list,
+            'tag': tag.description,
+            'current_developer': current_developer,
+            'current_tag_filter': current_tag_filter,
+        }
+        if request.is_ajax():
+            result = {'html': render_to_string(url_path, {'latest_commit_list': latest_commit_list})}
+            return HttpResponse(json.dumps(result, ensure_ascii=False),
+                                content_type='application/json')
+        end = time.time()
+
+        logger.info("Tempo total: " + str(end - start))
+
+        return HttpResponse(template.render(context, request))
+    except Exception as err:
+        logger.exception(err.with_traceback())
+        raise
+
+
+def __load_commits_by_request_and_tag(request, tag):
     load_commits = request.POST.get('load_commits')
-    if not load_commits:
-        if request.GET.get('load') and request.GET.get('load') == 'true':
-            load_commits = True
+    if not load_commits and (request.GET.get('load') and request.GET.get('load') == 'true'):
+        load_commits = True
 
     if load_commits:
-        hash_commit = None
-        if __load_commits_by_tag_and_request(tag, request):
-            return "uhuu"
+        filter = {}
+        project = __get_project_by_request(request)
 
-    url_path = 'contributions/index.html'
-    current_developer = None
-    current_tag_filter = None
-    developer_id = request.POST.get("developer_filter_id")
-    tag_id = request.POST.get("tag_filter_id")
-    if request.GET.get('commits'):
-        title_description = 'Contributions - Detalhes do commit'
-        url_path = 'developers/detail.html'
-    elif request.GET.get('directory_data'):
-        latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
-        url_path = 'contributions/directories.html'
-    else:
-        if developer_id or tag_id:
-            latest_commit_list = Commit.objects.none()
-            if developer_id:
-                current_developer = Developer.objects.get(pk=int(developer_id))
-                latest_commit_list = latest_commit_list | Commit.objects.filter(author_id=current_developer.id)
-            if tag_id:
-                current_tag_filter = Tag.objects.get(pk=int(tag_id))
-                if latest_commit_list:
-                    latest_commit_list = latest_commit_list & Commit.objects.filter(tag_id=current_tag_filter.id)
-                else:
-                    latest_commit_list = Commit.objects.filter(tag_id=current_tag_filter.id)
-            latest_commit_list = latest_commit_list.order_by("tag_id", "author__name")
-        elif tag:
-            latest_commit_list = load_commits_from_tags(tag)
-        else:
-            latest_commit_list = Commit.objects.all().order_by("tag_id", "author__name", "committer_date")
-        paginator = Paginator(latest_commit_list, 100)
+        if tag.previous_tag is not None:
+            commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
+            filter.setdefault('from_tag', tag.previous_tag.description)
+            if commit is not None:
+                hash_commit = commit.hash
+                filter.setdefault('from_commit', hash_commit)
+                filter.pop('from_tag', None)
+        filter.setdefault('only_in_branch', project.main_branch)
+        filter.setdefault('only_modifications_with_file_types', ['.java'])
+        filter.setdefault('only_no_merge', True)
+        i = 0
+        if tag.real_tag_description.find('*'):
+            i += 1
+        filter.setdefault('to_tag', tag.real_tag_description)
+        filter.pop('from_commit', None)
+        filter.pop('from_tag', None)
+        filter.pop('to_tag', None)
+        tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
+        for current_tag in tags:
+            if current_tag.minors:
+                if current_tag.previous_tag is not None and 'from_commit' not in filter:
+                    if 'from_tag' in filter:
+                        filter['from_tag'] = current_tag.previous_tag.description
+                    else:
+                        filter.setdefault('from_tag', current_tag.previous_tag.description)
+                for minor in list([current_tag.real_tag_description] + current_tag.minors):
+                    # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                    if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                        filter['from_tag'] = minor.replace('*', '')
+                        continue
+                    filter['to_tag'] = minor
+                    print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
+                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                        __build_and_save_commit(commit_repository, current_tag, filter['to_tag'])
 
-        page = request.GET.get('page')
-        latest_commit_list = paginator.get_page(page)
+                    # if 'from_tag' in filter.keys():
+                    filter['from_tag'] = minor
+                    filter.pop('from_commit', None)
 
-    # list_commits(request)
-
-    template = loader.get_template(url_path)
-    context = {
-        'title': title_description,
-        'latest_commit_list': latest_commit_list,
-        'tag': tag.description,
-        'current_developer': current_developer,
-        'current_tag_filter': current_tag_filter,
-    }
-    if request.is_ajax():
-        result = {'html': render_to_string(url_path, {'latest_commit_list': latest_commit_list})}
-        return HttpResponse(json.dumps(result, ensure_ascii=False),
-                            content_type='application/json')
-    end = time.time()
-
-    print("Tempo total: " + str(end - start))
-
-    return HttpResponse(template.render(context, request))
-
-
-def __load_commits_by_tag_and_request(request, tag):
-    filter = {}
-    project = __get_project_by_request(request)
-
-    if tag.previous_tag is not None:
-        commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
-        filter.setdefault('from_tag', tag.previous_tag.description)
-        if commit is not None:
-            hash_commit = commit.hash
-            filter.setdefault('from_commit', hash_commit)
-            filter.pop('from_tag', None)
-    filter.setdefault('only_in_branch', project.main_branch)
-    filter.setdefault('only_modifications_with_file_types', ['.java'])
-    filter.setdefault('only_no_merge', True)
-    i = 0
-    if tag.real_tag_description.find('*'):
-        i += 1
-    filter.setdefault('to_tag', tag.real_tag_description)
-    filter.pop('from_commit', None)
-    filter.pop('from_tag', None)
-    filter.pop('to_tag', None)
-    tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
-    for tag1 in tags:
-        if tag1.minors:
-            if tag1.previous_tag is not None and 'from_commit' not in filter:
-                if 'from_tag' in filter:
-                    filter['from_tag'] = tag1.previous_tag.description
-                else:
-                    filter.setdefault('from_tag', tag1.previous_tag.description)
-            for minor in list([tag1.real_tag_description] + tag1.minors):
-                # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                    filter['from_tag'] = minor.replace('*', '')
-                    continue
-                filter['to_tag'] = minor
-                print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
-                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
-
-                # if 'from_tag' in filter.keys():
-                filter['from_tag'] = minor
-                filter.pop('from_commit', None)
-
-        else:
-            if tag1.previous_tag is not None:
-                if 'from_tag' in filter:
-                    filter['from_tag'] = tag1.previous_tag.description
-                else:
-                    filter.setdefault('from_tag', tag1.previous_tag.description)
-            if 'to_tag' in filter:
-                filter['to_tag'] = tag1.real_tag_description
             else:
-                filter.setdefault('to_tag', tag1.real_tag_description)
-            for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
-        __update_commit__(Commit.objects.filter(tag=tag1))
+                if current_tag.previous_tag is not None:
+                    if 'from_tag' in filter:
+                        filter['from_tag'] = current_tag.previous_tag.description
+                    else:
+                        filter.setdefault('from_tag', current_tag.previous_tag.description)
+                if 'to_tag' in filter:
+                    filter['to_tag'] = current_tag.real_tag_description
+                else:
+                    filter.setdefault('to_tag', current_tag.real_tag_description)
+                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                    __build_and_save_commit(commit_repository, current_tag, filter['to_tag'])
+            __update_commit(Commit.objects.filter(tag=current_tag))
 
 
 def __get_project_by_request(request):
+    logger.info(f'project_id: {request.session["project"]}')
     return Project.objects.get(id=request.session['project'])
 
 
-def __build_and_save_commit__(commit_repository, tag, real_tag):
-    # posso pegar a quantidade de commits até a tag atual e ja procurar a partir daí. pra ele nao ter que ficar
-    # buscndo coisa que ja buscou. Posso olhar o id do ultimo commit salvo tbm
+def __build_and_save_commit(commit_repository, tag, real_tag):
     commit = Commit.objects.filter(hash=commit_repository.hash)
     if not commit.exists():
         author_name = CommitUtils.strip_accents(commit_repository.author.name)
@@ -283,7 +279,7 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
         total_modification = 0
         for modification_repo in commit_repository.modifications:
             # Save only commits with java file and not in test directory
-            if __no_commits_constraints__(modification_repo, tag):
+            if __no_commits_constraints(modification_repo, tag):
                 total_modification = total_modification + 1
                 if hasattr(modification_repo, 'nloc'):
                     nloc = modification_repo.nloc
@@ -300,17 +296,13 @@ def __build_and_save_commit__(commit_repository, tag, real_tag):
                                                 removed=modification_repo.removed,
                                                 nloc=nloc,
                                                 complexity=modification_repo.complexity)
-                    # To prevent redundat action
-                    # time.sleep(.200)
+                    logger.info(modification)
                     modification.save()
-                except Exception as e:
-                    print(str(e))
-        # else:
-        #     # for mod in commit[0].modifications.all():
-        #     #     mod.save()
-        #     commit[0].save()
+                except Exception:
+                    logger.exception(f'Erro ao salvar arquivo {modification.path}')
         if commit.pk is not None:
             commit.update_component_commits()
+        logger.info(commit)
     return commit
 
 
@@ -402,7 +394,7 @@ def load_commits_from_tags(tag):
     return commits
 
 
-def __update_commit__(commits):
+def __update_commit(commits):
     for commit in commits:
         lista = commit.parents_str.split(",")
         for parent_hash in lista:
@@ -414,7 +406,7 @@ def __update_commit__(commits):
                 parent.save(update_fields=['children_commit'])
 
 
-def __no_commits_constraints__(modification, tag):
+def __no_commits_constraints(modification, tag):
     path = CommitUtils.true_path(modification)
     directory_str = CommitUtils.extract_directory_name_from_full_file_name(path)
 

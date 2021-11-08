@@ -3,7 +3,6 @@ from contributions.models import Developer, Project, Tag
 
 
 def tags_processor(request):
-    # project = Project.objects.get(project_name="Apache Ant")
     project_id = request.session['project']
     if project_id is not None:
         project = Project.objects.get(id=project_id)

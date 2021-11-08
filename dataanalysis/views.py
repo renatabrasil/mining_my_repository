@@ -1,3 +1,4 @@
+import logging
 import math
 
 # third-party
@@ -28,6 +29,7 @@ POPULATION = "author"
 # TYPE OF CONTRIBUTIONS
 DECAY = 1
 IMPROVEMENT = 2
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -471,7 +473,8 @@ def __process_metrics__(type, commit_db, request):
                 metric_by_dev[key] += 1
 
     except Exception as e:
-        raise e
+        logger.exception(e)
+        raise
 
     return commits, metric_by_dev, metric_by_dev_by_comp
 
