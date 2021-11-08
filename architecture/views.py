@@ -95,7 +95,7 @@ def compiled(request, file_id):
     try:
         f = open(file.__str__(), 'r')
         myfile = File(f)
-        compiled_directory = file.directory + "/" + file.name.replace(".txt", "") + "/jars"
+        compiled_directory = f'{file.directory}/{file.name.replace(".txt", "")}/jars'
         if not os.path.exists(compiled_directory):
             os.makedirs(compiled_directory, exist_ok=True)
 
@@ -111,9 +111,7 @@ def compiled(request, file_id):
                 build_path = commit
             else:
                 try:
-                    jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
-                                                                                                                "").replace(
-                        ".", "-")
+                    jar_folder = f'{current_project_path}/{compiled_directory}/version-{commit.replace("/", "").replace(".", "-")}'
 
                     if not __has_jar_file__(jar_folder):
                         os.chdir(local_repository)
@@ -126,16 +124,6 @@ def compiled(request, file_id):
                             object_commit = object_commit[0]
                         else:
                             continue
-
-                        # if not (len(object_commit.parents) > 0 and object_commit.parents[0] is not None and
-                        #         object_commit.parents[0].compilable) and not (
-                        #         object_commit.children_commit is not None) and not object_commit.parents_str:
-                        #     object_commit.compilable = True
-                        #     object_commit.save()
-                        #     continue
-                        # elif not (len(object_commit.parents) > 0 and object_commit.parents[
-                        #     0] is not None) and object_commit.parents_str and not object_commit.has_impact_loc:
-                        #     continue
 
                         if not object_commit.has_impact_loc:
                             continue
@@ -632,7 +620,7 @@ def quality_between_versions(request):
 ################ Auxiliary methods ###################
 
 
-def __read_PM_file__(folder, tag_id):
+def __read_PM_file(folder, tag_id):
     '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}
     tag = Tag.objects.get(id=tag_id)
@@ -658,9 +646,9 @@ def __read_PM_file__(folder, tag_id):
                 rmd = 0.0
                 f = open(os.path.join(subdirectory, filename), "r")
                 content = f.readlines()
-                hash = f.name.split('\\')[1].split('-')[2]
-                if Commit.objects.filter(hash=hash).count() > 0:
-                    commit = Commit.objects.filter(hash=hash)[0]
+                hash_commit = f.name.split('\\')[1].split('-')[2]
+                if Commit.objects.filter(hash=hash_commit).count() > 0:
+                    commit = Commit.objects.filter(hash=hash_commit)[0]
 
                 # else:
                 #     continue
