@@ -1,5 +1,6 @@
 # standard library
 import json
+import logging
 import re
 import time
 
@@ -23,6 +24,8 @@ from contributions.models import (
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
 
+logger = logging.getLogger(__name__)
+
 
 # Evolution path
 # git log --no-walk --tags --pretty="%h %d %s" --decorate=full --reverse
@@ -33,10 +36,7 @@ def index(request):
 
     title_description = 'Contribuições - Commits'
 
-    project = Project.objects.get(id=request.session['project'])
-
     tag = ViewUtils.load_tag(request)
-    tag_description = tag.description
 
     load_commits = request.POST.get('load_commits')
     if not load_commits:
@@ -45,61 +45,8 @@ def index(request):
 
     if load_commits:
         hash_commit = None
-        filter = {}
-        if tag.previous_tag is not None:
-            commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
-            filter.setdefault('from_tag', tag.previous_tag.description)
-            if commit is not None:
-                hash_commit = commit.hash
-                filter.setdefault('from_commit', hash_commit)
-                filter.pop('from_tag', None)
-
-        filter.setdefault('only_in_branch', project.main_branch)
-        filter.setdefault('only_modifications_with_file_types', ['.java'])
-        filter.setdefault('only_no_merge', True)
-        i = 0
-        if tag.real_tag_description.find('*'):
-            i += 1
-        filter.setdefault('to_tag', tag.real_tag_description)
-
-        filter.pop('from_commit', None)
-        filter.pop('from_tag', None)
-        filter.pop('to_tag', None)
-        tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
-        for tag1 in tags:
-            if tag1.minors:
-                if tag1.previous_tag is not None and 'from_commit' not in filter:
-                    if 'from_tag' in filter:
-                        filter['from_tag'] = tag1.previous_tag.description
-                    else:
-                        filter.setdefault('from_tag', tag1.previous_tag.description)
-                for minor in list([tag1.real_tag_description] + tag1.minors):
-                    # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                    if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                        filter['from_tag'] = minor.replace('*', '')
-                        continue
-                    filter['to_tag'] = minor
-                    print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
-                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                        __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
-
-                    # if 'from_tag' in filter.keys():
-                    filter['from_tag'] = minor
-                    filter.pop('from_commit', None)
-
-            else:
-                if tag1.previous_tag is not None:
-                    if 'from_tag' in filter:
-                        filter['from_tag'] = tag1.previous_tag.description
-                    else:
-                        filter.setdefault('from_tag', tag1.previous_tag.description)
-                if 'to_tag' in filter:
-                    filter['to_tag'] = tag1.real_tag_description
-                else:
-                    filter.setdefault('to_tag', tag1.real_tag_description)
-                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
-            __update_commit__(Commit.objects.filter(tag=tag1))
+        if __load_commits_by_tag_and_request(tag, request):
+            return "uhuu"
 
     url_path = 'contributions/index.html'
     current_developer = None
@@ -140,7 +87,7 @@ def index(request):
     context = {
         'title': title_description,
         'latest_commit_list': latest_commit_list,
-        'tag': tag_description,
+        'tag': tag.description,
         'current_developer': current_developer,
         'current_tag_filter': current_tag_filter,
     }
@@ -153,6 +100,68 @@ def index(request):
     print("Tempo total: " + str(end - start))
 
     return HttpResponse(template.render(context, request))
+
+
+def __load_commits_by_tag_and_request(request, tag):
+    filter = {}
+    project = __get_project_by_request(request)
+
+    if tag.previous_tag is not None:
+        commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
+        filter.setdefault('from_tag', tag.previous_tag.description)
+        if commit is not None:
+            hash_commit = commit.hash
+            filter.setdefault('from_commit', hash_commit)
+            filter.pop('from_tag', None)
+    filter.setdefault('only_in_branch', project.main_branch)
+    filter.setdefault('only_modifications_with_file_types', ['.java'])
+    filter.setdefault('only_no_merge', True)
+    i = 0
+    if tag.real_tag_description.find('*'):
+        i += 1
+    filter.setdefault('to_tag', tag.real_tag_description)
+    filter.pop('from_commit', None)
+    filter.pop('from_tag', None)
+    filter.pop('to_tag', None)
+    tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
+    for tag1 in tags:
+        if tag1.minors:
+            if tag1.previous_tag is not None and 'from_commit' not in filter:
+                if 'from_tag' in filter:
+                    filter['from_tag'] = tag1.previous_tag.description
+                else:
+                    filter.setdefault('from_tag', tag1.previous_tag.description)
+            for minor in list([tag1.real_tag_description] + tag1.minors):
+                # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                if minor.find('*') == 0 and 'from_commit' not in filter.keys():
+                    filter['from_tag'] = minor.replace('*', '')
+                    continue
+                filter['to_tag'] = minor
+                print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
+                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                    __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+
+                # if 'from_tag' in filter.keys():
+                filter['from_tag'] = minor
+                filter.pop('from_commit', None)
+
+        else:
+            if tag1.previous_tag is not None:
+                if 'from_tag' in filter:
+                    filter['from_tag'] = tag1.previous_tag.description
+                else:
+                    filter.setdefault('from_tag', tag1.previous_tag.description)
+            if 'to_tag' in filter:
+                filter['to_tag'] = tag1.real_tag_description
+            else:
+                filter.setdefault('to_tag', tag1.real_tag_description)
+            for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                __build_and_save_commit__(commit_repository, tag1, filter['to_tag'])
+        __update_commit__(Commit.objects.filter(tag=tag1))
+
+
+def __get_project_by_request(request):
+    return Project.objects.get(id=request.session['project'])
 
 
 def __build_and_save_commit__(commit_repository, tag, real_tag):

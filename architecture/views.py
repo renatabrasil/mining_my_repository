@@ -43,11 +43,12 @@ def index(request):
     tag = ViewUtils.load_tag(request)
     request.project = request.session['project']
     template = loader.get_template('architecture/index.html')
-    files = []
     project_id = request.session['project']
     project = Project.objects.get(id=project_id)
 
-    logger.info("FUNCIONA")
+    logger.info(title_description)
+    logger.info(tag)
+    logger.info(template)
 
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
@@ -131,9 +132,9 @@ def compiled(request, file_id):
                         checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
                         checkout.wait()
 
-                        print(os.environ.get('JAVA_HOME'))
-                        print(os.environ.get('ANT_HOME'))
-                        print(os.environ.get('M2_HOME'))
+                        logger.info(os.environ.get('JAVA_HOME'))
+                        logger.info(os.environ.get('ANT_HOME'))
+                        logger.info(os.environ.get('M2_HOME'))
 
                         # Prepare build commands
                         for command in file.tag.pre_build_commands:
@@ -150,18 +151,14 @@ def compiled(request, file_id):
                             error = True
 
                         # Create jar
-                        jar_folder = current_project_path + '/' + compiled_directory + '/version-' + commit.replace("/",
-                                                                                                                    "").replace(
-                            ".", "-")
-                        jar_file = '"' + current_project_path + '/' + compiled_directory + '/' + 'version-' + commit.replace(
-                            "/", "").replace(".", "-") + '/version-' + commit.replace("/", "").replace(".",
-                                                                                                       "-") + '.jar"'
+                        jar_folder = f'{current_project_path}/{compiled_directory}/version-{commit.replace("/", "").replace(".", "-")}'
+                        jar_file = f'"{current_project_path}/{compiled_directory}/version-{commit.replace("/", "").replace(".", "-")}/version-{commit.replace("/", "").replace(".", "-")}.jar"'
 
                         os.makedirs(jar_folder, exist_ok=True)
 
-                        input_files = "'" + local_repository + "/" + build_path + "'"
-                        print("comando: jar -cf " + jar_file + " " + input_files)
-                        process = subprocess.Popen('jar -cf ' + jar_file + ' ' + build_path, cwd=local_repository)
+                        input_files = f'"{local_repository}/{build_path}"'
+                        logger.info(f'comando: jar -cf {jar_file} {input_files}')
+                        process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository)
                         process.wait()
 
                         # Check whether created jar is valid
@@ -456,12 +453,13 @@ def update_compilable_commits(commits_with_errors):
                     object_commit.save()
 
                 except OSError as e:
-                    print("Error: %s - %s." % (e.filename, e.strerror))
+                    logger.exception("Error: %s - %s." % (e.filename, e.strerror))
                 except Exception as er:
-                    print(er)
+                    logger.exception(er.with_traceback())
             i += 1
     except Exception as e:
-        print(e)
+        logger.exception(e.with_traceback())
+        raise
     finally:
         f.close()
 
