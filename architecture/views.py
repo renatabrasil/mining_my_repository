@@ -47,6 +47,8 @@ def index(request):
     project_id = request.session['project']
     project = Project.objects.get(id=project_id)
 
+    logger.info("FUNCIONA")
+
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
         form = FilesCompiledForm(request.POST)
@@ -713,11 +715,11 @@ def __read_PM_file__(folder, tag_id):
 
 def __create_files__(form, project_id):
     project = get_object_or_404(Project, pk=project_id)
-    files = list_commits(project, form)
+    files = generate_list_of_compiled_commits(project, form)
     return files
 
 
-def list_commits(project, form):
+def generate_list_of_compiled_commits(project, form):
     '''
     Generate list of commits that will be compiled
     :param project: current project selected
@@ -782,7 +784,6 @@ def list_commits(project, form):
 
 
 def __generate_csv__(folder):
-    current_project_path = os.getcwd()
     if os.path.exists(folder):
         for filename in os.listdir(folder):
             if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
@@ -790,7 +791,7 @@ def __generate_csv__(folder):
                 try:
                     arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
                                                      ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
-                                                     cwd=current_project_path)
+                                                     cwd=os.getcwd())
                     arcan_metrics.wait()
                 except Exception as er:
                     print(er)

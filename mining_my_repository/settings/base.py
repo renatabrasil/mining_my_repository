@@ -123,7 +123,6 @@ USE_TZ = True
 
 THOUSAND_SEPARATOR = '.',
 
-
 # Static files (CSS, JavaScript, Images)
 
 # TODO: configure to use postgres. Motive: heroku doesn't support sqlite
