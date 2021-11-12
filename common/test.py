@@ -6,7 +6,6 @@
 
 from django.http import request
 from django.test import TestCase
-from model_mommy import mommy
 from pydriller.domain.commit import ModificationType
 
 from common.utils import CommitUtils, ViewUtils

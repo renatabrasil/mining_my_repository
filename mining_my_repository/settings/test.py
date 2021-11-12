@@ -1,6 +1,7 @@
 from .base import *
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
+os.environ["ENVIRONMENT_VARIABLE"] = "test"
 # import django
 # django.setup()
 from django.core.wsgi import get_wsgi_application

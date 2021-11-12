@@ -4,11 +4,35 @@
 
 # third-party
 from django.test import TestCase
-# local Django
-from model_mommy import mommy
 
 from contributions.models import (
     Developer, Project, Tag, Directory, Commit)
+
+
+# local Django
+
+
+def create_project(name="Projeto", id=1):
+    return Project(project_name=name, id=id)
+
+
+def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
+               main_directory="main/code", max_minor_version_description=""):
+    return Tag(description=description, id=id, previous_tag=previous_tag, project=project, major=major,
+               main_directory=main_directory, max_minor_version_description=max_minor_version_description)
+
+
+def create_directory(project=create_project(), visible=True, name=""):
+    return Directory(project=project, visible=visible, name=name)
+
+
+def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
+    return Developer(name=name, email=email, login=login)
+
+
+def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
+                  committer=create_developer()):
+    return Commit(id=id, tag=tag, hash=hash, author=author, committer=committer)
 
 
 class DeveloperModelTests(TestCase):
@@ -28,14 +52,14 @@ class ProjectModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = mommy.make(Project, project_name="Project 1")
-        project2 = mommy.make(Project, project_name="Project 2", id=1)
+        project1 = create_project(name="Projeto 1", id=2)
+        project2 = create_project(name="Project 2", id=1)
 
-        tag = mommy.make(Tag, description='rel/1.1', id=1, previous_tag=None, project=project2,
+        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
-        tag2 = mommy.make(Tag, description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
-        tag3 = mommy.make(Tag, description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
-        tag_minor1 = mommy.make(Tag, description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
+        tag2 = create_tag(description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
+        tag3 = create_tag(description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
+        tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
 
     @classmethod
     def create_project(cls, name="Project 1", path="https://github.com/project_1"):
@@ -48,7 +72,7 @@ class ProjectModelTests(TestCase):
 
     # @patch()
     def test_first_tag(self):
-        project1 = mommy.make(Project, project_name="Project 1")
+        project1 = create_project(project_name="Project 1")
 
         tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=project1)
 
@@ -60,24 +84,24 @@ class TagModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = mommy.make(Project, project_name="Project 1")
-        project2 = mommy.make(Project, project_name="Project 2", id=1)
+        project1 = create_project(project_name="Project 1", id=2)
+        project2 = create_project(project_name="Project 2", id=1)
 
-        tag = mommy.make(Tag, description='rel/1.1', id=1, previous_tag=None, project=project2,
+        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
-        tag2 = mommy.make(Tag, description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
-        tag3 = mommy.make(Tag, description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
-        tag_minor1 = mommy.make(Tag, description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
+        tag2 = create_tag(description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
+        tag3 = create_tag(description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
+        tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
 
     def test_minors(self):
-        tag_major = mommy.make(Tag, max_minor_version_description="1.1,1.2,1.2.a,1.3.1")
+        tag_major = create_tag(max_minor_version_description="1.1,1.2,1.2.a,1.3.1")
 
         result = tag_major.minors
 
         self.assertListEqual(["1.1", "1.2", "1.2.a", "1.3.1"], result)
 
     def test_minors_when_minors_are_empty(self):
-        tag_major = mommy.make(Tag, max_minor_version_description="")
+        tag_major = create_tag(max_minor_version_description="")
 
         result = tag_major.minors
 
@@ -87,60 +111,60 @@ class TagModelTests(TestCase):
         self.assertListEqual([1, 2, 3], list(Tag.line_major_versions(1)))
 
     def test_main_directory_prefix(self):
-        project2 = mommy.make(Project, project_name="Project 2", id=1)
-        tag = mommy.make(Tag, description='rel/1.1', id=1, previous_tag=None, project=project2,
+        project2 = create_project(project_name="Project 2", id=1)
+        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
 
         self.assertEqual("main/code/", tag.main_directory_prefix)
 
     def test_pre_build_commands_successfully(self):
-        tag = mommy.make(Tag, prepare_build_command="ant clean, ant update, ant compile")
+        tag = create_tag(prepare_build_command="ant clean, ant update, ant compile")
 
         result = tag.pre_build_commands
 
         self.assertListEqual(["ant clean", "ant update", "ant compile"], result)
 
     def test__str__(self):
-        project2 = mommy.make(Project, project_name="Project 2", id=1)
-        tag2 = mommy.make(Tag, description='rel/1.2', id=2, project=project2, major=True)
+        project2 = create_project(project_name="Project 2", id=1)
+        tag2 = create_tag(description='rel/1.2', id=2, project=project2, major=True)
 
         self.assertEqual("Project 2: rel/1.2", tag2.__str__())
 
 
 class DirectoryModelTests(TestCase):
     def test_directory_name(self):
-        project2 = mommy.make(Project, project_name="Project 2", id=1)
-        directory = mommy.make(Directory, project=project2, visible=False, name="core/db/models")
+        project2 = create_project(project_name="Project 2", id=1)
+        directory = create_directory(project=project2, visible=False, name="core/db/models")
 
         self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
 
     def test_belongs_to_component_with_same_path(self):
         file = "core/db/models/"
 
-        directory = mommy.make(Directory, visible=True, name="core/db/models/")
+        directory = create_directory(visible=True, name="core/db/models/")
 
         self.assertTrue(directory.belongs_to_component(file))
 
     def test_file_inside_belongs_to_component(self):
         file = "core/db/models/create_client.sql"
 
-        directory = mommy.make(Directory, visible=False, name="core/db/models/")
+        directory = create_directory(visible=False, name="core/db/models/")
 
         self.assertTrue(directory.belongs_to_component(file))
 
     def test_file_inside_belongs_to_component_and_file_is_a_component(self):
         file = "core/db/models/"
 
-        directory = mommy.make(Directory, visible=True, name="core/db/models")
+        directory = create_directory(visible=True, name="core/db/models")
 
         self.assertFalse(directory.belongs_to_component(file))
 
 
 class CommitModelTests(TestCase):
     def test__str__(self):
-        author = mommy.make(Developer, name="Roberto")
-        tag = mommy.make(Tag, description="1.0")
-        commit = mommy.make(Commit, hash="ABCD123456", id=15, author=author, tag=tag)
+        author = create_developer(name="Roberto")
+        tag = create_tag(description="1.0")
+        commit = create_commit(hash="ABCD123456", id=15, author=author, tag=tag)
 
         expectedResult = "15 - hash: ABCD123456 - Author: Roberto - Tag: 1.0"
         result = commit.__str__()
