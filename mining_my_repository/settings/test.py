@@ -8,6 +8,8 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
+print(TESTS_IN_PROGRESS)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -18,5 +20,4 @@ DATABASES = {
     }
 }
 
-DEBUG = True
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"

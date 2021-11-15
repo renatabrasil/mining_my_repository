@@ -7,9 +7,7 @@ class TestCommit(TestCase):
     def setUp(self):
         self.commit = Commit()
 
-
     def test_has_impact_loc(self):
-
         self.fail()
 
     def test_has_files_in_this_directory(self):
@@ -50,6 +48,7 @@ class TestCommit(TestCase):
 
     def test_save(self):
         self.fail()
+
 
 if __name__ == '__main__':
     main()

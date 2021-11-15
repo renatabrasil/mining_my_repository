@@ -12,8 +12,8 @@ from contributions.models import (
 # local Django
 
 
-def create_project(name="Projeto", id=1):
-    return Project(project_name=name, id=id)
+def create_project(name="Projeto"):
+    return Project.objects.create(project_name=name)
 
 
 def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
@@ -52,8 +52,8 @@ class ProjectModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = create_project(name="Projeto 1", id=2)
-        project2 = create_project(name="Project 2", id=1)
+        project1 = create_project(name="Projeto 1")
+        project2 = create_project(name="Project 2")
 
         tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
@@ -84,8 +84,8 @@ class TagModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = create_project(project_name="Project 1", id=2)
-        project2 = create_project(project_name="Project 2", id=1)
+        project1 = create_project(project_name="Project 1")
+        project2 = create_project(project_name="Project 2")
 
         tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
@@ -133,7 +133,7 @@ class TagModelTests(TestCase):
 
 class DirectoryModelTests(TestCase):
     def test_directory_name(self):
-        project2 = create_project(project_name="Project 2", id=1)
+        project2 = create_project(project_name="Project 2")
         directory = create_directory(project=project2, visible=False, name="core/db/models")
 
         self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
