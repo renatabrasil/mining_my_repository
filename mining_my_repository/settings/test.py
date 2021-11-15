@@ -15,8 +15,10 @@ print(TESTS_IN_PROGRESS)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(os.path.dirname(__file__), 'test.db'),
-        'TEST_NAME': os.path.join(os.path.dirname(__file__), 'test.db'),
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'TEST': {
+            'NAME': 'test_database',
+        },
     }
 }
 
