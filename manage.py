@@ -3,11 +3,21 @@
 import os
 import sys
 
-ENV_ = sys.argv[1] if sys.argv[1] != 'runserver' else 'dev'
+ENV_ = 'dev' if sys.argv[1] == 'runserver' else sys.argv[1]
+
+settings = {'runserver': 'mining_my_repository.settings.dev', 'test': 'mining_my_repository.settings.test',
+            'prod': 'mining_my_repository.settings.prod'}
+
+
+def __get_settings_file(arg):
+    if arg not in settings:
+        return 'mining_my_repository.settings'
+    else:
+        return settings[arg]
 
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', f'mining_my_repository.settings.{ENV_}')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', __get_settings_file(sys.argv[1]))
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
