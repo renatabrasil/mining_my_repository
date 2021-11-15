@@ -28,5 +28,4 @@ jobs:
         pip install -r requirements.txt
     - name: Run Tests
       run: |
-        mkdir -p logs
         python manage.py test contributions

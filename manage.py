@@ -3,9 +3,11 @@
 import os
 import sys
 
+ENV_ = sys.argv[1] if sys.argv[1] != 'runserver' else 'dev'
+
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mining_my_repository.settings.dev')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', f'mining_my_repository.settings.{ENV_}')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
