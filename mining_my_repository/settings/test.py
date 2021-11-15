@@ -1,5 +1,7 @@
 from .base import *
 
+print("SETTINGS TEST CARREGADO")
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 os.environ["ENVIRONMENT_VARIABLE"] = "test"
 # import django

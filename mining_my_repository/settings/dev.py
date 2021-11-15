@@ -1,5 +1,7 @@
 from .base import *
 
+print("SETTINGS DEV CARREGADO")
+
 DEBUG = True
 # logging.basicConfig(filename='architecture.log', encoding='utf-8', level=logging.DEBUG)
 LOGGING = {
