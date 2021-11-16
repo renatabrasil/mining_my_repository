@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('architecture', '0040_auto_20200711_1336'),
+        ('architecture', '0027_filecommits_metrics_calculated_at'),
     ]
 
     operations = [
