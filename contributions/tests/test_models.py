@@ -52,31 +52,38 @@ class ProjectModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = create_project(name="Projeto 1")
-        project2 = create_project(name="Project 2")
+        self.project1 = create_project(name="Projeto 1")
+        self.project2 = create_project(name="Project 2")
 
-        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
-                         main_directory="main/code", major=True)
-        tag2 = create_tag(description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
-        tag3 = create_tag(description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
-        tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
+        self.tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=self.project2,
+                              main_directory="main/code", major=True)
+        self.tag2 = create_tag(description='rel/1.2', id=2, previous_tag=self.tag, project=self.project2, major=True)
+        self.tag3 = create_tag(description='rel/1.3', id=3, previous_tag=self.tag2, project=self.project2, major=True)
+        self.tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=self.tag3, project=self.project2,
+                                     major=False)
 
-    @classmethod
-    def create_project(cls, name="Project 1", path="https://github.com/project_1"):
-        return Project.objects.create(project_name=name, project_path=path)
+    def tearDown(self):
+        self.project1.delete()
+        self.project2.delete()
+        self.tag.delete()
+        self.tag2.delete()
+        self.tag3.delete()
+        self.tag_minor1.delete()
+
+    # @classmethod
+    # def create_project(cls, name="Project 1", path="https://github.com/project_1"):
+    #     return Project.objects.create(project_name=name, project_path=path)
 
     def test_project_name(self):
-        proj = self.create_project()
+        proj = create_project()
 
-        self.assertEqual(proj.__str__(), "Project 1")
+        self.assertEqual(proj.__str__(), "Projeto")
 
     # @patch()
     def test_first_tag(self):
-        project1 = create_project(project_name="Project 1")
+        tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
 
-        tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=project1)
-
-        self.assertEqual(project1.first_tag, tag)
+        self.assertEqual(self.project1.first_tag, tag)
 
 
 class TagModelTests(TestCase):

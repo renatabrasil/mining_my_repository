@@ -2,7 +2,7 @@ from .base import *
 
 print("SETTINGS DEV CARREGADO")
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 
 DEBUG = True
 
