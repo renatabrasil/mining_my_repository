@@ -170,4 +170,4 @@ if 'test' in sys.argv[1:] or 'jenkins' in sys.argv[1:]:
     DEBUG = False
     TEMPLATE_DEBUG = False
     TESTS_IN_PROGRESS = True
-    # MIGRATION_MODULES = DisableMigrations()
+    MIGRATION_MODULES = DisableMigrations()

@@ -9,6 +9,7 @@ os.environ["ENVIRONMENT_VARIABLE"] = "test"
 # DATABASES['default'] = dj_database_url.config()
 
 # import django
+#
 # django.setup()
 from django.core.wsgi import get_wsgi_application
 
