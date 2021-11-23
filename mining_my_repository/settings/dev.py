@@ -2,14 +2,9 @@ from .base import *
 
 print("SETTINGS DEV CARREGADO")
 
-DEBUG = True
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
+DEBUG = True
 
 # logging.basicConfig(filename='architecture.log', encoding='utf-8', level=logging.DEBUG)
 LOGGING = {
