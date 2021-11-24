@@ -1,4 +1,4 @@
-from unittest import TestCase, main
+from django.test import TestCase
 
 from contributions.models import Commit
 
@@ -48,7 +48,3 @@ class TestCommit(TestCase):
 
     def test_save(self):
         self.fail()
-
-
-if __name__ == '__main__':
-    main()

@@ -17,9 +17,10 @@ def create_project(name="Projeto"):
 
 
 def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
-               main_directory="main/code", max_minor_version_description=""):
+               main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
     return Tag(description=description, id=id, previous_tag=previous_tag, project=project, major=major,
-               main_directory=main_directory, max_minor_version_description=max_minor_version_description)
+               main_directory=main_directory, max_minor_version_description=max_minor_version_description,
+               prepare_build_command=prepare_build_command)
 
 
 def create_directory(project=create_project(), visible=True, name=""):
@@ -91,8 +92,8 @@ class TagModelTests(TestCase):
         """
         Set up all the tests
         """
-        project1 = create_project(project_name="Project 1")
-        project2 = create_project(project_name="Project 2")
+        project1 = create_project(name="Project 1")
+        project2 = create_project(name="Project 2")
 
         tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
@@ -118,7 +119,7 @@ class TagModelTests(TestCase):
         self.assertListEqual([1, 2, 3], list(Tag.line_major_versions(1)))
 
     def test_main_directory_prefix(self):
-        project2 = create_project(project_name="Project 2", id=1)
+        project2 = create_project(name="Project 2")
         tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
 
@@ -132,7 +133,7 @@ class TagModelTests(TestCase):
         self.assertListEqual(["ant clean", "ant update", "ant compile"], result)
 
     def test__str__(self):
-        project2 = create_project(project_name="Project 2", id=1)
+        project2 = create_project(name="Project 2")
         tag2 = create_tag(description='rel/1.2', id=2, project=project2, major=True)
 
         self.assertEqual("Project 2: rel/1.2", tag2.__str__())
@@ -140,7 +141,7 @@ class TagModelTests(TestCase):
 
 class DirectoryModelTests(TestCase):
     def test_directory_name(self):
-        project2 = create_project(project_name="Project 2")
+        project2 = create_project(name="Project 2")
         directory = create_directory(project=project2, visible=False, name="core/db/models")
 
         self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
