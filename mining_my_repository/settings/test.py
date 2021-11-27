@@ -1,5 +1,5 @@
-import dj_database_url
-from dj_config_url import config
+# import dj_database_url
+# from dj_config_url import config
 
 from .base import *
 
@@ -27,8 +27,8 @@ DATABASES['default'] = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
 }
-db_from_env = dj_database_url.config(default=config('DATABASE_URL'))
-DATABASES['default'].update(db_from_env)
+# db_from_env = dj_database_url.config(default=config('DATABASE_URL'))
+# DATABASES['default'].update(db_from_env)
 
 INSTALLED_APPS += ['contributions.tests', ]
 
