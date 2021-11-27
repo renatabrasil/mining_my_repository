@@ -31,7 +31,7 @@ DATABASES['default'] = {
 # db_from_env = dj_database_url.config(default=config('DATABASE_URL'))
 # DATABASES['default'].update(db_from_env)
 
-# INSTALLED_APPS += ['contributions.tests.test_models', ]
+INSTALLED_APPS += ['contributions', ]
 
 LOGGING = {
     'version': 1,
