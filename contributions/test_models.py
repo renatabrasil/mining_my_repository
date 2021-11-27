@@ -3,6 +3,8 @@
 # Django
 
 # third-party
+import unittest
+
 from django.test import TestCase
 
 from contributions.models import (
@@ -216,3 +218,6 @@ class CommitModelTests(TestCase):
 #         self.assertEqual(modification.diff_added, '\n0 lines added: \n\n2 +  public void {')
 #         self.assertEqual(modification.diff_removed, '\n0 lines removed:  \n\n3 -  * @author')
 #
+
+if __name__ == '__main__':
+    unittest.main()
