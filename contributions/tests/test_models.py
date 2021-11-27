@@ -84,11 +84,10 @@ class ProjectModelTests(TestCase):
 
         self.assertEqual(proj.__str__(), "Projeto")
 
+    def test_first_tag(self):
+        tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
 
-def test_first_tag(self):
-    tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
-
-    self.assertEqual(self.project1.first_tag, tag)
+        self.assertEqual(self.project1.first_tag, tag)
 
 # class TagModelTests(TestCase):
 #     def setUp(self):
