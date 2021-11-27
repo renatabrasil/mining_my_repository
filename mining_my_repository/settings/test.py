@@ -28,8 +28,6 @@ DATABASES['default'] = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
 }
-# db_from_env = dj_database_url.config(default=config('DATABASE_URL'))
-# DATABASES['default'].update(db_from_env)
 
 INSTALLED_APPS += ['contributions', ]
 

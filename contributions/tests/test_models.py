@@ -7,7 +7,7 @@
 from django.test import TestCase
 
 # local Django
-from contributions.models import Project
+from contributions.models import Project, Tag
 
 
 #
@@ -86,10 +86,9 @@ class ProjectModelTests(TestCase):
 
 
 def test_first_tag(self):
-    pass
-    # tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
-    #
-    # self.assertEqual(self.project1.first_tag, tag)
+    tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
+
+    self.assertEqual(self.project1.first_tag, tag)
 
 # class TagModelTests(TestCase):
 #     def setUp(self):
