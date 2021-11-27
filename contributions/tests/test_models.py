@@ -10,9 +10,6 @@ from django.test import TestCase
 from contributions.models import Project
 
 
-# def create_project(name="Projeto"):
-#     return Project.objects.create(project_name=name)
-#
 #
 # def create_tag(description='rel/1.1', previous_tag=None, project=create_project(), major=True,
 #                main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
@@ -48,12 +45,17 @@ from contributions.models import Project
 
 
 class ProjectModelTests(TestCase):
-    def setUp(self):
-        # """
-        # Set up all the tests
-        # """
 
-        self.project1 = Project.objects.create(name="Projeto 1")
+    def create_project(cls, name="Projeto"):
+        return Project.objects.create(project_name=name)
+
+    def setUp(self):
+
+    # """
+    # Set up all the tests
+    # """
+
+    # self.project1 = Project.objects.create(project_name="Projeto 1")
 
     # self.project2 = create_project(name="Project 2")
     #
@@ -77,10 +79,10 @@ class ProjectModelTests(TestCase):
     #     return Project.objects.create(project_name=name, project_path=path)
 
     def test_project_name(self):
-        pass
-        # proj = create_project()
-        #
-        # self.assertEqual(proj.__str__(), "Projeto")
+        # pass
+        proj = self.create_project()
+
+        self.assertEqual(proj.__str__(), "Projeto")
 
 
 def test_first_tag(self):
