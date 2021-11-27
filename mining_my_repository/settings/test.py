@@ -9,6 +9,7 @@ TESTING = True
 # os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 # os.environ["ENVIRONMENT_VARIABLE"] = "test"
 
+
 # DATABASES['default'] = dj_database_url.config()
 
 # import django
