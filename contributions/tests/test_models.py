@@ -49,7 +49,7 @@ class ProjectModelTests(TestCase):
     def create_project(cls, name="Projeto"):
         return Project.objects.create(project_name=name)
 
-    def setUp(self):
+    # def setUp(self):
 
     # """
     # Set up all the tests
