@@ -4,8 +4,7 @@
 
 # third-party
 # import unittest
-
-from django.test import TestCase
+import django
 
 from contributions.models import (
     Developer, Project, Tag, Directory, Commit)
@@ -51,7 +50,7 @@ def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_
 #         self.assertEqual(expected_result, dev.__str__())
 
 
-class ProjectModelTests(TestCase):
+class ProjectModelTests(django.test.TestCase):
     def setUp(self):
         """
         Set up all the tests
