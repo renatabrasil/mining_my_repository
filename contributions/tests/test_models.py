@@ -6,36 +6,33 @@
 # import unittest
 from django.test import TestCase
 
-from contributions.models import (
-    Developer, Project, Tag, Directory, Commit)
-
 
 # local Django
 
 
-def create_project(name="Projeto"):
-    return Project.objects.create(project_name=name)
-
-
-def create_tag(description='rel/1.1', previous_tag=None, project=create_project(), major=True,
-               main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
-    return Tag.objects.create(description=description, previous_tag=previous_tag, project=project, major=major,
-                              main_directory=main_directory,
-                              max_minor_version_description=max_minor_version_description,
-                              prepare_build_command=prepare_build_command)
-
-
-def create_directory(project=create_project(), visible=True, name=""):
-    return Directory.objects.create(project=project, visible=visible, name=name)
-
-
-def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
-    return Developer.objects.create(name=name, email=email, login=login)
-
-
-def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
-                  committer=create_developer()):
-    return Commit.objects.create(id=id, tag=tag, hash=hash, author=author, committer=committer)
+# def create_project(name="Projeto"):
+#     return Project.objects.create(project_name=name)
+#
+#
+# def create_tag(description='rel/1.1', previous_tag=None, project=create_project(), major=True,
+#                main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
+#     return Tag.objects.create(description=description, previous_tag=previous_tag, project=project, major=major,
+#                               main_directory=main_directory,
+#                               max_minor_version_description=max_minor_version_description,
+#                               prepare_build_command=prepare_build_command)
+#
+#
+# def create_directory(project=create_project(), visible=True, name=""):
+#     return Directory.objects.create(project=project, visible=visible, name=name)
+#
+#
+# def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
+#     return Developer.objects.create(name=name, email=email, login=login)
+#
+#
+# def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
+#                   committer=create_developer()):
+#     return Commit.objects.create(id=id, tag=tag, hash=hash, author=author, committer=committer)
 
 
 # class DeveloperModelTests(TestCase):
