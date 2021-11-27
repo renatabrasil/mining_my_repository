@@ -28,6 +28,6 @@ jobs:
         pip install -r requirements.txt
     - name: Run Tests
       run: |
-        python manage.py test contributions --settings mining_my_repository.settings.test
+        python manage.py test contributions --verbosity 2 --settings mining_my_repository.settings.test
         env:
           ENVIRONMENT_VARIABLE: test

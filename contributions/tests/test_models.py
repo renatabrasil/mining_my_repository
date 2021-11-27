@@ -26,7 +26,7 @@ def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_pr
 
 
 def create_directory(project=create_project(), visible=True, name=""):
-    return Directory(project=project, visible=visible, name=name)
+    return Directory.objects.create(project=project, visible=visible, name=name)
 
 
 def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
