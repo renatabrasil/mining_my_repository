@@ -84,7 +84,7 @@ class ProjectModelTests(TestCase):
 
     # @patch()
     def test_first_tag(self):
-        tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
+        tag = Tag(description='rel/1.1', previous_tag=None, project=self.project1)
 
         self.assertEqual(self.project1.first_tag, tag)
 
