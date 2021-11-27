@@ -55,9 +55,9 @@ class ProjectModelTests(TestCase):
     # Set up all the tests
     # """
 
-    # self.project1 = Project.objects.create(project_name="Projeto 1")
+        self.project1 = Project.objects.create(project_name="Projeto 1")
 
-    # self.project2 = create_project(name="Project 2")
+        self.project2 = create_project(name="Project 2")
     #
     # self.tag = create_tag(description='rel/1.1', previous_tag=None, project=self.project2,
     #                       main_directory="main/code", major=True)
