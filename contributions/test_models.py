@@ -15,7 +15,7 @@ from contributions.models import (
 
 
 def create_project(name="Projeto"):
-    return Project.objects.create(project_name=name)
+    return Project(project_name=name)
 
 
 def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
@@ -41,7 +41,7 @@ def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_
 class DeveloperModelTests(TestCase):
     @classmethod
     def create_developer(cls, name="Renata B", email="renata@gmail.com"):
-        return Developer.objects.create(name=name, email=email, login='renatabrasil')
+        return Developer(name=name, email=email, login='renatabrasil')
 
     def test_developer_name(self):
         dev = self.create_developer()
@@ -180,6 +180,7 @@ class CommitModelTests(TestCase):
         result = commit.__str__()
 
         self.assertEqual(expectedResult, result)
+
 
 # def test_calculate_general_experience_successfully(self):
 #         with mock.patch('contributions.models.update_commit') as mocked_handler:
