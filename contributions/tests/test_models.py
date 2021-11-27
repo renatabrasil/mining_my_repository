@@ -18,9 +18,9 @@ def create_project(name="Projeto"):
     return Project.objects.create(project_name=name)
 
 
-def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
+def create_tag(description='rel/1.1', pk=2, previous_tag=None, project=create_project(), major=True,
                main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
-    return Tag(description=description, id=id, previous_tag=previous_tag, project=project, major=major,
+    return Tag(description=description, pk=id, previous_tag=previous_tag, project=project, major=major,
                main_directory=main_directory, max_minor_version_description=max_minor_version_description,
                prepare_build_command=prepare_build_command)
 
@@ -33,9 +33,9 @@ def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
     return Developer(name=name, email=email, login=login)
 
 
-def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
+def create_commit(pk=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
                   committer=create_developer()):
-    return Commit(id=id, tag=tag, hash=hash, author=author, committer=committer)
+    return Commit(pk=id, tag=tag, hash=hash, author=author, committer=committer)
 
 
 class DeveloperModelTests(TestCase):
@@ -58,11 +58,11 @@ class ProjectModelTests(TestCase):
         self.project1 = create_project(name="Projeto 1")
         self.project2 = create_project(name="Project 2")
 
-        self.tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=self.project2,
+        self.tag = create_tag(description='rel/1.1', pk=1, previous_tag=None, project=self.project2,
                               main_directory="main/code", major=True)
-        self.tag2 = create_tag(description='rel/1.2', id=2, previous_tag=self.tag, project=self.project2, major=True)
-        self.tag3 = create_tag(description='rel/1.3', id=3, previous_tag=self.tag2, project=self.project2, major=True)
-        self.tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=self.tag3, project=self.project2,
+        self.tag2 = create_tag(description='rel/1.2', pk=2, previous_tag=self.tag, project=self.project2, major=True)
+        self.tag3 = create_tag(description='rel/1.3', pk=3, previous_tag=self.tag2, project=self.project2, major=True)
+        self.tag_minor1 = create_tag(description='rel/1.3.1', pk=4, previous_tag=self.tag3, project=self.project2,
                                      major=False)
 
     def tearDown(self):
@@ -97,11 +97,11 @@ class TagModelTests(TestCase):
         project1 = create_project(name="Project 1")
         project2 = create_project(name="Project 2")
 
-        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
+        tag = create_tag(description='rel/1.1', pk=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
-        tag2 = create_tag(description='rel/1.2', id=2, previous_tag=tag, project=project2, major=True)
-        tag3 = create_tag(description='rel/1.3', id=3, previous_tag=tag2, project=project2, major=True)
-        tag_minor1 = create_tag(description='rel/1.3.1', id=4, previous_tag=tag3, project=project2, major=False)
+        tag2 = create_tag(description='rel/1.2', pk=2, previous_tag=tag, project=project2, major=True)
+        tag3 = create_tag(description='rel/1.3', pk=3, previous_tag=tag2, project=project2, major=True)
+        tag_minor1 = create_tag(description='rel/1.3.1', pk=4, previous_tag=tag3, project=project2, major=False)
 
     def test_minors(self):
         tag_major = create_tag(max_minor_version_description="1.1,1.2,1.2.a,1.3.1")
@@ -122,7 +122,7 @@ class TagModelTests(TestCase):
 
     def test_main_directory_prefix(self):
         project2 = create_project(name="Project 2")
-        tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
+        tag = create_tag(description='rel/1.1', pk=1, previous_tag=None, project=project2,
                          main_directory="main/code", major=True)
 
         self.assertEqual("main/code/", tag.main_directory_prefix)
@@ -136,7 +136,7 @@ class TagModelTests(TestCase):
 
     def test__str__(self):
         project2 = create_project(name="Project 2")
-        tag2 = create_tag(description='rel/1.2', id=2, project=project2, major=True)
+        tag2 = create_tag(description='rel/1.2', pk=2, project=project2, major=True)
 
         self.assertEqual("Project 2: rel/1.2", tag2.__str__())
 
@@ -174,7 +174,7 @@ class CommitModelTests(TestCase):
     def test__str__(self):
         author = create_developer(name="Roberto")
         tag = create_tag(description="1.0")
-        commit = create_commit(hash="ABCD123456", id=15, author=author, tag=tag)
+        commit = create_commit(hash="ABCD123456", pk=15, author=author, tag=tag)
 
         expectedResult = "15 - hash: ABCD123456 - Author: Roberto - Tag: 1.0"
         result = commit.__str__()
@@ -184,7 +184,7 @@ class CommitModelTests(TestCase):
 
 # def test_calculate_general_experience_successfully(self):
 #         with mock.patch('contributions.models.update_commit') as mocked_handler:
-#             post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
+#             post_save.connect(mocked_handler, sender=Commit, dispatch_upk='test_cache_mocked_handler')
 #
 #         au = Mock(Developer)
 #         author = mommy.make(Developer)
