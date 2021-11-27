@@ -15,7 +15,7 @@ from contributions.models import (
 
 
 def create_project(name="Projeto"):
-    return Project(project_name=name)
+    return Project.objects.create(project_name=name)
 
 
 def create_tag(description='rel/1.1', id=2, previous_tag=None, project=create_project(), major=True,
