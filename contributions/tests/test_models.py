@@ -3,7 +3,7 @@
 # Django
 
 # third-party
-import unittest
+# import unittest
 
 from django.test import TestCase
 
@@ -221,5 +221,5 @@ class ProjectModelTests(TestCase):
 #         self.assertEqual(modification.diff_removed, '\n0 lines removed:  \n\n3 -  * @author')
 #
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()
