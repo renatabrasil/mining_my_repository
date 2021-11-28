@@ -1,10 +1,10 @@
 from django.test import TestCase
-# Create your tests here.
-from model_mommy.recipe import Recipe, foreign_key
 
 from architecture.models import (FileCommits)
-from contributions.models import (Commit, Modification,
-                                  Project, Tag)
+from contributions.models import (Project, Tag)
+
+
+# Create your tests here.
 
 
 class FileCommitsModelTests(TestCase):
@@ -16,18 +16,17 @@ class FileCommitsModelTests(TestCase):
 
         self.assertEqual(file.__str__(), 'desktop/File 1')
 
-
-class ArchitectureQualityMetricsModelTests(TestCase):
-    def setUp(self):
-        self.commit = Recipe(Commit,
-                             hash='Commit1'
-                             )
-        self.modification_ucloc = Recipe(Modification,
-                                         path='test.java',
-                                         added=2,
-                                         removed=1,
-                                         commit=foreign_key(self.commit)
-                                         )
+# class ArchitectureQualityMetricsModelTests(TestCase):
+# def setUp(self):
+#     self.commit = Recipe(Commit,
+#                          hash='Commit1'
+#                          )
+#     self.modification_ucloc = Recipe(Modification,
+#                                      path='test.java',
+#                                      added=2,
+#                                      removed=1,
+#                                      commit=foreign_key(self.commit)
+#                                      )
 
 # TODO: delete
 # def test_delta_metrics(self):
