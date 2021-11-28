@@ -1,9 +1,2 @@
 [run]
-omit =
-    # omit anything in a .local directory anywhere
-    */tests/*
-    # omit everything in /usr
-    */migrations/*
-    # omit this single file
-    */templates/*
-    */fixtures/*
+omit = */tests/*, */migrations/*, */templates/*, */fixtures/*
