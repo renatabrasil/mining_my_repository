@@ -41,7 +41,7 @@ jobs:
       - name: Install coverage
         run: pip install coverage
       - name: Run Test With Coverage
-        run: coverage run --branch --source=$GITHUB_WORKSPACE ./manage.py test --noinput --parallel
+        run: coverage run --branch --source=$GITHUB_WORKSPACE ./manage.py test contributions --noinput --parallel
       - name: Generate Coverage Report
         run: coverage xml -o test-coverage.xml
       - name: SonarCloud Scan
