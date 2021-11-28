@@ -6,7 +6,7 @@ from .base import *
 print(f"SETTINGS test CARREGADO")
 
 TESTING = True
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 # os.environ["ENVIRONMENT_VARIABLE"] = "test"
 
 
