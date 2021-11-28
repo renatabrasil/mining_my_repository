@@ -158,7 +158,8 @@ def compiled(request, file_id):
 
                         input_files = f'"{local_repository}/{build_path}"'
                         logger.info(f'comando: jar -cf {jar_file} {input_files}')
-                        process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository)
+                        process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository,
+                                                   shell=False)
                         process.wait()
 
                         # Check whether created jar is valid
