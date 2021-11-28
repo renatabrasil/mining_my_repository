@@ -90,7 +90,7 @@ def index(request):
 
         return HttpResponse(template.render(context, request))
     except Exception as err:
-        logger.exception(err.with_traceback())
+        logger.exception(err.args[0])
         raise
 
 

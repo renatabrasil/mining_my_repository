@@ -49,15 +49,15 @@ class ProjectModelTests(TestCase):
     def create_project(cls, name="Projeto"):
         return Project.objects.create(project_name=name)
 
-    # def setUp(self):
-
-    # """
-    # Set up all the tests
-    # """
+    def setUp(self):
+        # """
+        # Set up all the tests
+        # """
 
         self.project1 = Project.objects.create(project_name="Projeto 1")
 
-        self.project2 = create_project(name="Project 2")
+        self.project2 = self.create_project(name="Project 2")
+
     #
     # self.tag = create_tag(description='rel/1.1', previous_tag=None, project=self.project2,
     #                       main_directory="main/code", major=True)
