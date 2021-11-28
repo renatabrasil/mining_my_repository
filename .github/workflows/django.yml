@@ -38,6 +38,8 @@ jobs:
       - name: Run Tests
         run: |
           python manage.py test contributions --verbosity 2 --settings mining_my_repository.settings.test
+      - name: Install coverage
+        run: pip install coverage
       - name: Run Test With Coverage
         run: coverage run --branch --source=$GITHUB_WORKSPACE ./manage.py test --noinput --parallel
       - name: Generate Coverage Report
