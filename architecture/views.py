@@ -601,8 +601,6 @@ def quality_between_versions(request):
                 Tag.objects.filter(real_tag_description__endswith=name_version,
                                    project=request.session['project']).update(
                     delta_rmd_components=architectural_quality)
-                # Lucene
-                # Tag.objects.filter(description__endswith=name_version,project=request.session['project']).update(delta_rmd_components=architectural_quality)
 
         my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
         my_df = pd.DataFrame(metrics_by_directories)
@@ -736,7 +734,6 @@ def generate_list_of_compiled_commits(project, form):
         my_file = File(f)
         my_file.write(form['git_local_repository'].value() + "\n")
         my_file.write(form['build_path'].value() + "\n")
-        # my_file.write(ViewUtils.load_tag(request) + "\n")
         i = 1
         for commit in commits:
 
@@ -774,7 +771,6 @@ def __generate_csv__(folder):
     if os.path.exists(folder):
         for filename in os.listdir(folder):
             if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
-                # print(os.path.join(directory, filename))
                 try:
                     arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
                                                      ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
@@ -834,10 +830,12 @@ def __belongs_to_component__(component, directories):
     return False
 
 
-# return a dictionary key: module (component) value: dictionary key: commit value: metrics (RMD) {"org.apache.ant": {
-# "da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
 def h2_calculate_component_degradation(commit, directory, rmd):
-    '''Invoked by __read_PM_file__'''
+    '''Invoked by __read_PM_file__
+
+     return a dictionary key: module (component) value: dictionary key: commit value: metrics (RMD) {"org.apache.ant": {
+        # "da5a13f8e4e0e4475f942b5ae5670271b711d423": 0.5565}, {"66c400defd2ed0bd492715a7f4f10e2545cf9d46": 0.0}}
+    '''
     component_commit = ComponentCommit.objects.filter(commit=commit, component=directory)
     if component_commit.exists():
         component_commit = component_commit[0]

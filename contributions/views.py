@@ -70,8 +70,6 @@ def index(request):
             page = request.GET.get('page')
             latest_commit_list = paginator.get_page(page)
 
-        # list_commits(request)
-
         template = loader.get_template(url_path)
         context = {
             'title': title_description,
@@ -129,7 +127,6 @@ def __load_commits_by_request_and_tag(request, tag):
                     else:
                         filter.setdefault('from_tag', current_tag.previous_tag.description)
                 for minor in list([current_tag.real_tag_description] + current_tag.minors):
-                    # if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                     if minor.find('*') == 0 and 'from_commit' not in filter.keys():
                         filter['from_tag'] = minor.replace('*', '')
                         continue
@@ -138,7 +135,6 @@ def __load_commits_by_request_and_tag(request, tag):
                     for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
                         __build_and_save_commit(commit_repository, current_tag, filter['to_tag'])
 
-                    # if 'from_tag' in filter.keys():
                     filter['from_tag'] = minor
                     filter.pop('from_commit', None)
 
@@ -188,7 +184,6 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
                                           re.IGNORECASE)
                 full_email_pattern = re.search(
                     r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+',
-                    # r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)|.\s*)[a-zA-Z0-9-. ]+)+',
                     author_and_email, re.IGNORECASE)
                 if email_pattern:
                     email_found = email_pattern.group(0)
@@ -439,9 +434,6 @@ def __no_commits_constraints(modification, tag):
         hadoop_conditions = False
         for dir in dirs:
             hadoop_conditions = hadoop_conditions or str.lower(directory_str).find(dir) > -1
-
-    # FIXME: Fix the others
-    # shiro_conditions = str.lower(directory_str).startswith(tag.main_directory)
 
     return CommitUtils.is_java_file(path) and str.lower(directory_str).find('test') == -1 and \
            ant_conditions and lucene_conditions and maven_conditions and openjpa_conditions and cassandra_conditions and \

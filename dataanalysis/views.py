@@ -291,7 +291,6 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev, commit_db):
                 exp_arr = exp_degrad_arr[0]
                 degrad_arr = exp_degrad_arr[1]
                 if freq.isdigit() and commit.total_commits <= int(freq):
-                    # if freq.isdigit() and Commit.objects.filter(author=commit.author, tag_id__in=[2,3,4,5,6,7], id__lt=commit.id).count() <= int(freq):
                     exp_arr.append(commit.author_experience)
                     degrad_arr.append(commit.normalized_delta)
                     find = True
