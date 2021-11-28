@@ -12,10 +12,10 @@ TESTING = True
 
 # DATABASES['default'] = dj_database_url.config()
 
-# import django
+import django
 #
 # #
-# django.setup()
+django.setup()
 from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
