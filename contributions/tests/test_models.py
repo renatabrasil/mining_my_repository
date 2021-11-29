@@ -7,15 +7,10 @@
 from django.test import TestCase
 
 # local Django
-from contributions.models import Project, Tag, Developer
+from contributions.models import Project, Tag, Developer, Directory
 
 
 #
-
-#
-#
-# def create_directory(project=create_project(), visible=True, name=""):
-#     return Directory.objects.create(project=project, visible=visible, name=name)
 #
 #
 # def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
@@ -146,35 +141,46 @@ class TagModelTests(TestCase):
 
         self.assertEqual("Project 2: rel/1.2", tag2.__str__())
 
-#
-# class DirectoryModelTests(TestCase):
-#     def test_directory_name(self):
-#         project2 = create_project(name="Project 2")
-#         directory = create_directory(project=project2, visible=False, name="core/db/models")
-#
-#         self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
-#
-#     def test_belongs_to_component_with_same_path(self):
-#         file = "core/db/models/"
-#
-#         directory = create_directory(visible=True, name="core/db/models/")
-#
-#         self.assertTrue(directory.belongs_to_component(file))
-#
-#     def test_file_inside_belongs_to_component(self):
-#         file = "core/db/models/create_client.sql"
-#
-#         directory = create_directory(visible=False, name="core/db/models/")
-#
-#         self.assertTrue(directory.belongs_to_component(file))
-#
-#     def test_file_inside_belongs_to_component_and_file_is_a_component(self):
-#         file = "core/db/models/"
-#
-#         directory = create_directory(visible=True, name="core/db/models")
-#
-#         self.assertFalse(directory.belongs_to_component(file))
-#
+
+class DirectoryModelTests(TestCase):
+
+    @classmethod
+    def create_directory(cls, project=None, visible=True, name=""):
+        return Directory.objects.create(project=project, visible=visible, name=name)
+
+    def setUp(self):
+        """
+        Set up all the tests
+        """
+        self.project1 = ProjectModelTests.create_project(name="Project 1")
+        self.project2 = ProjectModelTests.create_project(name="Project 2")
+
+    def test_should_return_directory_name(self):
+        directory = self.create_directory(project=self.project2, visible=False, name="core/db/models")
+
+        self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
+
+    def test_should_check_if_directory_belongs_to_component_with_same_path(self):
+        file = "core/db/models/"
+
+        directory = self.create_directory(project=self.project1, visible=True, name="core/db/models/")
+
+        self.assertTrue(directory.belongs_to_component(file))
+
+    def test_should_check_if_a_file_inside_this_directory_belongs_to_component(self):
+        file = "core/db/models/create_client.sql"
+
+        directory = self.create_directory(project=self.project1, visible=False, name="core/db/models/")
+
+        self.assertTrue(directory.belongs_to_component(file))
+
+    def test_should_check_if_a_file_inside_this_directory_belongs_to_component_and_this_file_is_a_component(self):
+        file = "core/db/models/"
+
+        directory = self.create_directory(project=self.project1, visible=True, name="core/db/models")
+
+        self.assertFalse(directory.belongs_to_component(file))
+
 #
 # class CommitModelTests(TestCase):
 #     def test__str__(self):
