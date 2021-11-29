@@ -7,7 +7,7 @@
 from django.test import TestCase
 
 # local Django
-from contributions.models import Project, Tag
+from contributions.models import Project, Tag, Developer
 
 
 #
@@ -32,20 +32,21 @@ from contributions.models import Project, Tag
 #     return Commit.objects.create(id=id, tag=tag, hash=hash, author=author, committer=committer)
 #
 
-# class DeveloperModelTests(TestCase):
-#     @classmethod
-#     def create_developer(cls, name="Renata B", email="renata@gmail.com"):
-#         return Developer(name=name, email=email, login='renatabrasil')
-#
-#     def test_developer_name(self):
-#         dev = self.create_developer()
-#         expected_result = "Renata B (login: renatabrasil, email: renata@gmail.com)"
-#
-#         self.assertEqual(expected_result, dev.__str__())
+class DeveloperModelTests(TestCase):
+    @classmethod
+    def create_developer(cls, name="Renata B", email="renata@gmail.com"):
+        return Developer.objects.create(name=name, email=email, login='renatabrasil')
+
+    def test_developer_name(self):
+        dev = self.create_developer()
+        expected_result = "Renata B (login: renatabrasil, email: renata@gmail.com)"
+
+        self.assertEqual(expected_result, dev.__str__())
 
 
 class ProjectModelTests(TestCase):
 
+    @classmethod
     def create_project(cls, name="Projeto"):
         return Project.objects.create(project_name=name)
 
