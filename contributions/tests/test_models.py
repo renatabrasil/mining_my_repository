@@ -4,23 +4,12 @@
 
 # third-party
 # import unittest
+
 from django.test import TestCase
 
 # local Django
-from contributions.models import Project, Tag, Developer, Directory
+from contributions.models import Project, Tag, Developer, Directory, Commit
 
-
-#
-#
-#
-# def create_developer(name="Ana", email="ana@ana.com.br", login="anaana"):
-#     return Developer.objects.create(name=name, email=email, login=login)
-#
-#
-# def create_commit(id=1, tag=create_tag(), hash="ASDADADADSADADS", author=create_developer(),
-#                   committer=create_developer()):
-#     return Commit.objects.create(id=id, tag=tag, hash=hash, author=author, committer=committer)
-#
 
 class DeveloperModelTests(TestCase):
     @classmethod
@@ -46,28 +35,7 @@ class ProjectModelTests(TestCase):
         # """
 
         self.project1 = Project.objects.create(project_name="Projeto 1")
-
         self.project2 = self.create_project(name="Project 2")
-
-    #
-    # self.tag = create_tag(description='rel/1.1', previous_tag=None, project=self.project2,
-    #                       main_directory="main/code", major=True)
-    # self.tag2 = create_tag(description='rel/1.2', previous_tag=self.tag, project=self.project2, major=True)
-    # self.tag3 = create_tag(description='rel/1.3', previous_tag=self.tag2, project=self.project2, major=True)
-    # self.tag_minor1 = create_tag(description='rel/1.3.1', previous_tag=self.tag3, project=self.project2,
-    #                              major=False)
-
-    # def tearDown(self):
-    #     self.project1.delete()
-    #     self.project2.delete()
-    #     self.tag.delete()
-    #     self.tag2.delete()
-    #     self.tag3.delete()
-    #     self.tag_minor1.delete()
-
-    # @classmethod
-    # def create_project(cls, name="Project 1", path="https://github.com/project_1"):
-    #     return Project.objects.create(project_name=name, project_path=path)
 
     def test_should_return_project_name(self):
         # pass
@@ -181,33 +149,46 @@ class DirectoryModelTests(TestCase):
 
         self.assertFalse(directory.belongs_to_component(file))
 
-#
-# class CommitModelTests(TestCase):
-#     def test__str__(self):
-#         author = create_developer(name="Roberto")
-#         tag = create_tag(description="1.0")
-#         commit = create_commit(hash="ABCD123456", id=15, author=author, tag=tag)
-#
-#         expectedResult = "15 - hash: ABCD123456 - Author: Roberto - Tag: 1.0"
-#         result = commit.__str__()
-#
-#         self.assertEqual(expectedResult, result)
 
+class CommitModelTests(TestCase):
 
-# def test_calculate_general_experience_successfully(self):
-#         with mock.patch('contributions.models.update_commit') as mocked_handler:
-#             post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
-#
-#         au = Mock(Developer)
-#         author = mommy.make(Developer)
-#         committer = mommy.make(Developer)
-#         tag = mommy.make(Tag)
-#
-#         commit = Commit(author=author, committer=committer, tag=tag)
-#
-#         commit.save()
-#
-#         self.assertIsNone(commit)
+    @classmethod
+    def create_commit(tag=None, hash="ASDADADADSADADS", author=None,
+                      committer=None):
+        return Commit.objects.create(id=id, tag=tag, hash=hash, author=author, committer=committer)
+
+    def setUp(self):
+        """
+        Set up all the tests
+        """
+        self.project1 = Project.objects.create(project_name="Project 1")
+        self.project2 = Project.objects.create(project_name="Project 2")
+
+        self.developer1 = Developer.objects.create(name="Daniel Palacios", email="danpalacios@msn.com",
+                                                   login="danpalacios")
+        self.developer2 = Developer.objects.create(name="Roberto", email="roberto@brasil.com.br", login="beto2021")
+
+        self.tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project2,
+                                      main_directory="main/code", major=True)
+
+    def test_should_return_commit_description__str__(self):
+        commit = Commit.objects.create(hash="ABCD123456", id=15, author=self.developer1, tag=self.tag,
+                                       committer=self.developer2)
+
+        expectedResult = "15 - hash: ABCD123456 - Author: Daniel Palacios - Tag: rel/1.1"
+        result = commit.__str__()
+
+        self.assertEqual(expectedResult, result)
+
+    # def test_calculate_general_experience_successfully(self):
+    #     with mock.patch('contributions.models.update_commit') as mocked_handler:
+    #         post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
+    #
+    #     commit = Commit(author=self.developer1, committer=self.developer2, tag=self.tag)
+    #
+    #     commit.save()
+    #
+    #     self.assertIsNone(commit)
 
 # # FIXME: cloc uncommented lines test
 # class ModifiModelTests(TestCase):
