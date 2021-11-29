@@ -11,12 +11,7 @@ from contributions.models import Project, Tag, Developer
 
 
 #
-# def create_tag(description='rel/1.1', previous_tag=None, project=create_project(), major=True,
-#                main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
-#     return Tag.objects.create(description=description, previous_tag=previous_tag, project=project, major=major,
-#                               main_directory=main_directory,
-#                               max_minor_version_description=max_minor_version_description,
-#                               prepare_build_command=prepare_build_command)
+
 #
 #
 # def create_directory(project=create_project(), visible=True, name=""):
@@ -37,7 +32,7 @@ class DeveloperModelTests(TestCase):
     def create_developer(cls, name="Renata B", email="renata@gmail.com"):
         return Developer.objects.create(name=name, email=email, login='renatabrasil')
 
-    def test_developer_name(self):
+    def test_should_return_developer_name(self):
         dev = self.create_developer()
         expected_result = "Renata B (login: renatabrasil, email: renata@gmail.com)"
 
@@ -79,68 +74,78 @@ class ProjectModelTests(TestCase):
     # def create_project(cls, name="Project 1", path="https://github.com/project_1"):
     #     return Project.objects.create(project_name=name, project_path=path)
 
-    def test_project_name(self):
+    def test_should_return_project_name(self):
         # pass
         proj = self.create_project()
 
         self.assertEqual(proj.__str__(), "Projeto")
 
-    def test_first_tag(self):
+    def test_should_return_first_tag(self):
         tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project1)
 
         self.assertEqual(self.project1.first_tag, tag)
 
-# class TagModelTests(TestCase):
-#     def setUp(self):
-#         """
-#         Set up all the tests
-#         """
-#         project1 = create_project(name="Project 1")
-#         project2 = create_project(name="Project 2")
-#
-#         tag = create_tag(description='rel/1.1', previous_tag=None, project=project2,
-#                          main_directory="main/code", major=True)
-#         tag2 = create_tag(description='rel/1.2', previous_tag=tag, project=project2, major=True)
-#         tag3 = create_tag(description='rel/1.3', previous_tag=tag2, project=project2, major=True)
-#         tag_minor1 = create_tag(description='rel/1.3.1', previous_tag=tag3, project=project2, major=False)
-#
-#     def test_minors(self):
-#         tag_major = create_tag(max_minor_version_description="1.1,1.2,1.2.a,1.3.1")
-#
-#         result = tag_major.minors
-#
-#         self.assertListEqual(["1.1", "1.2", "1.2.a", "1.3.1"], result)
-#
-#     def test_minors_when_minors_are_empty(self):
-#         tag_major = create_tag(max_minor_version_description="")
-#
-#         result = tag_major.minors
-#
-#         self.assertListEqual([], result)
-#
-#     def test_line_major_versions(self):
-#         self.assertListEqual([1, 2, 3], list(Tag.line_major_versions(1)))
-#
-#     def test_main_directory_prefix(self):
-#         project2 = create_project(name="Project 2")
-#         tag = create_tag(description='rel/1.1', id=1, previous_tag=None, project=project2,
-#                          main_directory="main/code", major=True)
-#
-#         self.assertEqual("main/code/", tag.main_directory_prefix)
-#
-#     def test_pre_build_commands_successfully(self):
-#         tag = create_tag(prepare_build_command="ant clean, ant update, ant compile")
-#
-#         result = tag.pre_build_commands
-#
-#         self.assertListEqual(["ant clean", "ant update", "ant compile"], result)
-#
-#     def test__str__(self):
-#         project2 = create_project(name="Project 2")
-#         tag2 = create_tag(description='rel/1.2', id=2, project=project2, major=True)
-#
-#         self.assertEqual("Project 2: rel/1.2", tag2.__str__())
-#
+
+class TagModelTests(TestCase):
+
+    @classmethod
+    def create_tag(cls, description='rel/1.1', previous_tag=None, project=None,
+                   major=True,
+                   main_directory="main/code", max_minor_version_description="", prepare_build_command=""):
+        return Tag.objects.create(description=description, previous_tag=previous_tag, project=project, major=major,
+                                  main_directory=main_directory,
+                                  max_minor_version_description=max_minor_version_description,
+                                  prepare_build_command=prepare_build_command)
+
+    def setUp(self):
+        """
+        Set up all the tests
+        """
+        self.project1 = ProjectModelTests.create_project(name="Project 1")
+        self.project2 = ProjectModelTests.create_project(name="Project 2")
+
+        tag = self.create_tag(description='rel/1.1', previous_tag=None, project=self.project2,
+                              main_directory="main/code", major=True)
+        tag2 = self.create_tag(description='rel/1.2', previous_tag=tag, project=self.project2, major=True)
+        tag3 = self.create_tag(description='rel/1.3', previous_tag=tag2, project=self.project2, major=True)
+        self.tag_minor1 = self.create_tag(description='rel/1.3.1', previous_tag=tag3, project=self.project2,
+                                          major=False)
+
+    def test_should_return_minors(self):
+        tag_major = self.create_tag(max_minor_version_description="1.1,1.2,1.2.a,1.3.1", project=self.project1)
+
+        result = tag_major.minors
+
+        self.assertListEqual(["1.1", "1.2", "1.2.a", "1.3.1"], result)
+
+    def test_should_return_empty_array_when_minors_are_empty(self):
+        tag_major = self.create_tag(max_minor_version_description="", project=self.project1)
+
+        result = tag_major.minors
+
+        self.assertListEqual([], result)
+
+    def test_should_return_major_versions_of_a_project(self):
+        self.assertListEqual([1, 2, 3], list(Tag.line_major_versions(self.project2.id)))
+
+    def test_should_return_main_directory_prefix(self):
+        tag = self.create_tag(description='rel/1.1', previous_tag=None, project=self.project2,
+                              main_directory="main/code", major=True)
+
+        self.assertEqual("main/code/", tag.main_directory_prefix)
+
+    def test_should_return_pre_build_commands_successfully(self):
+        tag = self.create_tag(prepare_build_command="ant clean, ant update, ant compile", project=self.project1)
+
+        result = tag.pre_build_commands
+
+        self.assertListEqual(["ant clean", "ant update", "ant compile"], result)
+
+    def test__str__(self):
+        tag2 = self.create_tag(description='rel/1.2', project=self.project2, major=True)
+
+        self.assertEqual("Project 2: rel/1.2", tag2.__str__())
+
 #
 # class DirectoryModelTests(TestCase):
 #     def test_directory_name(self):
