@@ -51,17 +51,18 @@
 
     <div class="table-responsive" id="metrics">
         <table class="table table-striped table-sm" id="headingOne" style="font-size: small;">
+            <caption></caption>
         <div id="commit-{{forloop.counter}}" class="collapse" aria-labelledby="headingOne" data-parent="#metrics">
-        <tr>
-            <th>Commit (autor)</th>
-            <th>Exp</th>
-            <th>CA</th>
-            <th>CE</th>
-            <th>RMI</th>
-            <th>RMA</th>
-            <th>RMD</th>
-            <th>Delta RMD</th>
-        </tr>
+            <tr>
+                <th scope="colgroup">Exp</th>
+                <th scope="colgroup">CA</th>
+                <th scope="colgroup">Commit (autor)</th>
+                <th scope="colgroup">CE</th>
+                <th scope="colgroup">RMI</th>
+                <th scope="colgroup">RMA</th>
+                <th scope="colgroup">RMD</th>
+                <th scope="colgroup">Delta RMD</th>
+            </tr>
 
         {% for metric in metrics_by_developer %}
         <tr class="{% if metric.delta_rmd > 0 %} text-danger {% elif metric.delta_rmd < 0 %} text-success {% endif %}">
