@@ -5,10 +5,19 @@
 # third-party
 # import unittest
 
+from enum import Enum
+
 from django.test import TestCase
 
 # local Django
-from contributions.models import Project, Tag, Developer, Directory, Commit
+from contributions.models import Project, Tag, Developer, Directory, Commit, Modification
+
+
+class change_type(Enum):
+    ADDED = 'ADD'
+    DELETED = 'DEL'
+    MODIFIED = 'MOD'
+    RENAMED = 'REN'
 
 
 class DeveloperModelTests(TestCase):
@@ -171,6 +180,24 @@ class CommitModelTests(TestCase):
         self.tag = Tag.objects.create(description='rel/1.1', previous_tag=None, project=self.project2,
                                       main_directory="main/code", major=True)
 
+        self.first_commit = Commit.objects.create(hash="FIRSTCOMMIT", author=self.developer2, committer=self.developer2,
+                                                  tag=self.tag)
+        self.commit_with_author_experience = Commit.objects.create(hash="COMMITWITHXP", author=self.developer2,
+                                                                   committer=self.developer2,
+                                                                   previous_impactful_commit=self.first_commit,
+                                                                   tag=self.tag)
+
+        self.first_files_in_the_project_1 = Modification.objects.create(new_path="/src", commit=self.first_commit,
+                                                                        change_type=change_type.ADDED, added=1000,
+                                                                        removed=0)
+        self.first_files_in_the_project_2 = Modification.objects.create(new_path="/src/main/database",
+                                                                        commit=self.first_commit,
+                                                                        change_type=change_type.ADDED, added=10,
+                                                                        removed=0)
+        self.refactor_file = Modification.objects.create(new_path="/src/main", change_type=change_type.MODIFIED,
+                                                         commit=self.commit_with_author_experience, added=50,
+                                                         removed=12)
+
     def test_should_return_commit_description__str__(self):
         commit = Commit.objects.create(hash="ABCD123456", id=15, author=self.developer1, tag=self.tag,
                                        committer=self.developer2)
@@ -180,15 +207,18 @@ class CommitModelTests(TestCase):
 
         self.assertEqual(expectedResult, result)
 
-    # def test_calculate_general_experience_successfully(self):
-    #     with mock.patch('contributions.models.update_commit') as mocked_handler:
-    #         post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
-    #
-    #     commit = Commit(author=self.developer1, committer=self.developer2, tag=self.tag)
-    #
-    #     commit.save()
-    #
-    #     self.assertIsNone(commit)
+    def test_should_calculate_general_experience_successfully(self):
+        # with mock.patch('contributions.models.update_commit') as mocked_handler:
+        #     post_save.connect(mocked_handler, sender=Commit, dispatch_uid='test_cache_mocked_handler')
+
+        commit = Commit(author=self.developer1, committer=self.developer2, tag=self.tag, hash="AAASSDDD")
+        refactor_file = Modification.objects.create(new_path="/src/main/addoc", change_type=change_type.MODIFIED,
+                                                    commit=commit, added=540,
+                                                    removed=20)
+
+        # commit.save()
+
+        self.assertIsNotNone(commit)
 
 # # FIXME: cloc uncommented lines test
 # class ModifiModelTests(TestCase):
