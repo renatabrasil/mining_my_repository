@@ -401,7 +401,7 @@ class Modification(models.Model):
     complexity = models.IntegerField(null=True)
 
     def __str__(self):
-        return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
+        return f"Commit: {self.commit.hash} - Directory: {self.directory.name} - File name: {self.file}"
 
     def __diff_text(self):
         GR = GitRepository(self.commit.tag.project.project_path)
@@ -438,8 +438,7 @@ class Modification(models.Model):
         parsed_lines = self.__diff_text()
         added_text = parsed_lines['added']
 
-        diff_text = None
-        diff_text = '\n' + str(self.added) + ' lines added: \n'  # result: Added: [(4, 'log.debug("b")')]
+        diff_text = f'\n{str(self.added)} lines added: \n'  # result: Added: [(4, 'log.debug("b")')]
         diff_text = self.__print_text_in_lines(added_text, diff_text, '+')
 
         return diff_text
@@ -447,7 +446,7 @@ class Modification(models.Model):
     @property
     def diff_removed(self):
         deleted_text = self.__diff_text()['deleted']
-        diff_text = '\n' + str(self.removed) + ' lines removed:  \n'
+        diff_text = f'\n{str(self.removed)} lines removed:  \n'
         diff_text = self.__print_text_in_lines(deleted_text, diff_text, '-')
 
         return diff_text

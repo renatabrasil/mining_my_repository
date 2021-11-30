@@ -3,10 +3,8 @@ from enum import Enum
 # third-party
 from django.test import TestCase
 
-from contributions.models import Commit, Project, Developer, Tag, Modification, Directory
-
-
 # Django
+from contributions.models import Commit, Project, Developer, Tag, Modification, Directory
 
 
 class change_type(Enum):
@@ -16,7 +14,7 @@ class change_type(Enum):
     RENAMED = 'REN'
 
 
-class ModifiModelTests(TestCase):
+class ModificationModelTests(TestCase):
 
     def setUp(self):
         """
@@ -36,22 +34,33 @@ class ModifiModelTests(TestCase):
         self.first_commit = Commit.objects.create(hash="FIRSTCOMMIT", author=self.developer2, committer=self.developer2,
                                                   tag=self.tag)
 
-    def test_modification_name(self):
+    def test_should_return_modification_name(self):
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
         modification2 = Modification.objects.create(new_path="test.java", directory=self.main_directory,
                                                     commit=self.first_commit, change_type=change_type.ADDED)
-        self.assertEqual(modification.__str__(),
-                         'Commit: ' + modification.commit.hash + ' - Directory: src/main/apache - File name: main.java')
-        # self.assertEqual(modification2.__str__(),
-        #                  'Commit: ' + modification2.commit.hash + ' - Directory: src/main/apache  - File name: test.java')
 
-    def test_diff_text(self):
+        expected_responses = {
+            'response_modification_1': f'Commit: {modification.commit.hash} - Directory: src/main/apache - File name: main.java',
+            'response_modification_2': f'Commit: {modification2.commit.hash} - Directory: / - File name: test.java'
+        }
+
+        self.assertEqual(expected_responses['response_modification_1'], modification.__str__())
+        self.assertEqual(expected_responses['response_modification_2'], modification2.__str__())
+
+    def test_should_return_diff_text(self):
+        diff = "\n+ public void {\n\n- * @author"
+
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    change_type=change_type.MODIFIED,
-                                                   commit=self.first_commit, diff="\n+ public void {\n\n- * @author")
-        self.assertEqual(modification.diff_added, '\n0 lines added: \n\n2 +  public void {')
-        self.assertEqual(modification.diff_removed, '\n0 lines removed:  \n\n3 -  * @author')
+                                                   commit=self.first_commit, diff=diff)
+        expected_response = {
+            'lines_added': '\n0 lines added: \n\n2 +  public void {',
+            'lines_removed': '\n0 lines removed:  \n\n3 -  * @author'
+        }
+
+        self.assertEqual(expected_response['lines_added'], modification.diff_added)
+        self.assertEqual(expected_response['lines_removed'], modification.diff_removed)
 
 
 class CommitModelTests(TestCase):
@@ -103,7 +112,6 @@ class CommitModelTests(TestCase):
         self.assertEqual(expected_result, result)
 
     def test_should_calculate_general_experience_successfully(self):
-
         commit = Commit(author=self.developer1, committer=self.developer2, tag=self.tag, hash="AAASSDDD")
         refactor_file = Modification.objects.create(new_path="/src/main/addoc", change_type=change_type.MODIFIED,
                                                     commit=commit, added=540,
@@ -112,4 +120,3 @@ class CommitModelTests(TestCase):
         # commit.save()
 
         self.assertIsNotNone(commit)
-
