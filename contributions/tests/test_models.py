@@ -123,7 +123,7 @@ class DirectoryModelTests(TestCase):
     def test_should_return_directory_name(self):
         directory = self.create_directory(project=self.project2, visible=False, name="core/db/models")
 
-        self.assertEqual(directory.__str__(), "core/db/models - Visible: False")
+        self.assertEqual("core/db/models - Visible: False", directory.__str__())
 
     def test_should_check_if_directory_belongs_to_component_with_same_path(self):
         file = "core/db/models/"
