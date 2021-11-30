@@ -34,6 +34,18 @@ class ModificationModelTests(TestCase):
         self.first_commit = Commit.objects.create(hash="FIRSTCOMMIT", author=self.developer2, committer=self.developer2,
                                                   tag=self.tag)
 
+    def test_should_return_file_name_in_root_path(self):
+        modification = Modification.objects.create(new_path="main.java", directory=self.main_directory,
+                                                   commit=self.first_commit, change_type=change_type.ADDED)
+
+        self.assertEqual("main.java", modification.file)
+
+    def test_should_return_file_name_in_complete_path(self):
+        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+                                                   commit=self.first_commit, change_type=change_type.ADDED)
+
+        self.assertEqual("main.java", modification.file)
+
     def test_should_return_modification_name(self):
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
