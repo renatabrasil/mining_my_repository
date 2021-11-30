@@ -19,7 +19,7 @@ from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
     Commit, Developer, Directory, Modification,
     Project, Tag, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
-    CASSANDRA, has_impact_loc_calculation_static_method)
+    CASSANDRA, __has_impact_loc_calculation_static_method)
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -345,7 +345,7 @@ def detail(request, commit_id):
             GR = GitRepository(commit.tag.project.project_path)
 
             parsed_lines = GR.parse_diff(mod.diff)
-            has_impact_loc_calculation_static_method(parsed_lines)
+            __has_impact_loc_calculation_static_method(parsed_lines)
 
     except Developer.DoesNotExist:
         raise Http404("Question does not exist")

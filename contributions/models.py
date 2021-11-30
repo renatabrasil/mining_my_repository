@@ -1,4 +1,5 @@
 # standard library
+import logging
 import re
 
 # third-party
@@ -31,6 +32,9 @@ HADOOP = 6
 
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.DEBUG)
+
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -38,7 +42,7 @@ class Developer(models.Model):
     email = models.CharField(max_length=200)
 
     def __str__(self):
-        return self.name + ' (login: ' + self.login + ', email: ' + self.email + ')'
+        return f'{self.name} (login: {self.login}, email: {self.email})'
 
 
 class Project(models.Model):
@@ -97,7 +101,7 @@ class Tag(models.Model):
         return self.main_directory + '/'
 
     def __str__(self):
-        return self.project.project_name + ': ' + self.description
+        return f'{self.project.project_name}: {self.description}'
 
     @property
     def pre_build_commands(self):
@@ -138,12 +142,6 @@ class NoOutlierCommitManager(models.Manager):
             except Commit.DoesNotExist:
                 pass
         return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
-        # LUCENE
-        # for hash in HASH_FILTER:
-        #     hash_db = Commit.objects.get(hash=hash)
-        #     if hash_db:
-        #         ids.append(hash_db.id)
-        # return super().get_queryset().exclude(id__in=ids)
 
 
 class Commit(models.Model):
@@ -195,12 +193,6 @@ class Commit(models.Model):
                 return True
         return False
 
-    def has_files_in_this_directory(self, directory):
-        for mod in self.modifications.all():
-            if mod.directory == directory:
-                return True
-        return False
-
     @property
     def parents(self):
         self._parents = []
@@ -215,14 +207,6 @@ class Commit(models.Model):
     @parents.setter
     def parents(self, list):
         self._parents = list
-
-    @property
-    def number_of_java_files(self):
-        total_java_files = 0
-        for modification in self.modifications.all():
-            if modification.is_java_file:
-                total_java_files = total_java_files + 1
-        return total_java_files
 
     @property
     def cloc(self):
@@ -256,12 +240,6 @@ class Commit(models.Model):
             if directory.belongs_to_component(mod.directory.name):
                 cloc += mod.u_cloc
         return cloc
-
-    def is_initial_commit_in_component(self, directory):
-        for dir in self.starter_directories.all():
-            if dir == directory:
-                return True
-        return False
 
     @property
     def delta_rmd(self):
@@ -321,11 +299,10 @@ class Commit(models.Model):
             self.author_experience = 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
             self.total_commits += 1
 
-            print('Cadastrando commit: ' + self.hash)
-            print('Versao: ' + self.tag.__str__())
-            print('Autor: ' + self.author.name)
-
-            print('\n')
+            logger.info("###")
+            logger.info(f'Cadastrando commit: {self.hash}')
+            logger.info(f'Versao: {self.tag.__str__()}')
+            logger.info(f'Autor: {self.author.name}')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -426,52 +403,52 @@ class Modification(models.Model):
     def __str__(self):
         return "Commit: " + self.commit.hash + " - Directory: " + self.directory.name + " - File name: " + self.file
 
-    def __diff_text__(self):
+    def __diff_text(self):
         GR = GitRepository(self.commit.tag.project.project_path)
 
         parsed_lines = GR.parse_diff(self.diff)
 
         return parsed_lines
 
-    def __print_text_in_lines__(self, text, result, type_symbol):
+    def __print_text_in_lines(self, text, result, type_symbol):
         for line in text:
             result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
         return result
 
     def __cloc_uncommented__(self):
-        diff_text = self.__diff_text__()
-        added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
-        deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
+        diff_text = self.__diff_text()
+        added_text = self.__print_text_in_lines(diff_text['added'], "", "")
+        deleted_text = self.__print_text_in_lines(diff_text['deleted'], "", "")
 
         added_uncommented_lines = count_loc(added_text)
         deleted_uncommented_lines = count_loc(deleted_text)
         return added_uncommented_lines + deleted_uncommented_lines
 
     def has_impact_loc_calculation(self):
-        diff_text = self.__diff_text__()
-        added_text = self.__print_text_in_lines__(diff_text['added'], "", "")
-        deleted_text = self.__print_text_in_lines__(diff_text['deleted'], "", "")
+        diff_text = self.__diff_text()
+        added_text = self.__print_text_in_lines(diff_text['added'], "", "")
+        deleted_text = self.__print_text_in_lines(diff_text['deleted'], "", "")
 
-        added_uncommented_lines = __detect_impact_loc__(added_text)
-        deleted_uncommented_lines = __detect_impact_loc__(deleted_text)
+        added_uncommented_lines = detect_impact_loc(added_text)
+        deleted_uncommented_lines = detect_impact_loc(deleted_text)
         return added_uncommented_lines or deleted_uncommented_lines
 
     @property
     def diff_added(self):
-        parsed_lines = self.__diff_text__()
+        parsed_lines = self.__diff_text()
         added_text = parsed_lines['added']
 
         diff_text = None
         diff_text = '\n' + str(self.added) + ' lines added: \n'  # result: Added: [(4, 'log.debug("b")')]
-        diff_text = self.__print_text_in_lines__(added_text, diff_text, '+')
+        diff_text = self.__print_text_in_lines(added_text, diff_text, '+')
 
         return diff_text
 
     @property
     def diff_removed(self):
-        deleted_text = self.__diff_text__()['deleted']
+        deleted_text = self.__diff_text()['deleted']
         diff_text = '\n' + str(self.removed) + ' lines removed:  \n'
-        diff_text = self.__print_text_in_lines__(deleted_text, diff_text, '-')
+        diff_text = self.__print_text_in_lines(deleted_text, diff_text, '-')
 
         return diff_text
 
@@ -541,7 +518,7 @@ def update_commit(sender, instance, **kwargs):
             parent.save(update_fields=['children_commit'])
 
 
-def __detect_impact_loc__(code):
+def detect_impact_loc(code):
     total_lines = code.count('\n')
     if total_lines > 0:
         commented_lines = 0
@@ -579,11 +556,11 @@ def __detect_impact_loc__(code):
 
 def count_loc(code):
     total_lines = code.count('\n')
-    return total_lines - count_blank_lines(code)
+    return total_lines - __count_blank_lines(code)
 
 
 # FIXME: Test technical debt
-def count_blank_lines(code):
+def __count_blank_lines(code):
     blank_lines = 0
     lines = code.split('\n')
     for line in lines[1:]:
@@ -594,13 +571,13 @@ def count_blank_lines(code):
     return blank_lines
 
 
-def prepare_diff_text(text, result, type_symbol):
+def __prepare_diff_text(text, result, type_symbol):
     for line in text:
         result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
     return result
 
 
-def has_impact_loc_calculation_static_method(diff):
-    added_text = prepare_diff_text(diff['added'], "", "")
-    deleted_text = prepare_diff_text(diff['deleted'], "", "")
-    return __detect_impact_loc__(added_text) or __detect_impact_loc__(deleted_text)
+def __has_impact_loc_calculation_static_method(diff):
+    added_text = __prepare_diff_text(diff['added'], "", "")
+    deleted_text = __prepare_diff_text(diff['deleted'], "", "")
+    return detect_impact_loc(added_text) or detect_impact_loc(deleted_text)
