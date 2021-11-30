@@ -4,36 +4,52 @@ SonarCloud: [![Quality Gate Status](https://sonarcloud.io/api/project_badges/mea
 
 CodeClimate: [![Maintainability](https://api.codeclimate.com/v1/badges/a831076e1130f16dfada/maintainability)](https://codeclimate.com/github/renatabrasil/mining_my_repository/maintainability)
 
-Main functionalities: it collects the individual contributions of the developers and analyzes the impact of commits in Java projects.
+***
 
-**Next steps:**
+1. [Introduction](#introduction)
+    1. [Next steps](#next-steps)
+2. [Getting Started](#Getting-Started)
+    1. [Prerequisites](#prerequisites)
+3. [Running](#running)
+    1. [Application](#application)
+    2. [Tests](#tests)
+4. [Built With](#built-with)
+5. [Authors](#authors)
+6. [License](#license)
 
-- Clear the code and prepare the first release
-- Implement the infrastructure for testing
-- Implement unit tests
-- Set up test and production environment
+## Introduction
+
+Main functionalities: it collects the individual contributions of the developers and analyzes the impact of commits in
+Java projects.
+
+### Next steps:
+
+* Clear the code and prepare the first release
+* Implement the infrastructure for testing
+* Implement unit tests
+* Set up test and production environment
 
 ## Getting Started
 
 Choose a local directory and clone this repository using:
-```
-git clone https://github.com/renatabrasil/mining_my_repository.git
+
+```shell
+> git clone https://github.com/renatabrasil/mining_my_repository.git
 ```
 
 ### Prerequisites
 
-
-- Python 3.7.4
-- GitPython (3.1.3): https://pypi.org/project/GitPython/3.0.2/
-- PyDriller (1.9.2): https://pydriller.readthedocs.io/en/latest/intro.html
-- Django 3.0 (or above)
-- Django-mathfilters: https://pypi.org/project/django-mathfilters/0.4.0/
-- PyYAML (5.1.2 or above) = https://pypi.org/project/PyYAML/#history
-- numPY
-- unicoded
-- whitenoise
-- matplotlib: https://matplotlib.org/users/installing.html
-- pandas: https://pandas.pydata.org/
+* Python 3.7.4
+* GitPython (3.1.3): https://pypi.org/project/GitPython/3.0.2/
+* PyDriller (1.9.2): https://pydriller.readthedocs.io/en/latest/intro.html
+* Django 3.0 (or above)
+* Django-mathfilters: https://pypi.org/project/django-mathfilters/0.4.0/
+* PyYAML (5.1.2 or above) = https://pypi.org/project/PyYAML/#history
+* numPY
+* unicoded
+* whitenoise
+* matplotlib: https://matplotlib.org/users/installing.html
+* pandas: https://pandas.pydata.org/
 
 ## Running
 
@@ -41,22 +57,30 @@ Instructions for running the application and testing.
 
 ### Application
 
+```shell
+> python manage.py migrate
+> python manage.py loaddata init.yaml
+> python manage.py runserver
 ```
-python manage.py migrate
-python manage.py loaddata init.yaml
-python manage.py runserver
-```
-
 
 ### Tests
 
+To run django unit tests:
+
+```shell
+> python manage.py test
 ```
-coverage run manage.py test <module - or empty to run for all Apps>
+
+To run and generate coverage report:
+
+```shell
+> coverage run manage.py test <module - or empty to run for all Apps>
 ```
+
 To generate test coverage report:
 
-```
-coverage html
+```shell
+> coverage html
 ```
 
 ## Built With
