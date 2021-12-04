@@ -65,33 +65,33 @@ class ModificationModelTests(TestCase):
         self.assertTrue(modification.is_java_file)
         self.assertFalse(modification2.is_java_file)
 
-    # def test_should_return_modification_name(self):
-    #     modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
-    #                                                commit=self.first_commit, change_type=change_type.ADDED)
-    #     modification2 = Modification.objects.create(new_path="test.java", directory=self.main_directory,
-    #                                                 commit=self.first_commit, change_type=change_type.ADDED)
-    #
-    #     expected_responses = {
-    #         'response_modification_1': f'Commit: {modification.commit.hash} - Directory: src/main/apache - File name: main.java',
-    #         'response_modification_2': f'Commit: {modification2.commit.hash} - Directory: / - File name: test.java'
-    #     }
-    #
-    #     self.assertEqual(expected_responses['response_modification_1'], modification.__str__())
-    #     self.assertEqual(expected_responses['response_modification_2'], modification2.__str__())
+    def test_should_return_modification_name(self):
+        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+                                                   commit=self.first_commit, change_type=change_type.ADDED)
+        modification2 = Modification.objects.create(new_path="test.java", directory=self.main_directory,
+                                                    commit=self.first_commit, change_type=change_type.ADDED)
 
-    # def test_should_return_diff_text(self):
-    #     diff = "\n+ public void {\n\n- * @author"
-    #
-    #     modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
-    #                                                change_type=change_type.MODIFIED,
-    #                                                commit=self.first_commit, diff=diff)
-    #     expected_response = {
-    #         'lines_added': '\n0 lines added: \n\n2 +  public void {',
-    #         'lines_removed': '\n0 lines removed:  \n\n3 -  * @author'
-    #     }
-    #
-    #     self.assertEqual(expected_response['lines_added'], modification.diff_added)
-    #     self.assertEqual(expected_response['lines_removed'], modification.diff_removed)
+        expected_responses = {
+            'response_modification_1': f'Commit: {modification.commit.hash} - Directory: src/main/apache - File name: main.java',
+            'response_modification_2': f'Commit: {modification2.commit.hash} - Directory: / - File name: test.java'
+        }
+
+        self.assertEqual(expected_responses['response_modification_1'], modification.__str__())
+        self.assertEqual(expected_responses['response_modification_2'], modification2.__str__())
+
+    def test_should_return_diff_text(self):
+        diff = "\n+ public void {\n\n- * @author"
+
+        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+                                                   change_type=change_type.MODIFIED,
+                                                   commit=self.first_commit, diff=diff)
+        expected_response = {
+            'lines_added': '\n0 lines added: \n\n2 +  public void {',
+            'lines_removed': '\n0 lines removed:  \n\n3 -  * @author'
+        }
+
+        self.assertEqual(expected_response['lines_added'], modification.diff_added)
+        self.assertEqual(expected_response['lines_removed'], modification.diff_removed)
 
 
 class CommitModelTests(TestCase):
