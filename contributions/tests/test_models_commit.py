@@ -1,11 +1,12 @@
 from enum import Enum
-# third-party
-from unittest.mock import patch
 
 from django.test import TestCase
 
 # Django
 from contributions.models import Commit, Project, Developer, Tag, Modification, Directory
+
+
+# third-party
 
 
 class change_type(Enum):
@@ -55,10 +56,7 @@ class ModificationModelTests(TestCase):
 
         self.assertEqual("main.java", modification.file)
 
-    @patch('common.utils.CommitUtils.is_java_file')
-    def test_should_return_if_a_file_is_a_java_file(self, mock1):
-        mock1.side_effect = [None, None, True, False]
-
+    def test_should_return_if_a_file_is_a_java_file(self):
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
         modification2 = Modification.objects.create(new_path="docs/README.md", directory=self.main_directory,
