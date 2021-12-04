@@ -64,8 +64,9 @@
 <div class="table-responsive">
 
     <table class="table table-striped table-sm">
+        <caption>Commit details</caption>
         <tr>
-            <th style="text-align: right">Compila </th>
+            <th scope="col" style="text-align: right">Compila</th>
             <td style="text-align: center;" class="{% if not commit.compilable %} text-danger {% else %} text-success {% endif %}" colspan="2">
             <strong>
                 {% if not commit.compilable %}
@@ -77,62 +78,62 @@
             </td>
         </tr>
         <tr>
-            <th style="text-align: right">Tem linhas de código:</th>
+            <th scope="col" style="text-align: right">Tem linhas de código:</th>
             <td colspan="2">{{commit.has_impact_loc}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Tag:</th>
+            <th scope="col" style="text-align: right">Tag:</th>
             <td colspan="2">{{commit.tag.description}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Real Tag:</th>
+            <th scope="col" style="text-align: right">Real Tag:</th>
             <td colspan="2">{{commit.real_tag_description}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Autor:</th>
+            <th scope="col" style="text-align: right">Autor:</th>
             <td colspan="2">{{commit.author.name}} - Moment Experience: {{commit.author_experience|floatformat:2}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Senioridade do Autor:</th>
+            <th scope="col" style="text-align: right">Senioridade do Autor:</th>
             <td colspan="2">{{commit.author_seniority}} dias</td>
         </tr>
         <tr>
-            <th style="text-align: right">Numero de commits:</th>
+            <th scope="col" style="text-align: right">Numero de commits:</th>
             <td colspan="2">{{commit.total_commits}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Committer:</th>
+            <th scope="col" style="text-align: right">Committer:</th>
             <td colspan="2">{{commit.committer.name}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Data:</th>
+            <th scope="col" style="text-align: right">Data:</th>
             <td colspan="2">{{commit.committer_date | date:'d/m/Y H:i'}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Cloc (without commented and blank lines):</th>
+            <th scope="col" style="text-align: right">Cloc (without commented and blank lines):</th>
             <td colspan="2">{{commit.u_cloc}} </td>
         </tr>
         parents_str
         {% for parent_commit in commit.parents %}
         <tr>
-            <th style="text-align: right">Parent (real):</th>
+            <th scope="col" style="text-align: right">Parent (real):</th>
             <td colspan="2"><a href="/contributions/{{ parent_commit.id }}/">{{parent_commit.hash}}</a></td>
         </tr>
         {% endfor %}
         <tr>
-            <th style="text-align: right">Parent:</th>
+            <th scope="col" style="text-align: right">Parent:</th>
             <td colspan="2"><a href="/contributions/{{ commit.previous_impactful_commit.id }}/">{{commit.previous_impactful_commit.hash}}</a></td>
         </tr>
         <tr>
-            <th style="text-align: right">Hash</th>
+            <th scope="col" style="text-align: right">Hash</th>
             <td colspan="2">{{commit.hash}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Filho</th>
+            <th scope="col" style="text-align: right">Filho</th>
             <td colspan="2">{{commit.children_commit.hash}}</td>
         </tr>
         <tr>
-            <th style="text-align: right">Mensagem do commit:</th>
+            <th scope="col" style="text-align: right">Mensagem do commit:</th>
             <td colspan="2">
                 <pre>
                     {{commit.msg}}
@@ -140,7 +141,7 @@
             </td>
         </tr>
         <tr>
-            <th style="text-align: right">Quantidade de arquivos:</th>
+            <th scope="col" style="text-align: right">Quantidade de arquivos:</th>
             <td colspan="2">{{commit.modifications.all.count}}</td>
         </tr>
 
@@ -149,28 +150,29 @@
                 <td colspan="3" style="text-align: center;"><strong>File {{forloop.counter}} - é java? {{modification.is_java_file}}</strong></td>
             </tr>
             <tr>
-                <th style="text-align: right; vertical-align: top" rowspan="10">
+                <th scope="col" style="text-align: right; vertical-align: top" rowspan="10">
                     {{modification.file}}:
                 </th>
                 <td>
                     <tr>
-                        <td width="14%" style="text-decoration: underline">Path:</td>
+        <td style="width='14%', text-decoration: underline">Path:</td>
                         <td>{{ modification.path }}</td>
                     </tr>
                     <tr>
-                        <td width="14%" style="text-decoration: underline">New path:</td>
+                        <td style="width='14%', text-decoration: underline">New path:</td>
                         <td>{{ modification.new_path }}</td>
                     </tr>
                     <tr>
-                        <td width="14%" style="text-decoration: underline">Old path:</td>
+                        <td style="width='14%', text-decoration: underline">Old path:</td>
                         <td>{{ modification.old_path }}</td>
                     </tr>
                     <tr>
-                        <td width="14%" style="text-decoration: underline">Change type:</td>
+                        <td style="width='14%', text-decoration: underline">Change type:</td>
                         <td>{{ modification.change_type }}</td>
                     </tr>
                     <tr>
-                        <td width="14%" style="text-decoration: underline">Cloc (without commented and blank lines):</td>
+                        <td style="width='14%', text-decoration: underline">Cloc (without commented and blank lines):
+                        </td>
                         <td>{{ modification.u_cloc }}</td>
                     </tr>
                     <tr>

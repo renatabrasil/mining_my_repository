@@ -56,6 +56,13 @@ class ModificationModelTests(TestCase):
 
         self.assertEqual("main.java", modification.file)
 
+    def test_verify_whether_a_modification_has_impact_loc_or_not(self):
+        diff = "\n+ public void {\n\n- * @author"
+
+        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+                                                   change_type=change_type.MODIFIED,
+                                                   commit=self.first_commit, diff=diff)
+
     def test_should_return_if_a_file_is_a_java_file(self):
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
