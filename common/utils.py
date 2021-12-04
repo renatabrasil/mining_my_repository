@@ -6,11 +6,6 @@ from django.http import HttpRequest
 from contributions import models
 
 
-# local Django
-# from django.apps import apps
-# Modification = apps.get_model('contributions', 'Modification')
-
-
 class CommitUtils(object):
 
     @staticmethod
