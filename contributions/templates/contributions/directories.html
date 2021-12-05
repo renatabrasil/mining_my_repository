@@ -7,11 +7,12 @@
 
 <div class="table-responsive">
     <table class="table table-striped table-sm">
+        <caption>Directories</caption>
         {% if latest_commit_list %}
         <thead class="thead-dark">
         <tr>
-            <th>Diretório</th>
-            <th colspan="2">Ações</th>
+            <th scope="col">Diretório</th>
+            <th scope="col" colspan="2">Ações</th>
         </tr>
         </thead>
         <tbody>
@@ -22,7 +23,6 @@
 
                 <form method="PUT" action="/contributions/{{directory.id}}/change" id="update-directory" novalidate>
                     {% csrf_token %}
-                    <!--                            <a href="{{request.path}}data_by_directory/{{directory.id}}"><i class="fas fa-arrow-alt-circle-down"></em></a>-->
                     <button type="submit" class="btn btn-link"><em class="fas fa-eye-slash" alt="Hide"></em></button>
                 </form>
             </td>

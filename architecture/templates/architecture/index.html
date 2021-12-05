@@ -84,6 +84,7 @@
 
 <div class="table-responsive">
     <table class="table">
+        <caption>Dadas</caption>
         <thead>
         <tr>
             <th scope="col" style="text-align:center">#</th>
@@ -97,7 +98,7 @@
         {% if files %}
         {% for file in files %}
         <tr>
-            <td scope="row" style="text-align:center">{{forloop.counter}}</td>
+            <td tyle="text-align:center">{{forloop.counter}}</td>
             <td>{{file}}</td>
             <td>{{file.has_compileds}}</td>
             <td>{{file.metrics_calculated_at|date:'d/m/Y H:i'}}</td>
