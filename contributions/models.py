@@ -13,6 +13,10 @@ from pydriller import GitRepository
 # local Django
 from common.utils import CommitUtils
 
+SUBMITTED_BY_PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
+
+COMMENTARY_REGEX = r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*'
+
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
                "390398d38e4fd0d195c91a384f6198a1528bb317", "8ca32df08e5021d144ebfa8b85da7879143c01ae",
@@ -81,20 +85,6 @@ class Tag(models.Model):
     @staticmethod
     def line_major_versions(project_id):
         return Tag.objects.filter(major=True, project_id=project_id).values_list('id', flat=True)
-
-    @staticmethod
-    def line_base():
-        line1_9_x = Tag.objects.get(description='rel/1.9.x').pk
-        line1_10_0 = Tag.objects.get(description='rel/1.10.0').pk
-        return [i for i in Tag.line_major_versions() if i != line1_9_x and i != line1_10_0]
-
-    @staticmethod
-    def line_1_10_x():
-        return Tag.line_base().append(Tag.objects.get(description='rel/1.10.0').pk)
-
-    @staticmethod
-    def line_1_9_x():
-        return Tag.line_base().append(Tag.objects.get(description='rel/1.9.x').pk)
 
     @property
     def main_directory_prefix(self):
@@ -260,9 +250,7 @@ class Commit(models.Model):
 
         if self.pk is None:
 
-            m = re.search(
-                r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
-                self.msg, re.IGNORECASE)
+            m = re.search(SUBMITTED_BY_PARTICLE_REGEX, self.msg, re.IGNORECASE)
             found = ''
             if m:
                 found = m.group(0)
@@ -373,12 +361,12 @@ class Modification(models.Model):
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='modifications')
     directory = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='modifications')
     component_commit = models.ForeignKey(ComponentCommit, on_delete=models.CASCADE, related_name='modifications')
-    ADDED = 'ADD'
+    ADDED_ = 'ADD'
     DELETED = 'DEL'
     MODIFIED = 'MOD'
     RENAMED = 'REN'
     CHANGE_TYPES_CHOICES = [
-        (ADDED, 'Added'),
+        (ADDED_, 'Added'),
         (DELETED, 'Deleted'),
         (MODIFIED, 'Modified'),
         (RENAMED, 'Renamed'),
@@ -503,8 +491,6 @@ class Modification(models.Model):
             super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
 
-# FIXME: Test technical debt
-# method for updating
 @receiver(post_save, sender=Commit, dispatch_uid="update_commit")
 def update_commit(sender, instance, **kwargs):
     lista = instance.parents_str.split(",")
@@ -526,9 +512,7 @@ def detect_impact_loc(code):
         # In case we should consider commented lines
         for line in lines:
             m = re.search(r"\u002F/.*", line)
-            n = re.search(
-                r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*',
-                line)
+            n = re.search(COMMENTARY_REGEX, line)
             if m or n:
                 if m:
                     found = m.group(0)

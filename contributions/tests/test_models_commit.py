@@ -44,27 +44,48 @@ class ModificationModelTests(TestCase):
         self.developer1.delete()
         self.project2.delete()
 
-    def test_should_return_file_name_in_root_path(self):
-        modification = Modification.objects.create(new_path="main.java", directory=self.main_directory,
+    def test_should_print_modification_details(self):
+        modification = Modification.objects.create(new_path="src/main/apache/domain/Transporte.java",
+                                                   directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
 
-        self.assertEqual("main.java", modification.file)
+        self.assertEqual("Commit: FIRSTCOMMIT - Directory: src/main/apache/domain - File name: Transporte.java",
+                         modification.__str__())
+
+    def test_should_return_file_name_in_root_path(self):
+        modification = Modification.objects.create(new_path="main2.java", directory=self.main_directory,
+                                                   commit=self.first_commit, change_type=change_type.ADDED)
+
+        self.assertEqual("main2.java", modification.file)
 
     def test_should_return_file_name_in_complete_path(self):
-        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+        modification = Modification.objects.create(new_path="src/main/apache/driver.java",
+                                                   directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
 
-        self.assertEqual("main.java", modification.file)
+        self.assertEqual("driver.java", modification.file)
 
     def test_verify_whether_a_modification_has_impact_loc_or_not(self):
         diff = "\n+ public void {\n\n- * @author"
+        diff_without_impact__log = "\n+*  public void {\n\n- // @author"
 
-        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+        modification = Modification.objects.create(new_path="src/main/domain/Project.java",
+                                                   directory=self.main_directory,
                                                    change_type=change_type.MODIFIED,
                                                    commit=self.first_commit, diff=diff)
 
+        modification_no_impactful_loc = Modification.objects.create(new_path="src/main/domain/Client.java",
+                                                                    directory=self.main_directory,
+                                                                    change_type=change_type.MODIFIED,
+                                                                    commit=self.first_commit,
+                                                                    diff=diff_without_impact__log)
+
+        self.assertTrue(modification.has_impact_loc_calculation())
+        self.assertFalse(modification_no_impactful_loc.has_impact_loc_calculation())
+
     def test_should_return_if_a_file_is_a_java_file(self):
-        modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
+        modification = Modification.objects.create(new_path="src/main/apache/controllers/ClientController.java",
+                                                   directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
         modification2 = Modification.objects.create(new_path="docs/README.md", directory=self.main_directory,
                                                     commit=self.first_commit, change_type=change_type.ADDED)

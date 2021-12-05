@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET
 from scipy.stats import spearmanr
 
 from architecture.views import ROUDING_SCALE
+from contributions.helpers import ant_project_helper
 from contributions.models import Tag, ComponentCommit
 
 # OPERATIONS
@@ -134,7 +135,7 @@ def descriptive_statistics(request, type):
             file_name = 'overview_by_dev.csv'
             for dev in metric_by_dev:
                 commits_by_dev.append([dev.name, request.commit_db.exclude(tag_id__in=[71, 16]).filter(author=dev,
-                                                                                                       tag_id__in=Tag.line_1_10_x()).count(),
+                                                                                                       tag_id__in=ant_project_helper.line_1_10_x()).count(),
                                        metric_by_dev[dev]])
             my_df = pd.DataFrame(commits_by_dev, columns=['dev', 'total_commits', 'contributions'])
             my_df.to_csv(file_name, index=None, header=True)
@@ -279,7 +280,7 @@ def __exp_and_degradation_by_class__(metric_by_dev, commit_db):
     means = []
     # Sem Peter Donald, ele mexeu bastante em um componente que pode nao fazer parte do core do software
     commits = commit_db.exclude(tag_id__in=[71, 16]).exclude(normalized_delta=0).filter(
-        tag_id__in=Tag.line_1_10_x())
+        tag_id__in=ant_project_helper.line_1_10_x())
     # Com todos
     # commits = Commit.objects.exclude(normalized_delta=0).filter(tag_id__in=Tag.line_1_10_x())
     for commit in commits:
