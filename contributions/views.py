@@ -11,6 +11,7 @@ from django.http import (Http404, HttpResponse)
 from django.shortcuts import render
 from django.template import loader
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_GET
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
@@ -27,6 +28,7 @@ report_directories = None
 logger = logging.getLogger(__name__)
 
 
+@require_GET
 def index(request):
     try:
         start = time.time()
@@ -301,6 +303,7 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
     return commit
 
 
+@require_GET
 def visible_directory(request, directory_id):
     directory = Directory.objects.filter(pk=directory_id)
     directory.update(visible=False)
@@ -316,6 +319,7 @@ def visible_directory(request, directory_id):
     return index(request)
 
 
+@require_GET
 def detail_by_hash(request):
     hash_commit = request.POST.get('hash')
     if hash_commit:
@@ -335,6 +339,7 @@ def detail_by_hash(request):
                   {'commit': commit, 'current_commit_hash': hash_commit, 'title': 'Detalhes do commit'})
 
 
+@require_GET
 def detail(request, commit_id):
     try:
         commit = Commit.objects.get(pk=commit_id)
@@ -352,6 +357,7 @@ def detail(request, commit_id):
     return render(request, 'contributions/detail.html', {'commit': commit})
 
 
+@require_GET
 def detail_in_committer(request, committer_id):
     try:
         project = Project.objects.get(project_name="Apache Ant")

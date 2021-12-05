@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 from scipy.stats import spearmanr
 
 from architecture.views import ROUDING_SCALE
@@ -32,6 +33,7 @@ IMPROVEMENT = 2
 logger = logging.getLogger(__name__)
 
 
+@require_GET
 def index(request):
     template = loader.get_template('data_analysis/index.html')
 
@@ -44,6 +46,7 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
+@require_GET
 def descriptive_statistics(request, type):
     if type == DELTAS_TREND:
         commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type, request.commit_db, request)
