@@ -2,6 +2,7 @@
 {% load mathfilters %}
 {% csrf_token %}
 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
@@ -36,17 +37,19 @@
 
 <body>
 
-    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">Mining my repository</a>
-        <ul class="navbar-nav mr-auto">
-      <li class="nav-item active">
-        <a class="nav-link" href="#"><strong>Projeto: </strong> {{project.project_name}} <span class="sr-only">(current)</span></a>
-      </li>
-        </ul>
+<nav aria-label="Site menu" class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">Mining
+        my repository</a>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+            <a class="nav-link" href="#"><strong>Projeto: </strong> {{project.project_name}} <span class="sr-only">(current)</span></a>
+        </li>
+    </ul>
 
-        <form class="form-inline my-12 my-lg-0" href="" method="POST">{% csrf_token %}
+    <form class="form-inline my-12 my-lg-0" href="" method="POST">{% csrf_token %}
 
-        <select class="form-control mr-sm-16 mb-16" style="padding:2px;" id="tag2_selector" placeholder="Selecione o projeto" name="project_base_id" >
+        <select class="form-control mr-sm-16 mb-16" style="padding:2px;" id="tag2_selector"
+                placeholder="Selecione o projeto" name="project_base_id">
           <option selected value="{{project.id}}">Selecione o projeto</option>
           {% for project in projects %} {{current_project}}
             <option value="{{project.id}}"
@@ -67,17 +70,24 @@
 
     <div class="container-fluid">
       <div class="row">
-        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
-          <div id="sidebar">
-        {% block sidebar %}
-        <div class="sidebar-sticky">
-            <ul class="nav flex-column">
-            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-              <span>Análise dos Dados</span>
-              <a class="d-flex align-items-center text-muted" href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus-circle"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-              </a>
-            </h6>
+          <nav aria-label="Site menu" class="col-md-2 d-none d-md-block bg-light sidebar">
+              <div id="sidebar">
+                  {% block sidebar %}
+                  <div class="sidebar-sticky">
+                      <ul class="nav flex-column">
+                          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                              <span>Análise dos Dados</span>
+                              <a class="d-flex align-items-center text-muted"
+                                 href="https://getbootstrap.com/docs/4.3/examples/dashboard/#">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                       fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                       stroke-linejoin="round" class="feather feather-plus-circle">
+                                      <circle cx="12" cy="12" r="10"></circle>
+                                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                                  </svg>
+                              </a>
+                          </h6>
               <li class="nav-item">
                 <a class="nav-link" href="/data_analysis">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-layers"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
