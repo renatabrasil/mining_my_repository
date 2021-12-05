@@ -18,7 +18,7 @@ from django.template import loader
 from django.urls import reverse
 # local Django
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits
@@ -36,7 +36,7 @@ NO_OUTLIERS = 1
 logger = logging.getLogger(__name__)
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def index(request):
     """"Architecture Configuration"""
     title_description = 'Configuração do Projeto'
@@ -80,7 +80,7 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def compiled(request, file_id):
     '''
     Method responsible for create compiled of all commits of interest. Commits are collected in a file that was generated
@@ -249,7 +249,7 @@ def compiled(request, file_id):
 
 
 # Using overall design evaluation
-@require_GET
+@require_http_methods(["GET", "POST"])
 def impactful_commits(request):
     export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
 
@@ -466,7 +466,7 @@ def update_compilable_commits(commits_with_errors):
         f.close()
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def calculate_metrics(request, file_id):
     '''Process metrics calculation request from view'''
     file = FileCommits.objects.get(pk=file_id)
@@ -482,7 +482,7 @@ def calculate_metrics(request, file_id):
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def calculate_architecture_metrics(request, file_id):
     file = FileCommits.objects.get(pk=file_id)
     directory_name = file.__str__().replace(".txt", "")
@@ -531,7 +531,7 @@ def metrics_by_commits(request):
     return HttpResponse(template.render(context, request))
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def metrics_by_developer(request):
     template = loader.get_template('architecture/metrics_by_developer.html')
     tag = ViewUtils.load_tag(request)
@@ -550,7 +550,7 @@ def metrics_by_developer(request):
     return HttpResponse(template.render(context, request))
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def quality_between_versions(request):
     template = loader.get_template('architecture/metrics_between_versions.html')
     tag = ViewUtils.load_tag(request)
@@ -621,7 +621,7 @@ def quality_between_versions(request):
 
 ################ Auxiliary methods ###################
 
-
+@require_http_methods(["GET", "POST"])
 def __read_pm_file(folder, tag_id):
     '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}

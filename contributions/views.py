@@ -11,7 +11,7 @@ from django.http import (Http404, HttpResponse)
 from django.shortcuts import render
 from django.template import loader
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
@@ -28,7 +28,7 @@ report_directories = None
 logger = logging.getLogger(__name__)
 
 
-# @require_GET
+@require_http_methods(["GET", "POST"])
 def index(request):
     try:
         start = time.time()
@@ -319,7 +319,7 @@ def visible_directory(request, directory_id):
     return index(request)
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def detail_by_hash(request):
     hash_commit = request.POST.get('hash')
     if hash_commit:
