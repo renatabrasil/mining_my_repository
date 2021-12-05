@@ -26,6 +26,7 @@ from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   Project,
                                   Tag, ComponentCommit)
+from contributions.repositories.commit_repository import CommitRepository
 
 SCALE = 6
 ROUDING_SCALE = 10 ** SCALE
@@ -34,6 +35,8 @@ ROUDING_SCALE = 10 ** SCALE
 NO_OUTLIERS = 1
 
 logger = logging.getLogger(__name__)
+
+commit_repository = CommitRepository()
 
 
 @require_http_methods(["GET", "POST"])
@@ -603,8 +606,7 @@ def quality_between_versions(request):
 
                 # FIXME this is too naive and just work for this project. Should be fix soon.
                 # Ant
-                Tag.objects.filter(real_tag_description__endswith=name_version,
-                                   project=request.session['project']).update(
+                Tag.objects.update(
                     delta_rmd_components=architectural_quality)
 
         my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
@@ -627,11 +629,11 @@ def __read_pm_file(folder, tag_id):
     metrics = {}
     tag = Tag.objects.get(id=tag_id)
 
-    Commit.objects.filter(tag_id=tag_id).update(mean_rmd_components=0.0, std_rmd_components=0.0,
-                                                delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
-    ComponentCommit.objects.filter(commit__tag_id=tag_id).update(delta_rmd=0.0, rmd=0.0)
-    Directory.objects.filter(initial_commit__tag_id=tag_id).update(visible=False)
-    Commit.objects.filter(changed_architecture=True, tag_id=tag_id).update(changed_architecture=False)
+    Commit.objects.update(mean_rmd_components=0.0, std_rmd_components=0.0,
+                          delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
+    ComponentCommit.objects.update(delta_rmd=0.0, rmd=0.0)
+    Directory.objects.update(visible=False)
+    Commit.objects.update(changed_architecture=False)
     components_evolution = []
     n_commits = 0
 
@@ -720,7 +722,14 @@ def generate_list_of_compiled_commits(project, form):
     FileCommits.objects.filter(tag__project=project).delete()
     folder = form['directory'].value()
 
-    commits = [i for i in list(Commit.objects.filter(tag__project=project).order_by("id"))]
+    if not folder:
+        raise ValueError("Directory is not informed")
+
+    commits = commit_repository.find_all_commits_by_project_order_by_id_asc(project=project)
+
+    if len(commits) == 0:
+        raise ValueError("There is no commits loaded")
+
     first_commit = commits[0]
 
     files = []
@@ -729,7 +738,6 @@ def generate_list_of_compiled_commits(project, form):
         os.mkdir(folder)
     j = first_commit.tag.description
     try:
-        file = None
         j = j.replace("/", "-")
         filename = "commits-" + j + ".txt"
         file = __update_file_commits__(form, filename)
@@ -767,8 +775,10 @@ def generate_list_of_compiled_commits(project, form):
         file.save()
 
     except Exception as e:
-        print(e.args[0])
-        files = []
+        logger.exception(e.args[0])
+        raise
+    finally:
+        f.close()
     return files
 
 

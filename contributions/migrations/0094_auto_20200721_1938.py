@@ -63,10 +63,6 @@ class Migration(migrations.Migration):
         migrations.DeleteModel(
             name='MetricsReport',
         ),
-        migrations.RemoveField(
-            model_name='commit',
-            name='analysis_period',
-        ),
         migrations.DeleteModel(
             name='DirectoryReport',
         ),

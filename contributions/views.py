@@ -305,7 +305,7 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
 
 @require_GET
 def visible_directory(request, directory_id):
-    directory = Directory.objects.filter(pk=directory_id)
+    directory = Directory.objects
     directory.update(visible=False)
     latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
     url_path = 'contributions/directories.html'
