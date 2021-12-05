@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             commit.save()
 
     dependencies = [
-        ('contributions', '0072_auto_20200424_1608'),
+        ('contributions', '0071_auto_20200424_1312'),
     ]
 
     operations = [
