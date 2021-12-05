@@ -48,10 +48,7 @@ def index(request):
 
 @require_GET
 def descriptive_statistics(request, type):
-    if type == DELTAS_TREND:
-        commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type, request.commit_db, request)
-    else:
-        commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type, request.commit_db, request)
+    commits, metric_by_dev, metric_by_dev_by_comp = __process_metrics__(type, request.commit_db, request)
     file_name = 'undefined'
 
     try:
@@ -61,7 +58,7 @@ def descriptive_statistics(request, type):
             else:
                 by_author = True
 
-            devs, file_name, population_means_list = __exp_and_degradation_means__(file_name, metric_by_dev,
+            devs, file_name, population_means_list = __exp_and_degradation_means__(metric_by_dev,
                                                                                    request.commit_db, by_author)
 
             if by_author:
@@ -76,7 +73,7 @@ def descriptive_statistics(request, type):
 
         elif type == CORRELATION_BY_VERSION:
 
-            correlation_list, file_name = __correlation_version__(file_name, metric_by_dev)
+            correlation_list, file_name = __correlation_version__(metric_by_dev)
 
             my_df = pd.DataFrame(correlation_list, columns=['versao', 'r', 'p-value'])
             my_df.to_csv(file_name, index=None, header=True)
@@ -84,12 +81,12 @@ def descriptive_statistics(request, type):
 
         elif type == CORRELATION_BY_DEV:
 
-            correlation_list, file_name = __correlation_by_dev__(file_name, metric_by_dev, commits)
+            correlation_list, file_name = __correlation_by_dev__(metric_by_dev, commits)
 
             my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'r texto'])
             my_df.to_csv(file_name, index=None, header=True)
 
-            correlation_list, file_name = __correlation_by_dev_by_component__(file_name, metric_by_dev_by_comp, commits)
+            correlation_list, file_name = __correlation_by_dev_by_component__(metric_by_dev_by_comp, commits)
 
             my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'r texto'])
             my_df.to_csv(file_name, index=None, header=True)
@@ -144,7 +141,7 @@ def descriptive_statistics(request, type):
             print('overview by dev')
 
         elif type == MEANS_BY_COMMITS_FREQUENCY:
-            file_name, mean_list = __exp_and_degradation_by_class__(file_name, metric_by_dev)
+            file_name, mean_list = __exp_and_degradation_by_class__(metric_by_dev, request.commit_db)
 
             my_df = pd.DataFrame(mean_list, columns=['commits', 'experiencia', 'degradacao'])
 
@@ -208,7 +205,7 @@ def descriptive_statistics(request, type):
         elif type == CORRELATION_BY_COMPONENT:
             print("Correlation by component")
 
-            correlation_list, file_name = __correlation_h2_by_component__(file_name, metric_by_dev_by_comp, commits)
+            correlation_list, file_name = __correlation_h2_by_component__(metric_by_dev_by_comp, commits)
 
             my_df = pd.DataFrame(correlation_list, columns=['dev', 'r', 'p-value', 'number of developers'])
             my_df.to_csv(file_name, index=None, header=True)
@@ -223,7 +220,6 @@ def descriptive_statistics(request, type):
 
 def __impactful_commits_statistics__(commits, type=0):
     stats = []
-    # FIXME: If seniority changes to years, fix it:
     if type == DECAY:
         commits = [x for x in commits if x.delta_rmd_components > 0.0]
     elif type == IMPROVEMENT:
@@ -264,7 +260,7 @@ def __impactful_commits_statistics__(commits, type=0):
     return stats
 
 
-def __exp_and_degradation_by_class__(file_name, metric_by_dev, commit_db):
+def __exp_and_degradation_by_class__(metric_by_dev, commit_db):
     file_name = 'by_commit_frequency_10x_semOutliers.csv'
     begin__in = 0
     interval = 100
@@ -308,7 +304,7 @@ def __exp_and_degradation_by_class__(file_name, metric_by_dev, commit_db):
     return file_name, mean_list
 
 
-def __correlation_by_dev_by_component__(file_name, metric_by_dev, commits):
+def __correlation_by_dev_by_component__(metric_by_dev, commits):
     file_name = 'correlation_dev_comp.csv'
     correlation_list = []
     for dev in metric_by_dev:
@@ -324,7 +320,7 @@ def __correlation_by_dev_by_component__(file_name, metric_by_dev, commits):
     return correlation_list, file_name
 
 
-def __correlation_by_dev__(file_name, metric_by_dev, commits):
+def __correlation_by_dev__(metric_by_dev, commits):
     file_name = 'correlation_dev.csv'
     correlation_list = []
     for dev in metric_by_dev:
@@ -338,7 +334,7 @@ def __correlation_by_dev__(file_name, metric_by_dev, commits):
     return correlation_list, file_name
 
 
-def __correlation_h2_by_component__(file_name, metric_by_component, commits):
+def __correlation_h2_by_component__(metric_by_component, commits):
     file_name = 'correlation_h2_by_comp.csv'
     correlation_list = []
     for component in metric_by_component:
@@ -353,7 +349,7 @@ def __correlation_h2_by_component__(file_name, metric_by_component, commits):
     return correlation_list, file_name
 
 
-def __correlation_version__(file_name, metric_by_dev):
+def __correlation_version__(metric_by_dev):
     file_name = 'correlation_version.csv'
     correlation_list = []
     for tag in metric_by_dev:
@@ -364,7 +360,7 @@ def __correlation_version__(file_name, metric_by_dev):
     return correlation_list, file_name
 
 
-def __exp_and_degradation_means__(file_name, metric_by_dev, commit_db, by_author=True):
+def __exp_and_degradation_means__(metric_by_dev, commit_db, by_author=True):
     if by_author:
         file_name = 'author_population_means.csv'
     else:
