@@ -28,7 +28,7 @@ report_directories = None
 logger = logging.getLogger(__name__)
 
 
-@require_GET
+# @require_GET
 def index(request):
     try:
         start = time.time()
@@ -293,7 +293,7 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
                                                 removed=modification_repo.removed,
                                                 nloc=nloc,
                                                 complexity=modification_repo.complexity)
-                    logger.info(modification)
+                    logger.info(modification.__str__())
                     modification.save()
                 except Exception:
                     logger.exception(f'Erro ao salvar arquivo {modification.path}')

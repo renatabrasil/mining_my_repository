@@ -389,7 +389,7 @@ class Modification(models.Model):
     complexity = models.IntegerField(null=True)
 
     def __str__(self):
-        return f"Commit: {self.commit.hash} - Directory: {self.directory.name} - File name: {self.file}"
+        return f"Commit: {self.commit.hash}, Path: {self.path}"
 
     def __diff_text(self):
         GR = GitRepository(self.commit.tag.project.project_path)

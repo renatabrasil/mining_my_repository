@@ -49,7 +49,7 @@ class ModificationModelTests(TestCase):
                                                    directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
 
-        self.assertEqual("Commit: FIRSTCOMMIT - Directory: src/main/apache/domain - File name: Transporte.java",
+        self.assertEqual("Commit: FIRSTCOMMIT, Path: src/main/apache/domain/Transporte.java",
                          modification.__str__())
 
     def test_should_return_file_name_in_root_path(self):
@@ -100,8 +100,8 @@ class ModificationModelTests(TestCase):
                                                     commit=self.first_commit, change_type=change_type.ADDED)
 
         expected_responses = {
-            'response_modification_1': f'Commit: {modification.commit.hash} - Directory: src/main/apache - File name: main.java',
-            'response_modification_2': f'Commit: {modification2.commit.hash} - Directory: / - File name: test.java'
+            'response_modification_1': f'Commit: {modification.commit.hash}, Path: src/main/apache/main.java',
+            'response_modification_2': f'Commit: {modification2.commit.hash}, Path: test.java'
         }
 
         self.assertEqual(expected_responses['response_modification_1'], modification.__str__())
