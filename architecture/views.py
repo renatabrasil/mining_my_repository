@@ -777,8 +777,6 @@ def generate_list_of_compiled_commits(project, form):
     except Exception as e:
         logger.exception(e.args[0])
         raise
-    finally:
-        f.close()
     return files
 
 

@@ -7,15 +7,23 @@
 #     given number of `days` offset to now (negative for questions published
 #     in the past, positive for questions that have yet to be published).
 #     """
+import shutil
+from unittest.mock import patch, Mock
 
 from django.test import TestCase
+from django.test.utils import isolate_apps
 from django.urls import reverse
 
+from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits
-from contributions.models import Project, Tag
+from contributions.models import Project, Tag, Commit
 
 
+@isolate_apps('architecture')
 class ArchitectureCalculateMetricsViewTests(TestCase):
+
+    def tearDown(self):
+        shutil.rmtree("compiled", ignore_errors=True)
 
     def test_should_load_index_view_as_get_http_method(self):
         """
@@ -39,36 +47,39 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
         # When
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "compiled/commits-rel-1.4.txt")
+        self.assertQuerysetEqual(response.context['title'], "Configuração do Projeto")
         self.assertQuerysetEqual(response.context['files'], files)
 
-    # @patch.object(FilesCompiledForm, "errors", [])
-    # @patch("contributions.repositories.commit_repository.CommitRepository.find_all_commits_by_project_order_by_id_asc",
-    #        return_value=[Commit(tag=Tag.objects.create(description="rel/1.1", project_id=1)), Mock(spec=Commit)])
-    # def test_should_send_form_with_configs_as_post_http_method(self, mock):
-    #     """
-    #     If HTTP METHOD is equal to POST, informations filled in the form should be sent
-    #     """
-    #     # Given
-    #     project = Project.objects.create(project_name="AntB")
-    #     tag = Tag.objects.create(description="rel/1.1", project=project)
-    #
-    #     with patch('contributions.models.Commit.tag', new_callable=PropertyMock) as mock_foo:
-    #         mock_foo = Mock(name="mock.tag.description")
-    #         commit = Commit()
-    #         commit.tag = Tag(description='rel/1.1')
-    #         mock_foo.return_value = Tag(description='rel/1.1')
-    #
-    #     session = self.client.session
-    #     session['tag'] = 1
-    #     session.save()
-    #
-    #     # When
-    #     response = self.client.post(reverse('architecture:index'),
-    #                                 data={'directory': '/compiled', 'git_local_repository': 'blablabla.git',
-    #                                       'build_path': '/build'})
-    #
-    #     # When
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertContains(response, "compiled/commits-rel-1.4.txt")
-    #     mock.assert_called_once_with
-    #     # self.assertQuerysetEqual(response.context['files'], files)
+    @patch.object(FilesCompiledForm, "errors", [])
+    @patch("contributions.repositories.commit_repository.CommitRepository.find_all_commits_by_project_order_by_id_asc",
+           return_value=[Commit(tag=Tag(description="rel/1.1")), Commit(tag=Tag(description="rel/1.1"))])
+    @patch('architecture.models.FileCommits')
+    @patch('architecture.models.FileCommits.objects')
+    def test_should_send_form_with_configs_as_post_http_method(self, mock_class, mock_file, mock):
+        """
+        If HTTP METHOD is equal to POST, informations filled in the form should be sent
+        """
+
+        mock_file.return_value.save = Mock(return_value=1)
+        mock_class.filter.return_value.__getitem__.return_value.__str__.return_value = "Hi"
+        mock_class.filter.return_value.count.return_value = 1
+
+        project = Project.objects.create(project_name="AntB")
+
+        session = self.client.session
+        session['tag'] = 1
+        session['project_id'] = project.id
+        session.save()
+
+        # When
+        response = self.client.post(reverse('architecture:index'),
+                                    data={'directory': '/compiled', 'git_local_repository': 'blablabla.git',
+                                          'build_path': '/build'})
+
+        # Then
+        self.assertEqual(response.status_code, 200)
+        # self.assertContains(response, "commits-rel-1.1.txt")
+        self.assertQuerysetEqual(response.context['title'], "Configuração do Projeto")
+        self.assertQuerysetEqual(response.context['files'], mock_class.filter)
+        mock.assert_called_once_with
+        # self.assertQuerysetEqual(response.context['files'], files)
