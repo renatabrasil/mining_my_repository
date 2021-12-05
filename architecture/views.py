@@ -129,7 +129,8 @@ def compiled(request, file_id):
                         if not object_commit.has_impact_loc:
                             continue
 
-                        checkout = subprocess.Popen('git reset --hard ' + hash_commit + '', cwd=local_repository)
+                        checkout = subprocess.Popen(f'git reset --hard {hash_commit}',
+                                                    shell=True, cwd=local_repository)
                         checkout.wait()
 
                         logger.info(os.environ.get('JAVA_HOME'))
@@ -211,10 +212,10 @@ def compiled(request, file_id):
                             shutil.rmtree(build_path_repository)
 
                 except OSError as e:
-                    logger.error("Error: %s - %s." % (e.filename, e.strerror))
+                    logger.exception(f"Error: {e.filename} - {e.strerror}.")
                 except Exception as er:
                     logger.exception(er)
-                    messages.error(request, 'Erro: ' + er)
+                    messages.error(request, f'Erro: {er}')
                 finally:
                     os.chdir(local_repository)
 
@@ -774,6 +775,7 @@ def __generate_csv__(folder):
                 try:
                     arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
                                                      ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
+                                                     shell=True,
                                                      cwd=os.getcwd())
                     arcan_metrics.wait()
                 except Exception as er:

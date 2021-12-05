@@ -17,8 +17,6 @@ for folder in sorted_files:
             print(filename)
             if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
                 print(folder)
-                # folder = '"\"'+folder+'"\"'
-                # folder = __import__=(folder)
                 try:
                     rc = os.system('java -jar Arcan-1.2.1-SNAPSHOT.jar -p ' + '"' + folder + '"'+ ' -out ' + '"' + folder + '"' +' -pm -folderOfJars')
                 except Exception as er:
