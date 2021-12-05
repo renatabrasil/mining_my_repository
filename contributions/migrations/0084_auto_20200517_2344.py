@@ -7,9 +7,9 @@ class Migration(migrations.Migration):
     def update_compilable_cassandra(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Tag = apps.get_model('contributions', 'Tag')
-        Project = apps.get_model('contributions', 'Project')
-        Commit = apps.get_model('contributions', 'Commit')
+        tag = apps.get_model('contributions', 'Tag')
+        project = apps.get_model('contributions', 'Project')
+        commit = apps.get_model('contributions', 'Commit')
 
     dependencies = [
         ('contributions', '0083_auto_20200517_1149'),

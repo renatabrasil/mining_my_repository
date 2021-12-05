@@ -9,10 +9,10 @@ class Migration(migrations.Migration):
     def fix_experience(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Commit = apps.get_model('contributions', 'Commit')
-        Modification = apps.get_model('contributions', 'Modification')
+        commit = apps.get_model('contributions', 'Commit')
+        modification = apps.get_model('contributions', 'Modification')
 
-        for commit in Commit.objects.filter(tag_id=23).order_by('id'):
+        for commit in commit.objects.filter(tag_id=23).order_by('id'):
             m = re.search(
                 r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
                 commit.msg, re.IGNORECASE)
@@ -22,10 +22,11 @@ class Migration(migrations.Migration):
                 if found:
                     commit.has_submitted_by = True
 
-            previous_commit = Commit.objects.filter(author=commit.author, tag_id__lte=commit.tag.id,
+            previous_commit = commit.objects.filter(author=commit.author, tag_id__lte=commit.tag.id,
                                                     tag__project=commit.tag.project, id__lt=commit.id).last()
 
-            first_commit = Commit.objects.filter(author=commit.author, has_submitted_by=False, tag_id__lte=commit.tag.id,
+            first_commit = commit.objects.filter(author=commit.author, has_submitted_by=False,
+                                                 tag_id__lte=commit.tag.id,
                                                  id__lt=commit.id, tag__project=commit.tag.project).first()
 
             commit.total_commits = previous_commit.total_commits if previous_commit is not None else 0
@@ -41,9 +42,9 @@ class Migration(migrations.Migration):
 
             commit.author_experience = 0.0
 
-            file_by_authors = Modification.objects.none()
+            file_by_authors = modification.objects.none()
             if commit.total_commits > 0:
-                file_by_authors = Modification.objects.filter(commit__author=commit.author,
+                file_by_authors = modification.objects.filter(commit__author=commit.author,
                                                               commit__tag_id__lte=commit.tag.id,
                                                               commit__tag__project=commit.tag.project,
                                                               commit_id__lte=previous_commit.id)
@@ -54,7 +55,7 @@ class Migration(migrations.Migration):
 
             lista = commit.parents_str.split(",")
             for parent_hash in lista:
-                parent = Commit.objects.filter(hash=parent_hash)
+                parent = commit.objects.filter(hash=parent_hash)
                 if parent.count() > 0:
                     parent = parent[0]
                     parent.children_commit = commit

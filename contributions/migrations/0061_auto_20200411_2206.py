@@ -8,9 +8,8 @@ class Migration(migrations.Migration):
     def update_delta_and_normalized_delta(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Commit = apps.get_model('contributions', 'Commit')
-        Modification = apps.get_model('contributions', 'Modification')
-        for commit in Commit.objects.filter(tag_id__gt=3):
+        commit = apps.get_model('contributions', 'Commit')
+        for commit in commit.objects.filter(tag_id__gt=3):
             u_cloc = 0
             for mod in commit.modifications.all():
                 u_cloc += mod.u_cloc

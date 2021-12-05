@@ -8,12 +8,12 @@ class Migration(migrations.Migration):
     def fix_experience(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Commit = apps.get_model('contributions', 'Commit')
-        Modification = apps.get_model('contributions', 'Modification')
+        commit = apps.get_model('contributions', 'Commit')
+        modification = apps.get_model('contributions', 'Modification')
 
-        for commit in Commit.objects.filter(tag_id=23).order_by('id'):
+        for commit in commit.objects.filter(tag_id=23).order_by('id'):
             if len(commit.modifications.all()) == 0:
-                instance = Commit.objects.get(id=commit.id)
+                instance = commit.objects.get(id=commit.id)
                 instance.delete()
 
     dependencies = [

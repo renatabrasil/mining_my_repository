@@ -8,9 +8,9 @@ class Migration(migrations.Migration):
     def update_tags_max_minor_version(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Tag = apps.get_model('contributions', 'Tag')
+        tag = apps.get_model('contributions', 'Tag')
 
-        for tag in Tag.objects.all():
+        for tag in tag.objects.all():
             if tag.description == 'rel/1.4':
                 tag.max_minor_version_description = 'ANT_141'
             elif tag.description == 'rel/1.5':

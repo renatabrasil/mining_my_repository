@@ -8,17 +8,17 @@ class Migration(migrations.Migration):
     def update_author_experience_in_components(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        ArchitecturalMetricsByCommit = apps.get_model('architecture', 'ArchitecturalMetricsByCommit')
-        Modification = apps.get_model('contributions', 'Modification')
+        architectural_metrics_by_commit = apps.get_model('architecture', 'ArchitecturalMetricsByCommit')
+        modification = apps.get_model('contributions', 'Modification')
 
-        for component in ArchitecturalMetricsByCommit.objects.all():
+        for component in architectural_metrics_by_commit.objects.all():
             component.commits_accumulation = 0
             component.cloc_accumulation = 0
             commits_accumulation = 0
             cloc_accumulation = 0
             previous_contribution_to_component = None
 
-            previous_contribution_to_component = ArchitecturalMetricsByCommit.objects.filter(
+            previous_contribution_to_component = architectural_metrics_by_commit.objects.filter(
                 commit__author=component.commit.author,
                 directory=component.directory,
                 commit__tag__lte=component.commit.tag.id,
@@ -37,10 +37,10 @@ class Migration(migrations.Migration):
                 component.commits_accumulation = commits_accumulation + 1
                 component.cloc_accumulation = cloc_accumulation + cloc
 
-            file_by_authors = Modification.objects.none()
+            file_by_authors = modification.objects.none()
             if commits_accumulation > 0:
                 # because Modification model imply any directory whether they are components or not
-                file_by_authors = Modification.objects.filter(commit__author=component.commit.author,
+                file_by_authors = modification.objects.filter(commit__author=component.commit.author,
                                                               commit__tag_id__lte=component.commit.tag.id,
                                                               id__lt=component.id,
                                                               directory__name__startswith=component.directory.name)
@@ -58,4 +58,3 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(update_author_experience_in_components),
     ]
-

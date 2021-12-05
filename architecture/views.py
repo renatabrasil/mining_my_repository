@@ -617,7 +617,7 @@ def quality_between_versions(request):
 ################ Auxiliary methods ###################
 
 
-def __read_PM_file(folder, tag_id):
+def __read_pm_file(folder, tag_id):
     '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}
     tag = Tag.objects.get(id=tag_id)

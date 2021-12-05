@@ -8,35 +8,11 @@ class Migration(migrations.Migration):
     def update_tags_max_minor_version(apps, schema_editor):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
-        Tag = apps.get_model('contributions', 'Tag')
-        Project = apps.get_model('contributions', 'Project')
+        tag = apps.get_model('contributions', 'Tag')
+        project = apps.get_model('contributions', 'Project')
 
+        apache = project.objects.get_or_create(project_name='Apache Ant')
 
-        apache=Project.objects.get_or_create(project_name='Apache Ant')
-
-        # Tag.objects.filter(description='ANT_141').update(major=False)
-        # Tag.objects.filter(description='rel/1.5.4').update(major=False)
-        # Tag.objects.filter(description='rel/1.6.5').update(major=False)
-        # Tag.objects.filter(description='rel/1.7.1').update(major=False)
-        # Tag.objects.filter(description='rel/1.8.4').update(major=False)
-        # Tag.objects.filter(description='rel/1.9.7').update(major=False)
-        # Tag.objects.filter(description='rel/1.10.7').update(major=False)
-        # Tag.objects.filter(id__gte=18).delete()
-        #
-        # tag = Tag(project=apache, description='rel/1.9.x',
-        #           max_minor_version_description='rel/1.9.8,rel/1.9.9,rel/1.9.10,rel/1.9.11,'
-        #                                         'rel/1.9.12,rel/1.9.13,rel/1.9.14,rel/1.9.14',
-        #           previous_tag=Tag.objects.get_or_create(description='rel/1.9.7'), major=True)
-        # tag.save()
-        #
-        # for tag in Tag.objects.filter(major=True):
-        #     if tag.description == 'rel/1.9.0':
-        #         tag.max_minor_version_description = 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,' \
-        #                                             'rel/1.9.7'
-        #     elif tag.description == 'rel/1.10.0':
-        #         tag.max_minor_version_description = 'rel/1.10.1,rel/1.10.2,rel/1.10.3,rel/1.10.4,rel/1.10.5,' \
-        #                                             'rel/1.10.6,rel/1.10.7'
-        #     tag.save()
 
     dependencies = [
         ('contributions', '0068_tag_major'),
