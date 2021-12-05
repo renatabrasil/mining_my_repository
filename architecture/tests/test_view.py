@@ -1,12 +1,3 @@
-#     time = timezone.now() + datetime.timedelta(days=days)
-#     return Question.objects.create(question_text=question_text, pub_date=time)
-
-# def create_question(question_text, days):
-#     """
-#     Create a question with the given `question_text` and published the
-#     given number of `days` offset to now (negative for questions published
-#     in the past, positive for questions that have yet to be published).
-#     """
 import shutil
 from unittest.mock import patch, Mock
 
@@ -21,9 +12,10 @@ from contributions.models import Project, Tag, Commit
 
 @isolate_apps('architecture')
 class ArchitectureCalculateMetricsViewTests(TestCase):
+    directory = "compiled"
 
     def tearDown(self):
-        shutil.rmtree("compiled", ignore_errors=True)
+        shutil.rmtree(self.directory, ignore_errors=True)
 
     def test_should_load_index_view_as_get_http_method(self):
         """
@@ -35,7 +27,7 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
         files = [FileCommits.objects.create(name='compiled/commits-rel-1.4.txt', tag=tag,
                                             local_repository='G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
                                             build_path='build',
-                                            directory='compiled')]
+                                            directory=self.directory)]
 
         session = self.client.session
         session['tag'] = 1
@@ -73,7 +65,7 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
 
         # When
         response = self.client.post(reverse('architecture:index'),
-                                    data={'directory': '/compiled', 'git_local_repository': 'blablabla.git',
+                                    data={'directory': self.directory, 'git_local_repository': 'blablabla.git',
                                           'build_path': '/build'})
 
         # Then
