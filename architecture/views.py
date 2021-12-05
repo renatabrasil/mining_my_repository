@@ -130,7 +130,7 @@ def compiled(request, file_id):
                             continue
 
                         checkout = subprocess.Popen(f'git reset --hard {hash_commit}',
-                                                    shell=True, cwd=local_repository)
+                                                    shell=False, cwd=local_repository)
                         checkout.wait()
 
                         logger.info(os.environ.get('JAVA_HOME'))
@@ -775,7 +775,7 @@ def __generate_csv__(folder):
                 try:
                     arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
                                                      ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
-                                                     shell=True,
+                                                     shell=False,
                                                      cwd=os.getcwd())
                     arcan_metrics.wait()
                 except Exception as er:
