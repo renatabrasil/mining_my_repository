@@ -1,3 +1,4 @@
+import os
 import shutil
 from unittest.mock import patch, Mock
 
@@ -15,6 +16,7 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
     directory = "compiled"
 
     def tearDown(self):
+        os.remove('Hi')
         shutil.rmtree(self.directory, ignore_errors=True)
 
     def test_should_load_index_view_as_get_http_method(self):
