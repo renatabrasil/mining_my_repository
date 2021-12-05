@@ -140,7 +140,7 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'contributions/static'),
 )
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',

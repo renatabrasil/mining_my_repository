@@ -1,6 +1,6 @@
 from enum import Enum
 
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 # Django
 from contributions.models import Commit, Project, Developer, Tag, Modification, Directory
@@ -16,7 +16,7 @@ class change_type(Enum):
     RENAMED = 'REN'
 
 
-class ModificationModelTests(TestCase):
+class ModificationModelTests(TransactionTestCase):
 
     def setUp(self):
         """
@@ -130,7 +130,7 @@ class ModificationModelTests(TestCase):
         self.assertEqual(expected_response['lines_removed'], modification.diff_removed)
 
 
-class CommitModelTests(TestCase):
+class CommitModelTests(TransactionTestCase):
 
     @classmethod
     def create_commit(cls, tag=None, hash="ASDADADADSADADS", author=None,
