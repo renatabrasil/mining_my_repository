@@ -93,6 +93,14 @@ class ModificationModelTests(TestCase):
         self.assertTrue(modification.is_java_file)
         self.assertFalse(modification2.is_java_file)
 
+    def test_should_save_modification_and_commit_at_the_same_time(self):
+        modification = Modification.objects.create(new_path="src/main/apache/db/ManageDriver.java",
+                                                   directory=self.main_directory,
+                                                   commit=Commit(hash="NEWCOMMIT", tag=self.tag, author=self.developer2,
+                                                                 committer=self.developer2),
+                                                   change_type=change_type.ADDED)
+        self.assertEqual("Commit: NEWCOMMIT, Path: src/main/apache/db/ManageDriver.java", modification.__str__())
+
     def test_should_return_modification_name(self):
         modification = Modification.objects.create(new_path="src/main/apache/main.java", directory=self.main_directory,
                                                    commit=self.first_commit, change_type=change_type.ADDED)
@@ -149,12 +157,14 @@ class CommitModelTests(TestCase):
                                                                    committer=self.developer2,
                                                                    previous_impactful_commit=self.first_commit,
                                                                    tag=self.tag)
-
-        self.first_files_in_the_project_1 = Modification.objects.create(new_path="/src", commit=self.first_commit,
+        self.first_files_in_the_project_1 = Modification.objects.create(new_path="/src/Database.java",
+                                                                        diff="\n+ public void {\n\n- private String author",
+                                                                        commit=self.commit_with_author_experience,
                                                                         change_type=change_type.ADDED, added=1000,
                                                                         removed=0)
-        self.first_files_in_the_project_2 = Modification.objects.create(new_path="/src/main/database",
-                                                                        commit=self.first_commit,
+        self.first_files_in_the_project_2 = Modification.objects.create(new_path="/src/main/database/main.java",
+                                                                        commit=self.commit_with_author_experience,
+                                                                        diff="\n+ public void {\n\n- * @author",
                                                                         change_type=change_type.ADDED, added=10,
                                                                         removed=0)
         self.refactor_file = Modification.objects.create(new_path="/src/main", change_type=change_type.MODIFIED,
@@ -171,11 +181,16 @@ class CommitModelTests(TestCase):
         self.assertEqual(expected_result, result)
 
     def test_should_calculate_general_experience_successfully(self):
-        commit = Commit(author=self.developer1, committer=self.developer2, tag=self.tag, hash="AAASSDDD")
-        refactor_file = Modification.objects.create(new_path="/src/main/addoc", change_type=change_type.MODIFIED,
-                                                    commit=commit, added=540,
-                                                    removed=20)
+        # Given
+        # Author 1:
+        # cloc_activity previous commit = 120
+        commit = Commit(author=self.developer2, committer=self.developer2, tag=self.tag, hash="AAASSDDD")
+        Modification.objects.create(new_path="/src/main/addoc", change_type=change_type.MODIFIED,
+                                    commit=commit, added=540,
+                                    removed=20)
+        # When
+        commit.save()
 
-        # commit.save()
-
-        self.assertIsNotNone(commit)
+        # Then
+        self.assertAlmostEqual(2.8, commit.author_experience, 1)
+        self.assertEqual(3, commit.total_commits)

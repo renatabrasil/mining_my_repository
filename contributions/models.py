@@ -239,6 +239,13 @@ class Commit(models.Model):
         for component in self.component_commits.all():
             component.calculate_experience()
 
+    def __has_submitted_by_in_the_commit_msg__(self):
+        m = re.search(SUBMITTED_BY_PARTICLE_REGEX, self.msg, re.IGNORECASE)
+        if m:
+            found = m.group(0)
+            return found
+        return False
+
     def save(self, *args, **kwargs):
         self.author.save()
         self.committer.save()
@@ -250,27 +257,22 @@ class Commit(models.Model):
 
         if self.pk is None:
 
-            m = re.search(SUBMITTED_BY_PARTICLE_REGEX, self.msg, re.IGNORECASE)
-            found = ''
-            if m:
-                found = m.group(0)
-                if found:
-                    self.has_submitted_by = True
+            self.has_submitted_by = self.__has_submitted_by_in_the_commit_msg__()
 
-            previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
-                                                    tag__project=self.tag.project).last()
+            previous_commit_of_the_author = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                                  tag__project=self.tag.project).last()
+            first_commit_of_the_author = Commit.objects.filter(author=self.author, has_submitted_by=False,
+                                                               tag_id__lte=self.tag.id,
+                                                               tag__project=self.tag.project).first()
 
-            first_commit = Commit.objects.filter(author=self.author, has_submitted_by=False, tag_id__lte=self.tag.id,
-                                                 tag__project=self.tag.project).first()
-
-            self.total_commits = previous_commit.total_commits if previous_commit is not None else 0
+            self.total_commits = previous_commit_of_the_author.total_commits if previous_commit_of_the_author is not None else 0
 
             self.cloc_activity = 0
-            if previous_commit is not None:
-                self.cloc_activity = previous_commit.cloc_activity
+            if previous_commit_of_the_author is not None:
+                self.cloc_activity = previous_commit_of_the_author.cloc_activity
 
-            if first_commit is not None:
-                self.author_seniority = self.author_date - first_commit.author_date
+            if first_commit_of_the_author is not None:
+                self.author_seniority = self.author_date - first_commit_of_the_author.author_date
                 self.author_seniority = abs(self.author_seniority.days)
 
             self.author_experience = 0.0
@@ -280,7 +282,7 @@ class Commit(models.Model):
                 file_by_authors = Modification.objects.filter(commit__author=self.author,
                                                               commit__tag_id__lte=self.tag.id,
                                                               commit__tag__project=self.tag.project,
-                                                              commit_id__lte=previous_commit.id)
+                                                              commit_id__lte=previous_commit_of_the_author.id)
 
             files = file_by_authors.values("path").distinct().count()
 
@@ -507,7 +509,6 @@ def detect_impact_loc(code):
     total_lines = code.count('\n')
     if total_lines > 0:
         commented_lines = 0
-        # FIXME: Put this part on loop below
         lines = code.split("\n")
         # In case we should consider commented lines
         for line in lines:
@@ -542,7 +543,6 @@ def count_loc(code):
     return total_lines - __count_blank_lines(code)
 
 
-# FIXME: Test technical debt
 def __count_blank_lines(code):
     blank_lines = 0
     lines = code.split('\n')
