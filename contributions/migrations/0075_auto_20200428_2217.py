@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 instance.delete()
 
     dependencies = [
-        ('contributions', '0074_auto_20200428_1742'),
+        ('contributions', '0073_auto_20200427_1127'),
     ]
 
     operations = [
