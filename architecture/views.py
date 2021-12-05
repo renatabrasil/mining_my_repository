@@ -80,7 +80,7 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
-@require_http_methods(["GET", "POST"])
+@require_GET
 def compiled(request, file_id):
     '''
     Method responsible for create compiled of all commits of interest. Commits are collected in a file that was generated
@@ -249,7 +249,7 @@ def compiled(request, file_id):
 
 
 # Using overall design evaluation
-@require_http_methods(["GET", "POST"])
+@require_GET
 def impactful_commits(request):
     export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
 
@@ -494,6 +494,7 @@ def calculate_architecture_metrics(request, file_id):
     return HttpResponseRedirect(reverse('architecture:index', ))
 
 
+@require_GET
 def metrics_by_commits(request):
     directories = Directory.objects.filter(visible=True).order_by("name")
     template = loader.get_template('architecture/metrics_by_directories.html')
@@ -529,6 +530,7 @@ def metrics_by_commits(request):
     return HttpResponse(template.render(context, request))
 
 
+@require_GET
 def metrics_by_developer(request):
     template = loader.get_template('architecture/metrics_by_developer.html')
     tag = ViewUtils.load_tag(request)
