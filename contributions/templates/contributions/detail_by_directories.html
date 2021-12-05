@@ -20,6 +20,7 @@
 
 <div class="table-responsive">
     <table class="table table-striped table-sm" style="font-size: small;">
+        <caption> Details by directories</caption>
 
         {% if latest_commit_list %}
 
@@ -54,17 +55,17 @@
         </tr>
         <thead class="thead-dark">
         <tr>
-            <th></th>
-            <th>Author</th>
-            <th style="text-align:right">Commits</th>
-            <th style="text-align:right">Files</th>
-            <th style="text-align:right">LOC</th>
-            <th style="width: '10', text-align:right">% commits (BF)</th>
-            <th style="text-align:right">% files (BF)</th>
-            <th style="text-align:right">% cloc (BF)</th>
-            <th style="text-align:right">Exp</th>
-            <th style="text-align:right">Exp com BF</th>
-            <th style="text-align:right">Exp (cloc) com BF</th>
+            <th scope="col"></th>
+            <th scope="col">Author</th>
+            <th scope="col" style="text-align:right">Commits</th>
+            <th scope="col" style="text-align:right">Files</th>
+            <th scope="col" style="text-align:right">LOC</th>
+            <th scope="col" style="width: '10', text-align:right">% commits (BF)</th>
+            <th scope="col" style="text-align:right">% files (BF)</th>
+            <th scope="col" style="text-align:right">% cloc (BF)</th>
+            <th scope="col" style="text-align:right">Exp</th>
+            <th scope="col" style="text-align:right">Exp com BF</th>
+            <th scope="col" style="text-align:right">Exp (cloc) com BF</th>
         </tr>
         </thead>
         <tbody>
@@ -72,8 +73,9 @@
             <td colspan="6"><strong>{{directory.directory.name}}</strong></td>
             <td></td>
             <td></td>
-            <td style="text-align:right" nowrap><small>Media: {{directory.mean|floatformat:5}}</small></td>
-            <td style="text-align:right" nowrap><small>Mediana: {{directory.median|floatformat:5}}</small></td>
+            <td style="text-align:right;white-space:nowrap"><small>Media: {{directory.mean|floatformat:5}}</small></td>
+            <td style="text-align:right;white-space:nowrap"><small>Mediana: {{directory.median|floatformat:5}}</small>
+            </td>
             <td style="text-align:right"><small>Desvio padrão: {{directory.standard_deviation|floatformat:5}}</small>
             </td>
         </tr>
@@ -99,10 +101,10 @@
         </tr>
         {% endfor %}
         <tr class="p-3 mb-2 bg-info text-white">
-            <th colspan="2">Total:</th>
-            <th style="text-align:right">{{directory.total_commits}}</th>
-            <th style="text-align:right">{{directory.total_files}}</th>
-            <th style="text-align:right">{{directory.total_cloc}}</th>
+            <th scope="col" colspan="2">Total:</th>
+            <th scope="col" style="text-align:right">{{directory.total_commits}}</th>
+            <th scope="col" style="text-align:right">{{directory.total_files}}</th>
+            <th scope="col" style="text-align:right">{{directory.total_cloc}}</th>
             <td colspan="6"></td>
         </tr>
         {% endfor %}
