@@ -40,7 +40,7 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
         # When
         response = self.client.get(reverse('architecture:index'))
 
-        # When
+        # Then
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "compiled/commits-rel-1.4.txt")
         self.assertQuerysetEqual(response.context['title'], "Configuração do Projeto")
@@ -74,8 +74,8 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
 
         # Then
         self.assertEqual(response.status_code, 200)
-        # self.assertContains(response, "commits-rel-1.1.txt")
         self.assertQuerysetEqual(response.context['title'], "Configuração do Projeto")
         self.assertQuerysetEqual(response.context['files'], mock_class.filter)
-        mock.assert_called_once_with
-        # self.assertQuerysetEqual(response.context['files'], files)
+        mock_class.assert_called_once
+        mock_file.assert_called_once
+        mock.assert_called_once
