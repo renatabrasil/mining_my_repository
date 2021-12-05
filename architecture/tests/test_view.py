@@ -14,9 +14,11 @@ from contributions.models import Project, Tag, Commit
 @isolate_apps('architecture')
 class ArchitectureCalculateMetricsViewTests(TestCase):
     directory = "compiled"
+    file_name = "commits-1.1.txt"
 
     def tearDown(self):
-        os.remove('Hi')
+        if os.path.isfile(self.file_name):
+            os.remove(self.file_name)
         shutil.rmtree(self.directory, ignore_errors=True)
 
     def test_should_load_index_view_as_get_http_method(self):
@@ -55,7 +57,7 @@ class ArchitectureCalculateMetricsViewTests(TestCase):
         """
 
         mock_file.return_value.save = Mock(return_value=1)
-        mock_class.filter.return_value.__getitem__.return_value.__str__.return_value = "Hi"
+        mock_class.filter.return_value.__getitem__.return_value.__str__.return_value = self.file_name
         mock_class.filter.return_value.count.return_value = 1
 
         project = Project.objects.create(project_name="AntB")
