@@ -40,18 +40,41 @@ class DeveloperModelTests(TransactionTestCase):
         project = Project.objects.create(project_name="ANT")
         tag = Tag.objects.create(description="v1.0", project=project)
 
+        Commit.objects.create(hash="TEST", author=Developer(name="Franco"),
+                              committer=Developer(name="Roberto"),
+                              tag=tag)
+        commit2 = Commit.objects.create(id=4, hash="TEST2", author=Developer(name="Franco Fanti"),
+                                        committer=Developer(name="Roberto"),
+                                        tag=tag)
+        Commit.objects.create(hash="TEST3", author=Developer(name="Franco Fanti"),
+                              committer=Developer(name="Roberto"),
+                              tag=tag)
+
+        # When
+        result = self.repository.find_by_primary_key(4)
+
+        # Then
+        self.assertEqual(4, result.id)
+
+    def test_should_return_all_commits(self):
+        # Given
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
         commit = Commit.objects.create(hash="TEST", author=Developer(name="Franco"),
                                        committer=Developer(name="Roberto"),
                                        tag=tag)
-        commit2 = Commit.objects.create(id=4, hash="TEST2", author=Developer(name="Franco Fanti"),
+        commit2 = Commit.objects.create(hash="TEST2", author=Developer(name="Franco Fanti"),
                                         committer=Developer(name="Roberto"),
                                         tag=tag)
         commit3 = Commit.objects.create(hash="TEST3", author=Developer(name="Franco Fanti"),
                                         committer=Developer(name="Roberto"),
                                         tag=tag)
 
+        expected_result = [commit, commit2, commit3]
+
         # When
-        result = self.repository.find_by_primary_key(4)
+        result = self.repository.find_all()
 
         # Then
-        self.assertEqual(4, commit2.id)
+        self.assertEqual(expected_result, list(result))
