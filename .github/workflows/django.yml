@@ -37,7 +37,7 @@ jobs:
           pip install -r requirements.txt
       - name: Run Tests
         run: |
-          python manage.py test contributions architecture --verbosity 2 --settings mining_my_repository.settings.test
+          python manage.py test --verbosity 2 --settings mining_my_repository.settings.test
       #      - name: Install coverage dependecy
       #        run: pip install coverage
       #      - name: Run Test With Coverage

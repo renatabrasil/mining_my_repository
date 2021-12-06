@@ -547,9 +547,7 @@ def __count_blank_lines(code):
     blank_lines = 0
     lines = code.split('\n')
     for line in lines[1:]:
-        if not line.strip():
-            blank_lines += 1
-        elif line.replace(" ", "").isdigit():
+        if not line.strip() or line.replace(" ", "").isdigit():
             blank_lines += 1
     return blank_lines
 

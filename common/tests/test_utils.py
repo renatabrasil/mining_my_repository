@@ -4,11 +4,10 @@
 
 # third-party
 
-from django.http import request
 from django.test import TestCase
 from pydriller.domain.commit import ModificationType
 
-from common.utils import CommitUtils, ViewUtils
+from common.utils import CommitUtils
 # local Django
 from contributions.models import Modification, Project, Tag, Commit, Developer
 
@@ -182,41 +181,4 @@ class CommitUtilsTests(TestCase):
 
 ###### ViewUtils tests
 
-class ViewUtilsTests(TestCase):
-    # @mock.patch('Project.objects.all().first()', return_value=None)
-    def test_current_project_successfully(self):
-        project1 = Project.objects.create(project_name="teste")
-
-        result = ViewUtils.get_current_project(request)
-
-        self.assertIsNotNone(result)
-        self.assertEquals(project1, result)
-
-    # def test_current_project_and_throws_exception_if_there_is_no_project(self):
-    #     Project.objects.all().delete()
-    #     # self.assertRaises(Exception,ViewUtils.get_current_project(request) )
-    #     self.assertRaises(Exception, ViewUtils.get_current_project, 'request')
-    #     # with self.assertRaises(Exception):
-    #     #     thing = ViewUtils.get_current_project(request)
-
-    # FIXME
-    # class RequestMock(RequestFactory):
-    #     def request(self, **request):
-    #         "Construct a generic request object."
-    #         request = RequestFactory.request(self, **request)
-    #         handler = BaseHandler()
-    #         handler.load_middleware()
-    #         for middleware_method in handler._request_middleware:
-    #             if middleware_method(request):
-    #                 raise Exception("Couldn't create request mock object - "
-    #                                 "request middleware returned a response")
-    #         return request
-    #
-    # def mocked_requests_get(self):
-    #     return None
-    # # @patch.object(Session, 'get')
-    # # @mock.patch("request.POST.get('tag')", return_value=None)
-    # @mock.patch('requests.get', return_value=None)
-    # # @mock.patch("request.session['tag']", side_effect=Exception("test error"))
-    # def test_load_tag_throws_exception(self):
-    #     # mock.assert_called_with(1)
+# class ViewUtilsTests(TestCase):

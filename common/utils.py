@@ -1,8 +1,6 @@
 # # third-party
 import unicodedata
 
-from django.http import HttpRequest
-
 from contributions import models
 
 
@@ -155,27 +153,3 @@ class ViewUtils(object):
         if query.count() > 0:
             tag = query[0]
         return tag
-
-    @staticmethod
-    def get_current_project(request):
-        '''
-        Should return the first project that exists in the database.
-
-        This method is used to prevent an exception in the presentation layer because it requires a project.
-
-        Throws an exception if there is no model in database
-
-        Parameters:
-            request(HttpRequest):
-
-        Return:
-            Project: the first project in database
-
-        Raises:
-            Exception: if there is no model in database
-
-        '''
-        try:
-            return models.Project.objects.all().first()
-        except Exception as e:
-            raise Exception(e)

@@ -1,5 +1,4 @@
 from enum import Enum
-from unittest import skip
 
 from django.test import TransactionTestCase
 
@@ -172,12 +171,12 @@ class CommitModelTests(TransactionTestCase):
                                                          commit=self.commit_with_author_experience, added=50,
                                                          removed=12)
 
-    @skip
+    # @skip
     def test_should_return_commit_description__str__(self):
-        commit = Commit.objects.create(hash="ABCD123456", id=15, author=self.developer1, tag=self.tag,
+        commit = Commit.objects.create(hash="ABCD123456", id=99, author=self.developer1, tag=self.tag,
                                        committer=self.developer2)
 
-        expected_result = "15 - hash: ABCD123456 - Author: Daniel Palacios - Tag: rel/1.1"
+        expected_result = "99 - hash: ABCD123456 - Author: Daniel Palacios - Tag: rel/1.1"
         result = commit.__str__()
 
         self.assertEqual(expected_result, result)
