@@ -10,7 +10,7 @@ from pydriller.domain.commit import ModificationType
 
 from common.utils import CommitUtils, ViewUtils
 # local Django
-from contributions.models import Modification, Project
+from contributions.models import Modification, Project, Tag, Commit, Developer
 
 
 class CommitUtilsTests(TestCase):
@@ -36,9 +36,14 @@ class CommitUtilsTests(TestCase):
 
     def test_true_path_when_is_modification_when_path_are_different(self):
         # Given
-        modification = mommy.prepare(Modification, old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
-                                     new_path="src\java\org\\apache\lucene\store\\NovoRAMDirectory.java",
-                                     change_type=ModificationType.MODIFY)
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
+        commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
+                        tag=tag)
+        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+                                                   new_path="src\java\org\\apache\lucene\store\\NovoRAMDirectory.java",
+                                                   change_type=ModificationType.MODIFY, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/NovoRAMDirectory.java"
 
         # When
@@ -49,9 +54,15 @@ class CommitUtilsTests(TestCase):
 
     def test_true_path_when_is_modification_when_path_are_the_same(self):
         # Given
-        modification = mommy.prepare(Modification, old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
-                                     new_path="src\java\org\\apache\lucene\store\\RAMDirectory.java",
-                                     change_type=ModificationType.MODIFY)
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
+        commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
+                        tag=tag)
+
+        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+                                                   new_path="src\java\org\\apache\lucene\store\\RAMDirectory.java",
+                                                   change_type=ModificationType.MODIFY, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
 
         # When
@@ -62,9 +73,15 @@ class CommitUtilsTests(TestCase):
 
     def test_true_path_modification_when_change_type_is_deleted(self):
         # Given
-        modification = mommy.prepare(Modification, old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
-                                     new_path=None,
-                                     change_type=ModificationType.DELETE)
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
+        commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
+                        tag=tag)
+
+        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+                                                   new_path=None,
+                                                   change_type=ModificationType.DELETE, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
         # When
         result = CommitUtils.true_path(modification)
@@ -74,9 +91,15 @@ class CommitUtilsTests(TestCase):
 
     def test_true_path_modification_when_change_type_is_added(self):
         # Given
-        modification = mommy.prepare(Modification, old_path=None,
-                                     new_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
-                                     change_type=ModificationType.ADD)
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
+        commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
+                        tag=tag)
+
+        modification = Modification.objects.create(old_path=None,
+                                                   new_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+                                                   change_type=ModificationType.ADD, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
 
         # When
@@ -87,9 +110,15 @@ class CommitUtilsTests(TestCase):
 
     def test_true_path_modification_and_return_empty_string_when_no_path_is_given(self):
         # Given
-        modification = mommy.prepare(Modification, old_path=None,
-                                     new_path=None,
-                                     change_type=ModificationType.ADD)
+        project = Project.objects.create(project_name="ANT")
+        tag = Tag.objects.create(description="v1.0", project=project)
+
+        commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
+                        tag=tag)
+
+        modification = Modification.objects.create(old_path=None,
+                                                   new_path=None,
+                                                   change_type=ModificationType.ADD, commit=commit)
 
         # When
         result = CommitUtils.true_path(modification)
@@ -156,7 +185,7 @@ class CommitUtilsTests(TestCase):
 class ViewUtilsTests(TestCase):
     # @mock.patch('Project.objects.all().first()', return_value=None)
     def test_current_project_successfully(self):
-        project1 = mommy.make(Project)
+        project1 = Project.objects.create(project_name="teste")
 
         result = ViewUtils.get_current_project(request)
 
