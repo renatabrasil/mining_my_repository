@@ -18,14 +18,25 @@ from pydriller.git_repository import GitRepository
 # local Django
 from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
-    Commit, Developer, Directory, Modification,
-    Project, Tag, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
+    Commit, Developer, Modification,
+    Tag, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
     CASSANDRA, __has_impact_loc_calculation_static_method)
+from contributions.repositories.commit_repository import CommitRepository
+from contributions.repositories.developer_repository import DeveloperRepository
+from contributions.repositories.directory_repository import DirectoryRepository
+from contributions.repositories.project_repository import ProjectRepository
+from contributions.repositories.tag_repository import TagRepository
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
 
 logger = logging.getLogger(__name__)
+
+commit_repository = CommitRepository()
+directory_repository = DirectoryRepository()
+developer_repository = DeveloperRepository()
+project_repository = ProjectRepository()
+tag_repository = TagRepository()
 
 
 @require_http_methods(["GET", "POST"])
@@ -48,25 +59,27 @@ def index(request):
             title_description = 'Contributions - Detalhes do commit'
             url_path = 'developers/detail.html'
         elif request.GET.get('directory_data'):
-            latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
+            latest_commit_list = directory_repository.find_all_visible_directories_order_by_id()
             url_path = 'contributions/directories.html'
         else:
             if developer_id or tag_id:
                 latest_commit_list = Commit.objects.none()
                 if developer_id:
-                    current_developer = Developer.objects.get(pk=int(developer_id))
-                    latest_commit_list = latest_commit_list | Commit.objects.filter(author_id=current_developer.id)
+                    current_developer = developer_repository.find_by_primary_key(pk=int(developer_id))
+                    latest_commit_list = latest_commit_list | commit_repository.find_all_commits_by_author_id(
+                        author_id=current_developer.id)
                 if tag_id:
-                    current_tag_filter = Tag.objects.get(pk=int(tag_id))
+                    current_tag_filter = tag_repository.find_by_primary_key(pk=int(tag_id))
                     if latest_commit_list:
-                        latest_commit_list = latest_commit_list & Commit.objects.filter(tag_id=current_tag_filter.id)
+                        latest_commit_list = latest_commit_list & commit_repository.find_all_commits_by_tag(
+                            tag_id=current_tag_filter.id)
                     else:
-                        latest_commit_list = Commit.objects.filter(tag_id=current_tag_filter.id)
+                        latest_commit_list = commit_repository.find_all_commits_by_tag(tag_id=current_tag_filter.id)
                 latest_commit_list = latest_commit_list.order_by("tag_id", "author__name")
             elif tag:
                 latest_commit_list = load_commits_from_tags(tag)
             else:
-                latest_commit_list = Commit.objects.all().order_by("tag_id", "author__name", "committer_date")
+                latest_commit_list = commit_repository.find_all().order_by("tag_id", "author__name", "committer_date")
             paginator = Paginator(latest_commit_list, 100)
 
             page = request.GET.get('page')
@@ -134,8 +147,8 @@ def __load_commits_by_request_and_tag(request, tag):
                         continue
                     filter['to_tag'] = minor
                     print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
-                    for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                        __build_and_save_commit(commit_repository, current_tag, filter['to_tag'])
+                    for commit_from_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                        __build_and_save_commit(commit_from_repository, current_tag, filter['to_tag'])
 
                     filter['from_tag'] = minor
                     filter.pop('from_commit', None)
@@ -150,26 +163,26 @@ def __load_commits_by_request_and_tag(request, tag):
                     filter['to_tag'] = current_tag.real_tag_description
                 else:
                     filter.setdefault('to_tag', current_tag.real_tag_description)
-                for commit_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    __build_and_save_commit(commit_repository, current_tag, filter['to_tag'])
-            __update_commit(Commit.objects.filter(tag=current_tag))
+                for commit_from_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
+                    __build_and_save_commit(commit_from_repository, current_tag, filter['to_tag'])
+            __update_commit(commit_repository.find_all_commits_by_tag(tag_id=current_tag))
 
 
 def __get_project_by_request(request):
     logger.info(f'project_id: {request.session["project"]}')
-    return Project.objects.get(id=request.session['project'])
+    return project_repository.find_by_primary_key(pk=request.session['project'])
 
 
-def __build_and_save_commit(commit_repository, tag, real_tag):
-    commit = Commit.objects.filter(hash=commit_repository.hash)
+def __build_and_save_commit(commit_from_repository, tag, real_tag):
+    commit = commit_repository.find_all_commits_by_hash(hash=commit_from_repository.hash)
     if not commit.exists():
-        author_name = CommitUtils.strip_accents(commit_repository.author.name)
-        committer_name = CommitUtils.strip_accents(commit_repository.committer.name)
-        email = commit_repository.author.email.lower()
-        login = commit_repository.author.email.split("@")[0].lower()
+        author_name = CommitUtils.strip_accents(commit_from_repository.author.name)
+        committer_name = CommitUtils.strip_accents(commit_from_repository.committer.name)
+        email = commit_from_repository.author.email.lower()
+        login = commit_from_repository.author.email.split("@")[0].lower()
         m = re.search(
             r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
-            commit_repository.msg, re.IGNORECASE)
+            commit_from_repository.msg, re.IGNORECASE)
         found = ''
         if m:
             found = m.group(0)
@@ -203,37 +216,37 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
         author_name = author_name.strip()
 
         if author_name == 'Mike McCandless':
-            if commit_repository.committer.name == 'Mike McCandless':
+            if commit_from_repository.committer.name == 'Mike McCandless':
                 committer_name = 'Michael McCandless'
             author_name = 'Michael McCandless'
         elif author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
-            if commit_repository.committer.name == 'jkf' or commit_repository.committer.name == 'Martijn Kruithof' or commit_repository.committer.name == 'J.M.Martijn Kruithof':
+            if commit_from_repository.committer.name == 'jkf' or commit_from_repository.committer.name == 'Martijn Kruithof' or commit_from_repository.committer.name == 'J.M.Martijn Kruithof':
                 committer_name = 'Jacobus Martinus Kruithof'
             author_name = 'Jacobus Martinus Kruithof'
         elif author_name == 'Steve Cohen':
-            if commit_repository.committer.name == 'Steve Cohen':
+            if commit_from_repository.committer.name == 'Steve Cohen':
                 committer_name = 'Steven M. Cohen'
             author_name = 'Steven M. Cohen'
         elif author_name == 'Jesse Glick':
-            if commit_repository.committer.name == 'Jesse Glick':
+            if commit_from_repository.committer.name == 'Jesse Glick':
                 committer_name = 'Jesse N. Glick'
             author_name = 'Jesse N. Glick'
         elif author_name == 'Gintas Grigelionis':
-            if commit_repository.committer.name == 'Gintas Grigelionis':
+            if commit_from_repository.committer.name == 'Gintas Grigelionis':
                 committer_name = 'twogee'
             author_name = 'twogee'
         elif author_name == 'Jan Matrne':
-            if commit_repository.committer.name == 'Jan Matrne':
+            if commit_from_repository.committer.name == 'Jan Matrne':
                 committer_name = 'Jan Materne'
             author_name = 'Jan Materne'
         elif author_name == 'cmanolache':
-            if commit_repository.committer.name == 'cmanolache':
+            if commit_from_repository.committer.name == 'cmanolache':
                 committer_name = 'Costin Manolache'
             author_name == 'Costin Manolache'
-        author = Developer.objects.filter(name__iexact=author_name)
+        author = developer_repository.find_all_developer_by_iexact_name(name=author_name)
         if author.count() == 0:
             if login != 'dev-null' and login != 'ant-dev':
-                author = Developer.objects.filter(login=login)
+                author = developer_repository.find_all_developer_by_login(login=login)
             # If it is find by login, update fields
             if author.count() > 0:
                 author = author[0]
@@ -251,30 +264,30 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
             author.email = email
             author.login = login
 
-        if author.name == commit_repository.committer.name:
+        if author.name == commit_from_repository.committer.name:
             committer = author
         else:
-            committer = Developer.objects.filter(name__iexact=committer_name)
+            committer = developer_repository.find_all_developer_by_iexact_name(name=committer_name)
             if committer.count() == 0:
-                email = commit_repository.committer.email.lower()
+                email = commit_from_repository.committer.email.lower()
                 login = email.split("@")[0].lower()
-                committer = Developer.objects.filter(login=login)
+                committer = developer_repository.find_all_developer_by_login(login=login)
                 if committer.count() > 0:
                     committer = committer[0]
                 else:
-                    committer = Developer(name=CommitUtils.strip_accents(commit_repository.committer.name),
+                    committer = Developer(name=CommitUtils.strip_accents(commit_from_repository.committer.name),
                                           email=email, login=login)
             else:
                 committer = committer[0]
 
-        commit = Commit(hash=commit_repository.hash, tag=tag,
-                        parents_str=str(commit_repository.parents)[1:-1].replace(" ", "").replace("'", ""),
-                        msg=commit_repository.msg,
-                        author=author, author_date=commit_repository.author_date,
+        commit = Commit(hash=commit_from_repository.hash, tag=tag,
+                        parents_str=str(commit_from_repository.parents)[1:-1].replace(" ", "").replace("'", ""),
+                        msg=commit_from_repository.msg,
+                        author=author, author_date=commit_from_repository.author_date,
                         committer=committer,
-                        committer_date=commit_repository.committer_date, real_tag_description=real_tag)
+                        committer_date=commit_from_repository.committer_date, real_tag_description=real_tag)
         total_modification = 0
-        for modification_repo in commit_repository.modifications:
+        for modification_repo in commit_from_repository.modifications:
             # Save only commits with java file and not in test directory
             if __no_commits_constraints(modification_repo, tag):
                 total_modification = total_modification + 1
@@ -305,9 +318,9 @@ def __build_and_save_commit(commit_repository, tag, real_tag):
 
 @require_GET
 def visible_directory(request, directory_id):
-    directory = Directory.objects
+    directory = directory_repository.find_by_primary_key(pk=directory_id)
     directory.update(visible=False)
-    latest_commit_list = Directory.objects.filter(visible=True).order_by("id")
+    latest_commit_list = directory_repository.find_all_visible_directories_order_by_id()
     url_path = 'contributions/directories.html'
     if request.is_ajax():
         result = {'html': render_to_string(url_path, {'latest_commit_list': latest_commit_list})}
@@ -330,7 +343,7 @@ def detail_by_hash(request):
         else:
             hash_commit = None
 
-    commit = Commit.objects.filter(hash=hash_commit)
+    commit = commit_repository.find_all_commits_by_hash(hash=hash_commit)
     if commit.count() > 0:
         commit = commit[0]
     else:
@@ -342,7 +355,7 @@ def detail_by_hash(request):
 @require_GET
 def detail(request, commit_id):
     try:
-        commit = Commit.objects.get(pk=commit_id)
+        commit = commit_repository.find_by_primary_key(pk=commit_id)
         commit.u_cloc
         print(commit.u_cloc)
         print(commit.committer_date)
@@ -360,7 +373,7 @@ def detail(request, commit_id):
 @require_GET
 def detail_in_committer(request, committer_id):
     try:
-        project = Project.objects.get(project_name="Apache Ant")
+        project = project_repository.find_project_by_name(name="Apache Ant")
         path = ""
         if request.GET.get('path'):
             path = request.GET.get('path')
@@ -399,7 +412,7 @@ def __update_commit(commits):
     for commit in commits:
         lista = commit.parents_str.split(",")
         for parent_hash in lista:
-            parent = Commit.objects.filter(hash=parent_hash)
+            parent = commit_repository.find_all_commits_by_hash(hash=parent_hash)
             if parent.count() > 0:
                 parent = parent[0]
                 parent.children_commit = commit

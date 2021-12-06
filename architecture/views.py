@@ -122,7 +122,7 @@ def compiled(request, file_id):
 
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-', '')
-                        object_commit = Commit.objects.filter(hash=hash_commit)
+                        object_commit = commit_repository.find_all_commits_by_hash(hash=hash_commit)
 
                         if object_commit.exists():
                             object_commit = object_commit[0]
@@ -444,7 +444,7 @@ def update_compilable_commits(commits_with_errors):
                 try:
                     # Go to version
                     hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-', '')
-                    object_commit = Commit.objects.filter(hash=hash_commit, compilable=True)
+                    object_commit = commit_repository.find_all_compilable_commits_by_hash(hash=hash_commit)
                     if not object_commit.exists():
                         continue
                     else:
@@ -651,8 +651,9 @@ def __read_pm_file(folder, tag_id):
                 f = open(os.path.join(subdirectory, filename), "r")
                 content = f.readlines()
                 hash_commit = f.name.split('\\')[1].split('-')[2]
-                if Commit.objects.filter(hash=hash_commit).count() > 0:
-                    commit = Commit.objects.filter(hash=hash_commit)[0]
+                commits = commit_repository.find_all_commits_by_hash(hash=hash_commit)
+                if commits.count() > 0:
+                    commit = commits[0]
 
                 # else:
                 #     continue
@@ -718,14 +719,13 @@ def generate_list_of_compiled_commits(project, form):
     :param form: data from form
     '''
     # Restricting to commits which has children
-    # first_commit = Commit.objects.filter(children_commit__gt=0).first()
     FileCommits.objects.filter(tag__project=project).delete()
     folder = form['directory'].value()
 
     if not folder:
         raise ValueError("Directory is not informed")
 
-    commits = commit_repository.find_all_commits_by_project_order_by_id_asc(project=project)
+    commits = commit_repository.find_all_commits_by_project_order_by_id_asc_as_list(project=project)
 
     if len(commits) == 0:
         raise ValueError("There is no commits loaded")
@@ -899,10 +899,7 @@ def retrieve_previous_commit(commit):
     if commit:
         if len(commit.parents) > 0:
             return commit.parents[0]
-        elif Commit.objects.filter(tag=commit.tag, id__lt=commit.id,
-                                   tag__real_tag_description__iexact=commit.tag.real_tag_description).exists():
-            return Commit.objects.filter(tag=commit.tag, id__lt=commit.id,
-                                         tag__real_tag_description__iexact=commit.tag.real_tag_description).last()
+        return commit_repository.find_all_previous_commits(commit=commit).last()
 
     return None
 
