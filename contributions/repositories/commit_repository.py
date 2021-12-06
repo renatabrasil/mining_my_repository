@@ -38,7 +38,7 @@ class CommitRepository(ModelRepository):
         return Commit.objects.filter(tag_id__lte=tag_id, tag__project__id=project_id)
 
     def find_all_commits_by_project_order_by_id_asc_as_list(self, project: Project):
-        return list(self.find_all_commits_by_project_order_by_id_asc())
+        return list(self.find_all_commits_by_project_order_by_id_asc(project=project))
 
     def find_all_commits_by_hash(self, hash: str):
         return Commit.objects.filter(hash=hash)
