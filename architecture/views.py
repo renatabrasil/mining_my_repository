@@ -27,6 +27,10 @@ from contributions.models import (Commit, Developer, Directory,
                                   Project,
                                   Tag, ComponentCommit)
 from contributions.repositories.commit_repository import CommitRepository
+from contributions.repositories.developer_repository import DeveloperRepository
+from contributions.repositories.directory_repository import DirectoryRepository
+from contributions.repositories.project_repository import ProjectRepository
+from contributions.repositories.tag_repository import TagRepository
 
 SCALE = 6
 ROUDING_SCALE = 10 ** SCALE
@@ -37,6 +41,10 @@ NO_OUTLIERS = 1
 logger = logging.getLogger(__name__)
 
 commit_repository = CommitRepository()
+project_repository = ProjectRepository()
+developer_repository = DeveloperRepository()
+directory_repository = DirectoryRepository()
+tag_repository = TagRepository()
 
 
 @require_http_methods(["GET", "POST"])
@@ -47,7 +55,7 @@ def index(request):
     request.project = request.session['project']
     template = loader.get_template('architecture/index.html')
     project_id = request.session['project']
-    project = Project.objects.get(id=project_id)
+    project = project_repository.find_by_primary_key(pk=project_id)
 
     logger.info(title_description)
     logger.info(tag)
@@ -262,7 +270,7 @@ def impactful_commits(request):
         full_tag = 'on'
 
     directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by("name")
-    developers = Developer.objects.all().order_by("name")
+    developers = developer_repository.find_all().order_by("name")
     developers = [d for d in developers if
                   d.commits.exclude(normalized_delta=0).filter(tag__project=request.session['project'])]
     commits = []
@@ -282,7 +290,7 @@ def impactful_commits(request):
             request.GET.get('directory_id'))
         if directory_filter > 0:
             query.setdefault('directory_id', directory_filter)
-            directory_name = Directory.objects.get(pk=directory_filter).name.replace('/', '_')
+            directory_name = directory_repository.find_by_primary_key(pk=directory_filter).name.replace('/', '_')
 
     if request.POST.get('tag_id') or request.GET.get('tag_id'):
         tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(request.GET.get('tag_id'))
@@ -296,7 +304,7 @@ def impactful_commits(request):
             else:
                 query.setdefault(tag_query_str, tag_filter)
             query.setdefault('tag__project_id', request.session['project'])
-            tag_name = Tag.objects.get(pk=tag_filter).description.replace('/', '_')
+            tag_name = tag_repository.find_by_primary_key(pk=tag_filter).description.replace('/', '_')
 
     if request.POST.get('developer_id') or request.GET.get('developer_id'):
         developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(
@@ -306,7 +314,7 @@ def impactful_commits(request):
                 query.setdefault('commit__author_id', developer_filter)
             else:
                 query.setdefault('author_id', developer_filter)
-            dev_name = Developer.objects.get(pk=developer_filter).name.replace(" ", "_").lower()
+            dev_name = developer_repository.find_by_primary_key(pk=developer_filter).name.replace(" ", "_").lower()
 
     if len(query) > 0:
         if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
@@ -500,7 +508,7 @@ def calculate_architecture_metrics(request, file_id):
 
 @require_GET
 def metrics_by_commits(request):
-    directories = Directory.objects.filter(visible=True).order_by("name")
+    directories = directory_repository.find_all_visible_directories_order_by_id().order_by("name")
     template = loader.get_template('architecture/metrics_by_directories.html')
     tag = ViewUtils.load_tag(request)
     architectural_metrics_list = []
@@ -606,8 +614,7 @@ def quality_between_versions(request):
 
                 # FIXME this is too naive and just work for this project. Should be fix soon.
                 # Ant
-                Tag.objects.update(
-                    delta_rmd_components=architectural_quality)
+                tag_repository.update(Tag, {'delta_rmd_components': architectural_quality})
 
         my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
         my_df = pd.DataFrame(metrics_by_directories)
@@ -627,7 +634,7 @@ def quality_between_versions(request):
 def __read_pm_file(folder, tag_id):
     '''Read PM.csv files from each commit of a specific tag'''
     metrics = {}
-    tag = Tag.objects.get(id=tag_id)
+    tag = tag_repository.find_by_primary_key(pk=tag_id)
 
     Commit.objects.update(mean_rmd_components=0.0, std_rmd_components=0.0,
                           delta_rmd_components=0.0, normalized_delta=0.0, compilable=False)
@@ -642,7 +649,7 @@ def __read_pm_file(folder, tag_id):
     sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
     for subdirectory in sorted_files:
         subdirectory = os.path.join(folder, subdirectory)
-        components_db = Directory.objects.filter(visible=True)
+        components_db = directory_repository.find_all_visible_directories_order_by_id()
         components = []
         print("\n" + os.path.join(folder, subdirectory) + "\n----------------------\n")
         for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:

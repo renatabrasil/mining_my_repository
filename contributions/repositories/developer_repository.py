@@ -14,3 +14,6 @@ class DeveloperRepository(ModelRepository):
 
     def find_all_developer_by_iexact_name(self, name: str):
         return Developer.objects.filter(name__iexact=name)
+
+    def find_all(self):
+        return super(DeveloperRepository, self).find_all()

@@ -19,13 +19,20 @@ from pydriller.git_repository import GitRepository
 from common.utils import CommitUtils, ViewUtils
 from contributions.models import (
     Commit, Developer, Modification,
-    Tag, ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
+    ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
     CASSANDRA, __has_impact_loc_calculation_static_method)
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
+from contributions.repositories.modification_repository import ModificationRepository
 from contributions.repositories.project_repository import ProjectRepository
 from contributions.repositories.tag_repository import TagRepository
+
+FULL_EMAIL_PATTERN_REGEX = r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+'
+
+EMAIL_PATTERN_REGEX = r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
+
+SUBMITTED_BY_PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
 
 GR = GitRepository('https://github.com/apache/ant.git')
 report_directories = None
@@ -37,6 +44,7 @@ directory_repository = DirectoryRepository()
 developer_repository = DeveloperRepository()
 project_repository = ProjectRepository()
 tag_repository = TagRepository()
+modification_repository = ModificationRepository()
 
 
 @require_http_methods(["GET", "POST"])
@@ -117,7 +125,8 @@ def __load_commits_by_request_and_tag(request, tag):
         project = __get_project_by_request(request)
 
         if tag.previous_tag is not None:
-            commit = Commit.objects.filter(tag_id__lte=tag.id, tag__project__id=request.session['project']).last()
+            commit = commit_repository.find_all_commit_from_all_previous_tag(tag_id=tag.id, project_id=request.session[
+                'project']).last()
             filter.setdefault('from_tag', tag.previous_tag.description)
             if commit is not None:
                 hash_commit = commit.hash
@@ -133,7 +142,8 @@ def __load_commits_by_request_and_tag(request, tag):
         filter.pop('from_commit', None)
         filter.pop('from_tag', None)
         filter.pop('to_tag', None)
-        tags = [x for x in list(Tag.objects.filter(project_id=project.id, id__gte=tag.id, major=True)) if x.id != 16]
+        tags = [x for x in list(tag_repository.find_all_major_tags_by_project(project_id=project.id, tag_id=tag.id)) if
+                x.id != 16]
         for current_tag in tags:
             if current_tag.minors:
                 if current_tag.previous_tag is not None and 'from_commit' not in filter:
@@ -180,9 +190,7 @@ def __build_and_save_commit(commit_from_repository, tag, real_tag):
         committer_name = CommitUtils.strip_accents(commit_from_repository.committer.name)
         email = commit_from_repository.author.email.lower()
         login = commit_from_repository.author.email.split("@")[0].lower()
-        m = re.search(
-            r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))',
-            commit_from_repository.msg, re.IGNORECASE)
+        m = re.search(SUBMITTED_BY_PARTICLE_REGEX, commit_from_repository.msg, re.IGNORECASE)
         found = ''
         if m:
             found = m.group(0)
@@ -195,11 +203,8 @@ def __build_and_save_commit(commit_from_repository, tag, real_tag):
                 author_name = author_name.replace("\"", "")
                 author_name = CommitUtils.strip_accents(author_name)
                 author_name = author_name.strip()
-                email_pattern = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", author_and_email,
-                                          re.IGNORECASE)
-                full_email_pattern = re.search(
-                    r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+',
-                    author_and_email, re.IGNORECASE)
+                email_pattern = re.search(EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                full_email_pattern = re.search(FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
                 if email_pattern:
                     email_found = email_pattern.group(0)
                     if email_found:
@@ -380,9 +385,11 @@ def detail_in_committer(request, committer_id):
 
         tag = ViewUtils.load_tag(request)
 
-        latest_commit_list = list(Commit.objects.filter(committer_id=committer_id, tag_id__lte=tag.id,
-                                                        modifications__in=Modification.objects.filter(
-                                                            directory_id=int(path))).distinct())
+        latest_commit_list = list(
+            commit_repository.find_all_distinct_commits_by_committer_and_modifications_for_specific_directory(
+                committer_id=committer_id, tag_id=tag.id,
+                modifications=modification_repository.find_all_modifications_by_path(
+                    directory_id=int(path))))
         context = {
             'latest_commit_list': latest_commit_list,
             'project': project,
@@ -398,12 +405,13 @@ return all commits up to current tag '''
 
 
 def load_commits_from_tags(tag):
-    commits = Commit.objects.filter(tag__description=tag.description).distinct()
+    commits = commit_repository.find_all_distinct_commits_by_tag_description(description=tag.description)
     if len(commits) == 0:
         return commits
     tag = tag.previous_tag
     while tag:
-        commits = commits | (Commit.objects.filter(tag__description=tag.description).distinct())
+        commits = commits | (
+            commit_repository.find_all_distinct_commits_by_tag_description(description=tag.description))
         tag = tag.previous_tag
     return commits
 
