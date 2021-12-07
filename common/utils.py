@@ -1,14 +1,18 @@
 # # third-party
+import logging
 import unicodedata
+from typing import Optional
 
 from contributions import models
+
+logger = logging.getLogger(__name__)
 
 
 class CommitUtils(object):
 
     @staticmethod
     def get_email(full_email: str):
-        '''
+        """
         Emails in the form of: "john doe at gmail dot com"
         Should return johndoe@gmail.com
 
@@ -16,7 +20,7 @@ class CommitUtils(object):
             full_email(str): unformatted email
         Returns:
             str: formatted email
-        '''
+        """
 
         array_email = full_email.split(" ")
         email = ''
@@ -36,7 +40,7 @@ class CommitUtils(object):
 
     @staticmethod
     def true_path(modification: 'Modification'):
-        '''Returns the right path based on the old_path, the new_path, and the type of modification of the file modified in a commit
+        """Returns the right path based on the old_path, the new_path, and the type of modification of the file modified in a commit
 
         Parameters:
             modification(Modification): file changed in a commit
@@ -44,7 +48,7 @@ class CommitUtils(object):
         Returns:
             str: the final path of the file
 
-        '''
+        """
         old_path = ''
         new_path = ''
 
@@ -61,7 +65,7 @@ class CommitUtils(object):
 
     @staticmethod
     def strip_accents(name: str):
-        '''
+        """
         Removes accents and special characters from a given name
 
         Parameters:
@@ -69,7 +73,7 @@ class CommitUtils(object):
 
         Returns:
             str: the same given name without special characters
-        '''
+        """
         try:
             name = unicode(name, 'utf-8')
         except NameError:  # unicode is a default on python 3
@@ -83,16 +87,15 @@ class CommitUtils(object):
 
     @staticmethod
     def extract_directory_name_from_full_file_name(path: str):
-        '''
+        """
         Receives the path of a file and returns the directory where it is
 
         Parameters:
             path(str): complete path of a file
         Returns:
             str: directory path
-        '''
+        """
         index = path.rfind("/")
-        directory_str = ""
         if index > -1:
             directory_str = path[:index]
         else:
@@ -101,8 +104,8 @@ class CommitUtils(object):
         return directory_str
 
     @staticmethod
-    def is_java_file(path: str):
-        '''
+    def is_java_file(path: Optional[str]) -> bool:
+        """
         Checks if a given file is a java file
 
         Parameters:
@@ -110,7 +113,7 @@ class CommitUtils(object):
 
         Returns:
             bool: true if it is a java file
-        '''
+        """
         if path:
             index = path.rfind(".")
             if index > -1:
@@ -119,13 +122,13 @@ class CommitUtils(object):
 
 
 class ViewUtils(object):
-    '''
+    """
     Methods to be used in views
-    '''
+    """
 
     @staticmethod
     def load_tag(request):
-        '''
+        """
         Should load the tag that is stored in session.
         If it is not possible, to avoid errors, should return the first tag of the first project in the database
 
@@ -134,22 +137,19 @@ class ViewUtils(object):
         Returns:
             Tag: the tag object
 
-        '''
-        tag_id = request.POST.get('tag')
+        """
+        try:
+            tag_id = request.session.get('tag', None)
+            if 'tag' in request.POST:
+                tag_id = request.POST.get('tag')
+            elif not tag_id and 'tag' in request.GET:
+                tag_id = models.Tag.objects.filter(description=request.GET.get('tag')).first().get('id', None)
 
-        if not tag_id:
-            try:
-                tag_id = request.session['tag']
-            except Exception as e:
-                print(str(e))
-                tag_id = models.Tag.objects.filter(project=request.session['project']).first().id
-        query = models.Tag.objects.filter(pk=tag_id)
-        if not tag_id:
-            tag_description = request.GET.get('tag')
-            query = models.Tag.objects.filter(description=tag_description)
-        else:
+            if not tag_id:
+                raise ValueError("Enter in admin session and provide a project and a tag belong to it.")
             request.session['tag'] = tag_id
-        tag = None
-        if query.count() > 0:
-            tag = query[0]
-        return tag
+            return models.Tag.objects.filter(pk=tag_id).first()
+        except Exception as e:
+            logger.exception(e.args[0])
+            logger.error("Enter in admin session and provide a project and a tag belong to it.")
+            raise
