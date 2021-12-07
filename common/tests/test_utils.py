@@ -1,13 +1,14 @@
 # standard library
 
 # Django
-
-# third-party
+from unittest.mock import patch, Mock
 
 from django.test import TestCase
+from django.test.client import RequestFactory
+# third-party
 from pydriller.domain.commit import ModificationType
 
-from common.utils import CommitUtils
+from common.utils import CommitUtils, ViewUtils
 # local Django
 from contributions.models import Modification, Project, Tag, Commit, Developer
 
@@ -181,4 +182,82 @@ class CommitUtilsTests(TestCase):
 
 ###### ViewUtils tests
 
-# class ViewUtilsTests(TestCase):
+class ViewUtilsTests(TestCase):
+    def create_tag(self):
+        project = Project.objects.create(project_name="ANT")
+        return Tag.objects.create(description="v1.0", project=project)
+
+    @patch("contributions.models.Tag.objects")
+    def test_should_load_tag_stored_in_post_request_successfully(self, mock_tag):
+        # Given
+        mocked_tag = self.create_tag()
+        mock_tag.filter.return_value = Mock()
+        mock_tag.filter.return_value.first.return_value = mocked_tag
+
+        rf = RequestFactory()
+        post_request = rf.post('/submit/', {'tag': '1'})
+        post_request.session = {}
+
+        # When
+        result = ViewUtils.load_tag(post_request)
+
+        # Then
+        self.assertEqual('1', post_request.session['tag'])
+        self.assertEqual(mocked_tag, result)
+        mock_tag.assert_called_once
+
+    @patch("contributions.models.Tag.objects")
+    def test_should_load_tag_stored_in_session_in_a_request_successfully(self, mock_tag):
+        # Given
+        mocked_tag = self.create_tag()
+        mock_tag.filter.return_value = Mock()
+        mock_tag.filter.return_value.first.return_value = mocked_tag
+
+        rf = RequestFactory()
+        post_request = rf.post('/submit/')
+        post_request.session = {'tag': '2'}
+
+        # When
+        result = ViewUtils.load_tag(post_request)
+
+        # Then
+        self.assertEqual('2', post_request.session['tag'])
+        self.assertEqual(mocked_tag, result)
+        mock_tag.assert_called_once
+
+    @patch("contributions.models.Tag.objects")
+    def test_should_throws_exception_when_calls_load_tag_that_neither_stored_in_session_nor_in_request_successfully(
+            self, mock_tag):
+        # Given
+        mock_tag.filter.return_value = Mock()
+        mock_tag.filter.return_value.first.return_value.get.return_value = 2
+
+        rf = RequestFactory()
+        post_request = rf.post('/submit/')
+        post_request.session = {'project': '1'}
+
+        # When
+        with self.assertRaises(ValueError) as context:
+            result = ViewUtils.load_tag(post_request)
+
+        # Then
+        self.assertEqual('Enter in admin session and provide a project and a tag belong to it.',
+                         context.exception.args[0])
+        mock_tag.assert_called_once
+
+    @patch("contributions.models.Tag.objects")
+    def test_should_return_tag_saved_from_get_request(self, mock_tag):
+        # Given
+        mock_tag.filter.return_value = Mock()
+        mock_tag.filter.return_value.first.return_value.get.return_value = '5'
+
+        rf = RequestFactory()
+        get_request = rf.get('/submit/', {'tag': 'rel/1.1'})
+        get_request.session = {}
+
+        # When
+        result = ViewUtils.load_tag(get_request)
+
+        # Then
+        self.assertEqual('5', str(get_request.session['tag']))
+        mock_tag.assert_called_once
