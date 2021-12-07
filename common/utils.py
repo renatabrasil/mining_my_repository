@@ -1,6 +1,7 @@
 # # third-party
 import logging
 import unicodedata
+from typing import Optional
 
 from contributions import models
 
@@ -103,7 +104,7 @@ class CommitUtils(object):
         return directory_str
 
     @staticmethod
-    def is_java_file(path: str):
+    def is_java_file(path: Optional[str]) -> bool:
         """
         Checks if a given file is a java file
 

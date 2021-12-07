@@ -21,12 +21,12 @@ class CommitUtilsTests(TestCase):
 
     def test_get_email_successfully(self):
         #  Given
-        input = "john doe dash 2 at gmail dot com"
+        input_ = "john doe dash 2 at gmail dot com"
         input2 = "john doe minus 2 at gmail dot com"
         expected_result = "johndoe-2@gmail.com"
 
         # When
-        result = CommitUtils.get_email(input)
+        result = CommitUtils.get_email(input_)
 
         # Then
         self.assertEquals(expected_result, result)
@@ -41,7 +41,7 @@ class CommitUtilsTests(TestCase):
 
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
-        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAM2Directory.java",
                                                    new_path="src\java\org\\apache\lucene\store\\NovoRAMDirectory.java",
                                                    change_type=ModificationType.MODIFY, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/NovoRAMDirectory.java"
@@ -59,9 +59,10 @@ class CommitUtilsTests(TestCase):
 
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
+        path = "src\java\org\\apache\lucene\store\RAMDirectory.java"
 
-        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
-                                                   new_path="src\java\org\\apache\lucene\store\\RAMDirectory.java",
+        modification = Modification.objects.create(old_path=path,
+                                                   new_path=path,
                                                    change_type=ModificationType.MODIFY, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
 
@@ -79,10 +80,10 @@ class CommitUtilsTests(TestCase):
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
 
-        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\Database.java",
                                                    new_path=None,
                                                    change_type=ModificationType.DELETE, commit=commit)
-        expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
+        expected_result = "src/java/org/apache/lucene/store/Database.java"
         # When
         result = CommitUtils.true_path(modification)
 
@@ -195,7 +196,7 @@ class ViewUtilsTests(TestCase):
         mock_tag.filter.return_value.first.return_value = mocked_tag
 
         rf = RequestFactory()
-        post_request = rf.post('/submit/', {'tag': '1'})
+        post_request = rf.post('/submit2/', {'tag': '1'})
         post_request.session = {}
 
         # When
@@ -214,7 +215,7 @@ class ViewUtilsTests(TestCase):
         mock_tag.filter.return_value.first.return_value = mocked_tag
 
         rf = RequestFactory()
-        post_request = rf.post('/submit/')
+        post_request = rf.post('/submit5/')
         post_request.session = {'tag': '2'}
 
         # When
@@ -238,7 +239,7 @@ class ViewUtilsTests(TestCase):
 
         # When
         with self.assertRaises(ValueError) as context:
-            result = ViewUtils.load_tag(post_request)
+            ViewUtils.load_tag(post_request)
 
         # Then
         self.assertEqual('Enter in admin session and provide a project and a tag belong to it.',
@@ -256,7 +257,7 @@ class ViewUtilsTests(TestCase):
         get_request.session = {}
 
         # When
-        result = ViewUtils.load_tag(get_request)
+        ViewUtils.load_tag(get_request)
 
         # Then
         self.assertEqual('5', str(get_request.session['tag']))
