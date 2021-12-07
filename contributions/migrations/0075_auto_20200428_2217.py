@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
         # We can't import the Person model directly as it may be a newer
         # version than this migration expects. We use the historical version.
         commit = apps.get_model('contributions', 'Commit')
-        modification = apps.get_model('contributions', 'Modification')
 
         for commit in commit.objects.filter(tag_id=23).order_by('id'):
             if len(commit.modifications.all()) == 0:
