@@ -18,6 +18,7 @@ import sys
 dest_file = sys.argv[2]
 source_file = sys.argv[1]
 
+
 # This function receives a txt file with packages using . as separator
 def generate_module_list(file, prefix=''):
     f = open(file, "r")
@@ -30,30 +31,25 @@ def generate_module_list(file, prefix=''):
             else:
                 list.append(module.replace("\n", ""))
     return list
-    
-# new_commits = generate_module_list(arquivo_novo)
+
+
 source = generate_module_list(source_file)
-source_hashes = [re.search(r'([^0-9\n]+)[a-z]?.*', s).group(0).replace('-','') for s in source]
+source_hashes = [re.search(r'([^0-9\n]+)[a-z]?.*', s).group(0).replace('-', '') for s in source]
 dest = generate_module_list(dest_file)
 
 # key: source
 # value: dest
 files = {}
 
-# files = [f for f in dest if f in source]
-
-
-
 for file in dest:
-    hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', file).group(0).replace('-','')
-    #print(hash_commit)
+    hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', file).group(0).replace('-', '')
+    # print(hash_commit)
     if hash_commit in source_hashes:
-        files.setdefault('version-'+source[source_hashes.index(hash_commit)],'version-'+file)
-        #print('destino: ' + file)
-        #print('origem: '+source[source_hashes.index(hash_commit)])
+        files.setdefault('version-' + source[source_hashes.index(hash_commit)], 'version-' + file)
+        # print('destino: ' + file)
+        # print('origem: '+source[source_hashes.index(hash_commit)])
 
 print(files)
-
 
 # source = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.5Copia\\jars'
 # dest1 = 'C:\\Users\\brasi\\Documents\\mining_my_repository\\compiled\\commits-rel-1.5Copia\\jars'
@@ -64,18 +60,18 @@ print(files)
 # replaced = []
 
 # for file in files_dir:
-    # if not os.path.isdir(os.path.join(source, file)):
-        # print('not directory')
-        # continue # Not a directory
-    # if os.path.exists(os.path.join(source, file)):
-        # # print(file)
-        # if file in files.keys():
-            # for jarfile in os.listdir(os.path.join(source, file)):
-                # if jarfile.endswith(".jar"):
-                    # os.rename(os.path.join(source+'\\'+file, jarfile), os.path.join(source+'\\'+file, files[file]+'.jar') )
-            # os.rename(os.path.join(source, file), os.path.join(source, files[file]))
-            # shutil.move(os.path.join(source, files[file]), os.path.join(dest1, files[file]))
-            # replaced.append('De: '+os.path.join(source, files[file])+' --> Para: '+os.path.join(dest1, files[file])+'\n')
+# if not os.path.isdir(os.path.join(source, file)):
+# print('not directory')
+# continue # Not a directory
+# if os.path.exists(os.path.join(source, file)):
+# # print(file)
+# if file in files.keys():
+# for jarfile in os.listdir(os.path.join(source, file)):
+# if jarfile.endswith(".jar"):
+# os.rename(os.path.join(source+'\\'+file, jarfile), os.path.join(source+'\\'+file, files[file]+'.jar') )
+# os.rename(os.path.join(source, file), os.path.join(source, files[file]))
+# shutil.move(os.path.join(source, files[file]), os.path.join(dest1, files[file]))
+# replaced.append('De: '+os.path.join(source, files[file])+' --> Para: '+os.path.join(dest1, files[file])+'\n')
 
 
 # f = open("replaced.txt","w")
@@ -89,7 +85,6 @@ print(files)
 
 
 # for old in files.keys():
-    #os.rename(old, files[old])
-    #print("move de |"+old+"| to |"+files[old])
-    # shutil.move(source+f, dest1)
-
+# os.rename(old, files[old])
+# print("move de |"+old+"| to |"+files[old])
+# shutil.move(source+f, dest1)

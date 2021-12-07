@@ -43,9 +43,9 @@ class DeveloperModelTests(TransactionTestCase):
         Commit.objects.create(hash="TEST", author=Developer(name="Franco"),
                               committer=Developer(name="Roberto"),
                               tag=tag)
-        commit2 = Commit.objects.create(id=4, hash="TEST2", author=Developer(name="Franco Fanti"),
-                                        committer=Developer(name="Roberto"),
-                                        tag=tag)
+        Commit.objects.create(id=4, hash="TEST2", author=Developer(name="Fausto Fanti"),
+                              committer=Developer(name="Roberto"),
+                              tag=tag)
         Commit.objects.create(hash="TEST3", author=Developer(name="Franco Fanti"),
                               committer=Developer(name="Roberto"),
                               tag=tag)
@@ -64,7 +64,7 @@ class DeveloperModelTests(TransactionTestCase):
         commit = Commit.objects.create(hash="TEST", author=Developer(name="Franco"),
                                        committer=Developer(name="Roberto"),
                                        tag=tag)
-        commit2 = Commit.objects.create(hash="TEST2", author=Developer(name="Franco Fanti"),
+        commit2 = Commit.objects.create(hash="TEST2", author=Developer(name="Fred Fanti"),
                                         committer=Developer(name="Roberto"),
                                         tag=tag)
         commit3 = Commit.objects.create(hash="TEST3", author=Developer(name="Franco Fanti"),

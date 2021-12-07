@@ -121,60 +121,57 @@ def __load_commits_by_request_and_tag(request, tag):
         load_commits = True
 
     if load_commits:
-        filter = {}
+        filter_ = {}
         project = __get_project_by_request(request)
 
         if tag.previous_tag is not None:
             commit = commit_repository.find_all_commit_from_all_previous_tag(tag_id=tag.id, project_id=request.session[
                 'project']).last()
-            filter.setdefault('from_tag', tag.previous_tag.description)
+            filter_.setdefault('from_tag', tag.previous_tag.description)
             if commit is not None:
                 hash_commit = commit.hash
-                filter.setdefault('from_commit', hash_commit)
-                filter.pop('from_tag', None)
-        filter.setdefault('only_in_branch', project.main_branch)
-        filter.setdefault('only_modifications_with_file_types', ['.java'])
-        filter.setdefault('only_no_merge', True)
-        i = 0
-        if tag.real_tag_description.find('*'):
-            i += 1
-        filter.setdefault('to_tag', tag.real_tag_description)
-        filter.pop('from_commit', None)
-        filter.pop('from_tag', None)
-        filter.pop('to_tag', None)
+                filter_.setdefault('from_commit', hash_commit)
+                filter_.pop('from_tag', None)
+        filter_.setdefault('only_in_branch', project.main_branch)
+        filter_.setdefault('only_modifications_with_file_types', ['.java'])
+        filter_.setdefault('only_no_merge', True)
+        filter_.setdefault('to_tag', tag.real_tag_description)
+        filter_.pop('from_commit', None)
+        filter_.pop('from_tag', None)
+        filter_.pop('to_tag', None)
         tags = [x for x in list(tag_repository.find_all_major_tags_by_project(project_id=project.id, tag_id=tag.id)) if
                 x.id != 16]
         for current_tag in tags:
             if current_tag.minors:
-                if current_tag.previous_tag is not None and 'from_commit' not in filter:
-                    if 'from_tag' in filter:
-                        filter['from_tag'] = current_tag.previous_tag.description
+                if current_tag.previous_tag is not None and 'from_commit' not in filter_:
+                    if 'from_tag' in filter_:
+                        filter_['from_tag'] = current_tag.previous_tag.description
                     else:
-                        filter.setdefault('from_tag', current_tag.previous_tag.description)
+                        filter_.setdefault('from_tag', current_tag.previous_tag.description)
                 for minor in list([current_tag.real_tag_description] + current_tag.minors):
-                    if minor.find('*') == 0 and 'from_commit' not in filter.keys():
-                        filter['from_tag'] = minor.replace('*', '')
+                    if minor.find('*') == 0 and 'from_commit' not in filter_.keys():
+                        filter_['from_tag'] = minor.replace('*', '')
                         continue
-                    filter['to_tag'] = minor
-                    print(" \n************ VERSAO: " + filter['to_tag'] + ' ***************\n\n')
-                    for commit_from_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                        __build_and_save_commit(commit_from_repository, current_tag, filter['to_tag'])
+                    filter_['to_tag'] = minor
+                    print(" \n************ VERSAO: " + filter_['to_tag'] + ' ***************\n\n')
+                    for commit_from_repository in RepositoryMining(project.project_path, **filter_).traverse_commits():
+                        __build_and_save_commit(commit_from_repository, current_tag, filter_['to_tag'])
 
-                    filter['from_tag'] = minor
-                    filter.pop('from_commit', None)
+                    filter_['from_tag'] = minor
+                    filter_.pop('from_commit', None)
 
             else:
                 if current_tag.previous_tag is not None:
-                    if 'from_tag' in filter:
-                        filter['from_tag'] = current_tag.previous_tag.description
+                    if 'from_tag' in filter_:
+                        filter_['from_tag'] = current_tag.previous_tag.description
                     else:
-                        filter.setdefault('from_tag', current_tag.previous_tag.description)
-                if 'to_tag' in filter:
-                    filter['to_tag'] = current_tag.real_tag_description
+                        filter_.setdefault('from_tag', current_tag.previous_tag.description)
+                if 'to_tag' in filter_:
+                    filter_['to_tag'] = current_tag.real_tag_description
                 else:
-                    filter.setdefault('to_tag', current_tag.real_tag_description)
-                for commit_from_repository in RepositoryMining(project.project_path, **filter).traverse_commits():
-                    __build_and_save_commit(commit_from_repository, current_tag, filter['to_tag'])
+                    filter_.setdefault('to_tag', current_tag.real_tag_description)
+                for commit_from_repository in RepositoryMining(project.project_path, **filter_).traverse_commits():
+                    __build_and_save_commit(commit_from_repository, current_tag, filter_['to_tag'])
             __update_commit(commit_repository.find_all_commits_by_tag(tag_id=current_tag))
 
 
@@ -220,34 +217,6 @@ def __build_and_save_commit(commit_from_repository, tag, real_tag):
 
         author_name = author_name.strip()
 
-        if author_name == 'Mike McCandless':
-            if commit_from_repository.committer.name == 'Mike McCandless':
-                committer_name = 'Michael McCandless'
-            author_name = 'Michael McCandless'
-        elif author_name == 'jkf' or author_name == 'Martijn Kruithof' or author_name == 'J.M.Martijn Kruithof':
-            if commit_from_repository.committer.name == 'jkf' or commit_from_repository.committer.name == 'Martijn Kruithof' or commit_from_repository.committer.name == 'J.M.Martijn Kruithof':
-                committer_name = 'Jacobus Martinus Kruithof'
-            author_name = 'Jacobus Martinus Kruithof'
-        elif author_name == 'Steve Cohen':
-            if commit_from_repository.committer.name == 'Steve Cohen':
-                committer_name = 'Steven M. Cohen'
-            author_name = 'Steven M. Cohen'
-        elif author_name == 'Jesse Glick':
-            if commit_from_repository.committer.name == 'Jesse Glick':
-                committer_name = 'Jesse N. Glick'
-            author_name = 'Jesse N. Glick'
-        elif author_name == 'Gintas Grigelionis':
-            if commit_from_repository.committer.name == 'Gintas Grigelionis':
-                committer_name = 'twogee'
-            author_name = 'twogee'
-        elif author_name == 'Jan Matrne':
-            if commit_from_repository.committer.name == 'Jan Matrne':
-                committer_name = 'Jan Materne'
-            author_name = 'Jan Materne'
-        elif author_name == 'cmanolache':
-            if commit_from_repository.committer.name == 'cmanolache':
-                committer_name = 'Costin Manolache'
-            author_name == 'Costin Manolache'
         author = developer_repository.find_all_developer_by_iexact_name(name=author_name)
         if author.count() == 0:
             if login != 'dev-null' and login != 'ant-dev':

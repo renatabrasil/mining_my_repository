@@ -262,7 +262,7 @@ def compiled(request, file_id):
 # Using overall design evaluation
 @require_http_methods(["GET", "POST"])
 def impactful_commits(request):
-    export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true") if True else False
+    export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true")
 
     full_tag = request.POST.get('until_tag')
 

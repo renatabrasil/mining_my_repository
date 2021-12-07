@@ -508,7 +508,6 @@ def update_commit(sender, instance, **kwargs):
 def detect_impact_loc(code):
     total_lines = code.count('\n')
     if total_lines > 0:
-        commented_lines = 0
         lines = code.split("\n")
         # In case we should consider commented lines
         for line in lines:
@@ -519,18 +518,13 @@ def detect_impact_loc(code):
                     found = m.group(0)
                     line = line.replace(found, '')
                     line.replace(' ', '', 1)
-                    if line.strip().isdigit():
-                        commented_lines += 1
-                        continue
-                    else:
+                    if not line.strip().isdigit():
                         return True
                 elif n:
                     found = n.group(0)
                     line = line.replace(found, '')
                     line.replace(' ', '', 1)
-                    if line.strip().isdigit():
-                        commented_lines += 1
-                    else:
+                    if not line.strip().isdigit():
                         return True
             elif not line.replace(" ", "").isdigit() and (line != '' and line != '\n'):
                 return True

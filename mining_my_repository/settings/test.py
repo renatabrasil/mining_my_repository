@@ -1,18 +1,12 @@
-# import dj_database_url
-# from dj_config_url import config
-
 from .base import *
 
 print(f"SETTINGS test CARREGADO")
 
 TESTING = True
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
-# os.environ["ENVIRONMENT_VARIABLE"] = "test"
-
-
-# DATABASES['default'] = dj_database_url.config()
 
 import django
+
 #
 # #
 django.setup()
