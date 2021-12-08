@@ -2,12 +2,13 @@
 from django.urls import path
 
 # local Django
-from . import views
+from . import views2
+from .views import ContributionsView
 
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('<int:commit_id>/', views.detail, name='detail'),
-    path('commits/search/', views.detail_by_hash, name='detail_by_hash'),
-    path('developers/<int:committer_id>/', views.detail_in_committer, ),
-    path('<int:directory_id>/change', views.visible_directory),
+    path('2', views2.index, name='index'),
+    path('', ContributionsView.as_view(), name='index'),
+    path('<int:commit_id>/', views2.detail, name='detail'),
+    path('commits/', views2.detail_by_hash, name='detail_by_hash'),
+    path('developers/<int:committer_id>/', views2.detail_in_committer),
 ]
