@@ -56,19 +56,20 @@ class ContributionsView(View):
             filter_ = {}
             project = self.project_repository.find_by_primary_key(pk=request.session['project'])
 
-        if tag.previous_tag:
-            last_commit_saved = self.commit_repository.find_all_commit_from_all_previous_tag(tag_id=tag.id,
-                                                                                             project_id=request.session[
-                                                                                                 'project']).last()
-            filter_['from_tag'] = tag.previous_tag.description
-            if last_commit_saved:
-                filter_['from_commit'] = last_commit_saved.hash
-                filter_.pop('from_tag', None)
+            if tag.previous_tag:
+                last_commit_saved = self.commit_repository.find_all_commit_from_all_previous_tag(tag_id=tag.id,
+                                                                                                 project_id=
+                                                                                                 request.session[
+                                                                                                     'project']).last()
+                filter_['from_tag'] = tag.previous_tag.description
+                if last_commit_saved:
+                    filter_['from_commit'] = last_commit_saved.hash
+                    filter_.pop('from_tag', None)
 
-        filter_['only_in_branch'] = project.main_branch
-        set_default_filter_parameters(filter_)
+            filter_['only_in_branch'] = project.main_branch
+            set_default_filter_parameters(filter_)
 
-        self.__load_commits_by_tag(tag, filter_)
+            self.__load_commits_by_tag(tag, filter_)
 
         # LOAD
 
@@ -123,107 +124,78 @@ class ContributionsView(View):
                 filter_['from_tag'] = current_tag.previous_tag.description
 
     def __load_commits_from_repository_and_save_in_db(self, current_tag: Tag, filter_: dict) -> Commit:
-        for commit_from_repository in RepositoryMining(current_tag.project.project_path, **filter_).traverse_commits():
-            commit = self.commit_repository.find_all_commits_by_hash(hash=commit_from_repository.hash)
-            if not commit.exists():
-                commit = self.__save_commit(commit_from_repository, current_tag, filter_['to_tag'])
-        return commit
+        try:
+            commits = []
+            for commit_from_repository in RepositoryMining(current_tag.project.project_path,
+                                                           **filter_).traverse_commits():
+                commit = self.commit_repository.find_all_commits_by_hash(hash=commit_from_repository.hash)
+                if not commit.exists():
+                    author, committer = self.__configure_author_and_committer(commit_from_repository)
 
-    def __save_commit(self, commit_from_repository, tag: Tag, real_tag: str):
+                    commit: Commit = Commit(hash=commit_from_repository.hash, tag=current_tag,
+                                            parents_str=str(commit_from_repository.parents)[1:-1].replace(" ",
+                                                                                                          "").replace(
+                                                "'",
+                                                ""),
+                                            msg=commit_from_repository.msg,
+                                            author=author, author_date=commit_from_repository.author_date,
+                                            committer=committer,
+                                            committer_date=commit_from_repository.committer_date,
+                                            real_tag_description=filter_['to_tag'])
 
-        author, committer = self.__save_author_and_committer(commit_from_repository, tag)
+                    for modification_repo in commit_from_repository.modifications:
+                        # Save only commits with java file and not in test directory
+                        if self.__no_commits_constraints(modification_repo, current_tag):
+                            modification: Modification = Modification(commit=commit,
+                                                                      old_path=modification_repo.old_path,
+                                                                      new_path=modification_repo.new_path,
+                                                                      change_type=modification_repo.change_type,
+                                                                      diff=modification_repo.diff,
+                                                                      added=modification_repo.added,
+                                                                      removed=modification_repo.removed)
 
-        commit = Commit(hash=commit_from_repository.hash, tag=tag,
-                        parents_str=str(commit_from_repository.parents)[1:-1].replace(" ", "").replace("'", ""),
-                        msg=commit_from_repository.msg,
-                        author=author, author_date=commit_from_repository.author_date,
-                        committer=committer,
-                        committer_date=commit_from_repository.committer_date, real_tag_description=real_tag)
+                            logger.info(modification.__str__())
+                            modification.save()
+                    if commit.pk:
+                        commit.update_component_commits()
 
-        total_modification = len(self.__save_all_modifications_from_commit(commit_from_repository, commit))
-        if commit.pk:
-            commit.update_component_commits()
+                    commits.append(commit)
+            return commits
+        except Exception as err:
+            logger.exception(f'Erro ao salvar arquivo {modification.path}')
+            logger.exception(err)
+            raise
 
-    def __save_author_and_committer(self, commit_from_repository, tag: Tag):
+    def __configure_author_and_committer(self, commit_from_repository):
+        author = Developer.create(name=commit_from_repository.author.name, email=commit_from_repository.author.email,
+                                  login=commit_from_repository.author.email.split("@")[0])
+        author.format_data(commit_from_repository.msg)
 
-        author_name_from_repo = CommitUtils.strip_accents(commit_from_repository.author.name)
-        committer_name = CommitUtils.strip_accents(commit_from_repository.committer.name)
-        email = commit_from_repository.author.email.lower()
-        login = commit_from_repository.author.email.split("@")[0].lower()
-
-        author_name_from_repo = author_name_from_repo.strip()
-
-        author = self.developer_repository.find_all_developer_by_iexact_name(name=author_name_from_repo)
-        if author.count() == 0:
-            author = self.__adjust_and_save_author(author_name_from_repo, login, email)
-
-        if author.name == commit_from_repository.committer.name:
-            committer = author
+        author_db: Developer = self.developer_repository.find_all_developer_by_iexact_name(
+            name=author.name).first()
+        if author_db:
+            author.update_existing_developer(author_db)
         else:
-            committer = self.__adjust_and_save_committer(commit_from_repository.committer, committer_name)
+            author_db: Developer = self.developer_repository.find_all_developer_by_login(login=author.login).first()
+            if author_db:
+                author.update_existing_developer(author_db)
+
+        committer = Developer.create(name=commit_from_repository.committer.name,
+                                     email=commit_from_repository.committer.email,
+                                     login=commit_from_repository.committer.email.split("@")[0])
+        committer.format_data(commit_from_repository.msg)
+
+        committer_db: Developer = self.developer_repository.find_all_developer_by_iexact_name(
+            name=committer.name).first()
+        if committer_db:
+            committer.update_existing_developer(committer_db)
+        else:
+            committer_db: Developer = self.developer_repository.find_all_developer_by_login(
+                login=committer.login).first()
+            if committer_db:
+                committer.update_existing_developer(committer_db)
 
         return author, committer
-
-    def __adjust_and_save_author(self, author_name_from_repo, login: str, email: str):
-        if login != 'dev-null' and login != 'ant-dev':
-            author = self.developer_repository.find_all_developer_by_login(login=login)
-        # If it is find by login, update fields
-        if author.count() > 0:
-            author = author[0]
-            author.email = email
-            if author_name_from_repo:
-                author.name = author_name_from_repo
-        elif not author_name_from_repo:
-            author = Developer(name=login, email=email, login=login)
-        else:
-            author = Developer(name=author_name_from_repo, email=email, login=login)
-
-        # If it is find by name, update fields
-        author = author[0]
-        author.email = email
-        author.login = login
-
-        return author
-
-    def __adjust_and_save_committer(self, committer_from_repo, committer_name):
-        committer = self.developer_repository.find_all_developer_by_iexact_name(name=committer_name)
-        if committer.count() == 0:
-            email = committer_from_repo.email.lower()
-            login = email.split("@")[0].lower()
-            committer = self.developer_repository.find_all_developer_by_login(login=login)
-            if committer.count() > 0:
-                committer = committer[0]
-            else:
-                committer = Developer(name=CommitUtils.strip_accents(committer_from_repo.name),
-                                      email=email, login=login)
-        else:
-            committer = committer[0]
-        return committer
-
-    def __save_all_modifications_from_commit(self, commit_from_repo, commit: Commit):
-        modifications = []
-        for modification_repo in commit_from_repo.modifications:
-            # Save only commits with java file and not in test directory
-            if self.__no_commits_constraints(modification_repo, commit.tag):
-                total_modification = total_modification + 1
-                if hasattr(modification_repo, 'nloc'):
-                    nloc = modification_repo.nloc
-                else:
-                    nloc = None
-                modification = Modification(commit=commit, old_path=modification_repo.old_path,
-                                            new_path=modification_repo.new_path,
-                                            change_type=modification_repo.change_type,
-                                            diff=modification_repo.diff,
-                                            source_code=modification_repo.source_code,
-                                            source_code_before=modification_repo.source_code_before,
-                                            added=modification_repo.added,
-                                            removed=modification_repo.removed,
-                                            nloc=nloc,
-                                            complexity=modification_repo.complexity)
-                logger.info(modification.__str__())
-                modification.save()
-                modifications.append(modification)
-        return modifications
 
     def __update_commit(self, commits):
         for commit in commits:

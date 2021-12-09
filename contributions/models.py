@@ -39,14 +39,69 @@ filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.DEBUG)
 
+SUBMITTED_BY__PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
+SUBMITTED_BY_SIMPLE__REGEX = r'\Submitted\s*([bB][yY])[:]*\s*'
+NAME_PATTERN__REGEX = r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-. ]+)+|(\)|\>|\])'
+FULL_EMAIL_PATTERN_REGEX = r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+'
+EMAIL_PATTERN_REGEX = r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
+
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
     login = models.CharField(max_length=60, default='')
     email = models.CharField(max_length=200)
 
+    @classmethod
+    def create(cls, name="", email="", login=""):
+        developer = cls(name=CommitUtils.strip_accents(name).strip(), email=email.lower(), login=login.lower())
+        return developer
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.name = CommitUtils.strip_accents(kwargs['name']).strip()
+    #     self.email = kwargs['email'].lower()
+    #     self.login = kwargs['login'].lower()
+
     def __str__(self):
         return f'{self.name} (login: {self.login}, email: {self.email})'
+
+    def format_data(self, message: str):
+        match = re.search(SUBMITTED_BY_PARTICLE_REGEX, message, re.IGNORECASE)
+        if match:
+            found = match.group(0)
+            if found:
+                author_and_email = re.sub(SUBMITTED_BY_SIMPLE__REGEX, '', found)
+                author_name = re.sub(NAME_PATTERN__REGEX, '', author_and_email)
+                author_name = author_name.replace("\"", "")
+                author_name = CommitUtils.strip_accents(author_name)
+                author_name = author_name.strip()
+
+                email_pattern = re.search(EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                full_email_pattern = re.search(FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                if email_pattern:
+                    email_found = email_pattern.group(0)
+                    if email_found:
+                        self.email = email_found.lower()
+                elif full_email_pattern:
+                    # Full email
+                    email_found = full_email_pattern.group(0)
+                    if email_found:
+                        self.email = CommitUtils.get_email(email_found)
+                self.login = self.email.split("@")[0].lower()
+
+            self.name = author_name.strip()
+
+    def update_existing_developer(self, developer_db) -> None:
+
+        if developer_db:
+            if self.login == developer_db.login:  # Atualiza tudo menos o login
+                developer_db.email = self.email
+                developer_db.name = self.name
+                self = developer_db
+            else:
+                developer_db.email = self.email  # Atualiza tudo menos o nome
+                developer_db.login = self.login
+                self = developer_db
 
 
 class Project(models.Model):
@@ -75,7 +130,6 @@ class Tag(models.Model):
     prepare_build_command = models.CharField(max_length=800, null=True)
     core_component = models.CharField(max_length=280, default='')
     main_directory = models.CharField(max_length=280, default='')
-    v1_1 = 1
 
     @property
     def minors(self):
@@ -379,16 +433,12 @@ class Modification(models.Model):
         default=MODIFIED,
     )
     diff = models.TextField(default="")
-    source_code = models.TextField(null=True)
-    source_code_before = models.TextField(null=True)
     added = models.IntegerField(default=0)
     removed = models.IntegerField(default=0)
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
     has_impact_loc = models.BooleanField(default=False)
 
-    nloc = models.IntegerField(default=0, null=True)
-    complexity = models.IntegerField(null=True)
 
     def __str__(self):
         return f"Commit: {self.commit.hash}, Path: {self.path}"
