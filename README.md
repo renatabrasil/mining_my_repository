@@ -24,10 +24,11 @@ Java projects.
 
 ### Next steps:
 
-* Clear the code and prepare the first release
-* Implement the infrastructure for testing
 * Implement unit tests
-* Set up test and production environment
+* Refactoring design to reach a sustainable level of maintainability
+  * Change functions based view for class based views
+  * Separate views from user cases
+  * Bring some logic to models
 
 ## Getting Started
 
