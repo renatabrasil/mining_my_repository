@@ -13,14 +13,6 @@ from contributions.services import ContributionsService
 logger = logging.getLogger(__name__)
 
 
-def set_default_filter_parameters(filter_: dict):
-    filter_.pop('from_commit', None)
-    filter_.pop('from_tag', None)
-    filter_.pop('to_tag', None)
-    filter_['only_modifications_with_file_types'] = ['.java']
-    filter_['only_no_merge'] = True
-
-
 class ContributionsView(View):
     @inject
     def __init__(self, contributions_service: ContributionsService):
