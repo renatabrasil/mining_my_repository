@@ -10,12 +10,11 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from pydriller import GitRepository
 
-# local Django
 from common.utils import CommitUtils
+# local Django
+from contributions.constants import RegexConstants
 
 SUBMITTED_BY_PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
-
-COMMENTARY_REGEX = r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*'
 
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
@@ -27,23 +26,11 @@ HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207
                "1de4dfa58f198e1590294951183ff61210d48549", "0c4f5b1b629f96ffda3d4aca672e10c40b55bf0b",
                "ba9a8832d043d876fd18b2027cc933fc6689ca9c", "2e84be2474b10adb04c13fc622483be04ee3be4d",
                "6fcbf9b848c63465d26a40387a9be212e708f80b"]
-ANT = 1
-LUCENE = 2
-MAVEN = 3
-OPENJPA = 4
-CASSANDRA = 5
-HADOOP = 6
 
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.DEBUG)
-
-SUBMITTED_BY__PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
-SUBMITTED_BY_SIMPLE__REGEX = r'\Submitted\s*([bB][yY])[:]*\s*'
-NAME_PATTERN__REGEX = r'\s*(\[|\(|\<)|[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-. ]+)+|(\)|\>|\])'
-FULL_EMAIL_PATTERN_REGEX = r'[\sa-zA-Z0-9_.+-]+(\s*(a|A)(t|T)\s*)[a-zA-Z0-9-]+((\s*(d|D)(O|o)(t|T)\s*)[a-zA-Z0-9-. ]+)+'
-EMAIL_PATTERN_REGEX = r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
 
 
 class Developer(models.Model):
@@ -70,14 +57,14 @@ class Developer(models.Model):
         if match:
             found = match.group(0)
             if found:
-                author_and_email = re.sub(SUBMITTED_BY_SIMPLE__REGEX, '', found)
-                author_name = re.sub(NAME_PATTERN__REGEX, '', author_and_email)
+                author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
+                author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
                 author_name = author_name.replace("\"", "")
                 author_name = CommitUtils.strip_accents(author_name)
                 author_name = author_name.strip()
 
-                email_pattern = re.search(EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
-                full_email_pattern = re.search(FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
                 if email_pattern:
                     email_found = email_pattern.group(0)
                     if email_found:
@@ -439,7 +426,6 @@ class Modification(models.Model):
     u_cloc = models.IntegerField(default=0)
     has_impact_loc = models.BooleanField(default=False)
 
-
     def __str__(self):
         return f"Commit: {self.commit.hash}, Path: {self.path}"
 
@@ -562,7 +548,7 @@ def detect_impact_loc(code):
         # In case we should consider commented lines
         for line in lines:
             m = re.search(r"\u002F/.*", line)
-            n = re.search(COMMENTARY_REGEX, line)
+            n = re.search(RegexConstants.COMMENTARY_REGEX, line)
             if m or n:
                 if m:
                     found = m.group(0)

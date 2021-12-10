@@ -17,10 +17,9 @@ from pydriller.git_repository import GitRepository
 
 # local Django
 from common.utils import CommitUtils, ViewUtils
+from contributions.constants import ProjectsConstants
 from contributions.models import (
-    Commit, Developer, Modification,
-    ANT, LUCENE, MAVEN, OPENJPA, HADOOP,
-    CASSANDRA, __has_impact_loc_calculation_static_method)
+    Commit, Developer, Modification, __has_impact_loc_calculation_static_method)
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
@@ -390,23 +389,23 @@ def __no_commits_constraints(modification, tag):
     cassandra_conditions = True
     shiro_conditions = True
 
-    if tag.project.id == ANT:
+    if tag.project.id == ProjectsConstants.ANT:
         ant_conditions = str.lower(directory_str).find('proposal') == -1
-    if tag.project.id == LUCENE:
+    if tag.project.id == ProjectsConstants.LUCENE:
         lucene_conditions = str.lower(directory_str).find('/demo/') == -1
         lucene_conditions = lucene_conditions and (str.lower(directory_str).startswith('src/java') or (
                 str.lower(directory_str).startswith('lucene') and str.lower(directory_str).find(
             'src/java') > -1)) and str.lower(directory_str).find('solr') == -1
         # or str.lower(directory_str).startswith('lucene/core')) and str.lower(directory_str).find('solr') == -1
-    if tag.project.id == MAVEN:
+    if tag.project.id == ProjectsConstants.MAVEN:
         maven_conditions = str.lower(directory_str).startswith('maven-core') and str.lower(directory_str).find(
             'maven-core-') == -1
-    if tag.project.id == OPENJPA:
+    if tag.project.id == ProjectsConstants.OPENJPA:
         openjpa_conditions = str.lower(directory_str).startswith('openjpa-kernel/')
 
-    if tag.project.id == CASSANDRA:
+    if tag.project.id == ProjectsConstants.CASSANDRA:
         cassandra_conditions = str.lower(directory_str).startswith(tag.main_directory)
-    if tag.project.id == HADOOP:
+    if tag.project.id == ProjectsConstants.HADOOP:
         dirs = [x.strip() for x in tag.core_component.split(',')]
         hadoop_conditions = False
         for dir in dirs:
