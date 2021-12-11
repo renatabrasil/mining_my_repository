@@ -1,12 +1,12 @@
 import logging
 import time
 
-from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.shortcuts import render
+from django.template import loader
 from django.views import View
 from injector import inject
 
-from common.utils import ViewUtils
 from contributions.models import Commit
 from contributions.services import ContributionsService
 
@@ -25,48 +25,24 @@ class ContributionsView(View):
     def get(self, request):
         start = time.time()
 
-        request = self.contributions_service.index(request)
-
-        context = {
-            'tag': request.GET.get('tag.description'),
-            'current_tag_filter': request.GET.get('current_tag_filter'),
-            'latest_commit_list': request.GET.get('latest_commit_list'),
-        }
+        context = self.contributions_service.index(request)
 
         end = time.time()
-        self.logger.info("Tempo total: " + str(end - start))
+        logger.info("Tempo total: " + str(end - start))
+        template = loader.get_template(self.template_name)
 
-        return render(request, self.template_name, context)
+        return HttpResponse(template.render(context, request))
 
     def post(self, request):
         start = time.time()
-        tag = ViewUtils.load_tag(request)
 
         # LOAD FROM PYDRILLER
         request = self.contributions_service.process(request)
 
         # LOAD
-
-        tag = ViewUtils.load_tag(request)
-        tag_id = request.POST.get('tag_filter_id')
-
-        current_tag_filter = self.tag_repository.find_by_primary_key(pk=tag_id) if tag_id else None
-        if not tag_id:
-            latest_commit_list = self.commit_repository.find_all().order_by("tag_id", "author__name", "committer_date")
-
-        paginator = Paginator(latest_commit_list, 100)
-
-        page = request.GET.get('page')
-        latest_commit_list = paginator.get_page(page)
-
-        context = {
-            'tag': tag.description,
-            'current_tag_filter': current_tag_filter,
-            'latest_commit_list': latest_commit_list,
-        }
+        context = self.contributions_service.index(request)
 
         end = time.time()
-        self.logger.info("Tempo total: " + str(end - start))
+        logger.info("Tempo total: " + str(end - start))
 
         return render(request, self.template_name, context)
-

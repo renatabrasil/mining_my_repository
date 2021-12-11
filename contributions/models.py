@@ -14,8 +14,6 @@ from common.utils import CommitUtils
 # local Django
 from contributions.constants import RegexConstants
 
-SUBMITTED_BY_PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
-
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
                "390398d38e4fd0d195c91a384f6198a1528bb317", "8ca32df08e5021d144ebfa8b85da7879143c01ae",
@@ -43,17 +41,11 @@ class Developer(models.Model):
         developer = cls(name=CommitUtils.strip_accents(name).strip(), email=email.lower(), login=login.lower())
         return developer
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.name = CommitUtils.strip_accents(kwargs['name']).strip()
-    #     self.email = kwargs['email'].lower()
-    #     self.login = kwargs['login'].lower()
-
     def __str__(self):
         return f'{self.name} (login: {self.login}, email: {self.email})'
 
     def format_data(self, message: str):
-        match = re.search(SUBMITTED_BY_PARTICLE_REGEX, message, re.IGNORECASE)
+        match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
         if match:
             found = match.group(0)
             if found:
@@ -281,7 +273,7 @@ class Commit(models.Model):
             component.calculate_experience()
 
     def __has_submitted_by_in_the_commit_msg__(self):
-        m = re.search(SUBMITTED_BY_PARTICLE_REGEX, self.msg, re.IGNORECASE)
+        m = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, self.msg, re.IGNORECASE)
         if m:
             found = m.group(0)
             return found

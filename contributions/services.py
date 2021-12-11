@@ -47,7 +47,8 @@ class ContributionsService:
 
         return request
 
-    def index(self, request):
+    def index(self, request) -> dict:
+        
         tag = ViewUtils.load_tag(request)
         tag_id = request.POST.get('tag_filter_id')
 
@@ -61,11 +62,13 @@ class ContributionsService:
         page = request.GET.get('page')
         latest_commit_list = paginator.get_page(page)
 
-        request.GET['latest_commit_list'] = latest_commit_list
-        request.GET['current_tag_filter'] = current_tag_filter
-        request.GET['tag.description'] = tag.description
+        context = {
+            'tag': tag.description,
+            'current_tag_filter': current_tag_filter,
+            'latest_commit_list': latest_commit_list,
+        }
 
-        return request
+        return context
 
     def __set_filter_parameters(self, filter_: dict):
         filter_.pop('from_commit', None)
