@@ -274,19 +274,14 @@ class Commit(models.Model):
 
     def __has_submitted_by_in_the_commit_msg__(self):
         m = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, self.msg, re.IGNORECASE)
-        if m:
-            found = m.group(0)
-            return found
-        return False
+        return m and m.group(0)
 
     def save(self, *args, **kwargs):
         self.author.save()
         self.committer.save()
 
         for hash in self.parents:
-            parent = Commit.objects.filter(hash=hash)
-            if parent.count() > 0:
-                self.parent = parent[0]
+            self.parent = Commit.objects.filter(hash=hash).first()
 
         if self.pk is None:
 
@@ -301,10 +296,10 @@ class Commit(models.Model):
             self.total_commits = previous_commit_of_the_author.total_commits if previous_commit_of_the_author is not None else 0
 
             self.cloc_activity = 0
-            if previous_commit_of_the_author is not None:
+            if not previous_commit_of_the_author:
                 self.cloc_activity = previous_commit_of_the_author.cloc_activity
 
-            if first_commit_of_the_author is not None:
+            if not first_commit_of_the_author:
                 self.author_seniority = self.author_date - first_commit_of_the_author.author_date
                 self.author_seniority = abs(self.author_seniority.days)
 
