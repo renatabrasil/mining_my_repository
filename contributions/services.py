@@ -1,6 +1,7 @@
 import logging
 
 from django.core.paginator import Paginator
+from django.http import Http404
 from injector import inject
 from pydriller import RepositoryMining
 
@@ -48,7 +49,7 @@ class ContributionsService:
         return request
 
     def index(self, request) -> dict:
-        
+
         tag = ViewUtils.load_tag(request)
         tag_id = request.POST.get('tag_filter_id')
 
@@ -78,31 +79,37 @@ class ContributionsService:
         filter_['only_no_merge'] = True
 
     def __load_commits_from_repo_by_tag(self, tag: Tag, filter_: dict) -> None:
-        tags = [x for x in
-                list(self.tag_repository.find_all_major_tags_by_project(project_id=tag.project.id, tag_id=tag.id))
-                if
-                x.id != 16]
-        for current_tag in tags:
-            if current_tag.minors:
-                if current_tag.previous_tag and 'from_commit' not in filter_ and 'from_tag' in filter_:
-                    filter_['from_tag'] = current_tag.previous_tag.description
+        if tag.minors:
+            if tag.previous_tag and 'from_commit' not in filter_ and 'from_tag' in filter_:
+                filter_['from_tag'] = tag.previous_tag.description
 
-                current_tag_and_its_minor_tags = list([current_tag.real_tag_description] + current_tag.minors)
-                for minor in current_tag_and_its_minor_tags:
-                    if minor.find(ConstantsUtils.TAG_DELIMITER) == 0 and 'from_commit' not in filter_.keys():
-                        filter_['from_tag'] = minor.replace(ConstantsUtils.TAG_DELIMITER, '')
-                        continue
-                    filter_['to_tag'] = minor
+            current_tag_and_its_minor_tags = list([tag.real_tag_description] + tag.minors)
+            for minor in current_tag_and_its_minor_tags:
+                if minor.find(ConstantsUtils.TAG_DELIMITER) == 0 and 'from_commit' not in filter_.keys():
+                    filter_['from_tag'] = minor.replace(ConstantsUtils.TAG_DELIMITER, '')
+                    continue
+                filter_['to_tag'] = minor
 
-                    self.logger.info(" \n************ VERSAO: " + filter_['to_tag'] + ' ***************\n\n')
+                self.logger.info(" \n************ VERSAO: " + filter_['to_tag'] + ' ***************\n\n')
 
-                    self.__load_commits_from_repo_and_save_in_db(current_tag, filter_)
+                self.__load_commits_from_repo_and_save_in_db(tag, filter_)
 
-                    filter_['from_tag'] = minor
-                    filter_.pop('from_commit', None)
+                filter_['from_tag'] = minor
+                filter_.pop('from_commit', None)
 
-            elif current_tag.previous_tag and 'from_tag' in filter_:
-                filter_['from_tag'] = current_tag.previous_tag.description
+        elif tag.previous_tag and 'from_tag' in filter_:
+            filter_['from_tag'] = tag.previous_tag.description
+        else:
+            if tag.previous_tag:
+                if 'from_tag' in filter_:
+                    filter_['from_tag'] = tag.previous_tag.description
+                else:
+                    filter_['from_tag'] = tag.previous_tag.description
+            if 'to_tag' in filter_:
+                filter_['to_tag'] = tag.real_tag_description
+            else:
+                filter_['to_tag'] = tag.real_tag_description
+            self.__load_commits_from_repo_and_save_in_db(tag, filter_)
 
     def __load_commits_from_repo_and_save_in_db(self, current_tag: Tag, filter_: dict) -> Commit:
         try:
@@ -222,3 +229,23 @@ class ContributionsService:
                     parent.children_commit = commit
                     commit.parent = parent
                     parent.save(update_fields=['children_commit'])
+
+
+class ContributionsDetailsService:
+    @inject
+    def __init__(self, commit_repository: CommitRepository):
+        self.commit_repository = commit_repository
+        self.logger = logging.getLogger(__name__)
+
+    def show_commit(self, hash: str) -> Commit:
+        try:
+            commit = self.commit_repository.find_all_commits_by_hash(hash=hash).first()
+            # for mod in commit.modifications.all():
+            #     GR = GitRepository(commit.tag.project.project_path)
+            #
+            #     parsed_lines = GR.parse_diff(mod.diff)
+            #     has_impact_loc_calculation_static_method(parsed_lines)
+
+            return commit
+        except Commit.DoesNotExist:
+            raise Http404("Commit does not exist")

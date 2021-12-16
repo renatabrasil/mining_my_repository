@@ -146,7 +146,7 @@ class ViewUtils(object):
                 tag_id = models.Tag.objects.filter(description=request.GET.get('tag')).first().get('id', None)
 
             if not tag_id:
-                raise ValueError("Enter in admin session and provide a project and a tag belong to it.")
+                tag_id = models.Tag.objects.all().first().id
             request.session['tag'] = tag_id
             return models.Tag.objects.filter(pk=tag_id).first()
         except Exception as e:

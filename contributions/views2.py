@@ -7,11 +7,11 @@ import time
 # third-party
 # Django
 from django.core.paginator import Paginator
-from django.http import (Http404, HttpResponse)
+from django.http import (HttpResponse)
 from django.shortcuts import render
 from django.template import loader
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_http_methods
 from pydriller import RepositoryMining
 from pydriller.git_repository import GitRepository
 
@@ -19,7 +19,7 @@ from pydriller.git_repository import GitRepository
 from common.utils import CommitUtils, ViewUtils
 from contributions.constants import ProjectsConstants
 from contributions.models import (
-    Commit, Developer, Modification, __has_impact_loc_calculation_static_method)
+    Commit, Developer, Modification)
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
@@ -306,54 +306,10 @@ def detail_by_hash(request):
                   {'commit': commit, 'current_commit_hash': hash_commit, 'title': 'Detalhes do commit'})
 
 
-@require_GET
-def detail(request, commit_id):
-    try:
-        commit = commit_repository.find_by_primary_key(pk=commit_id)
-        commit.u_cloc
-        print(commit.u_cloc)
-        print(commit.committer_date)
-        for mod in commit.modifications.all():
-            GR = GitRepository(commit.tag.project.project_path)
-
-            parsed_lines = GR.parse_diff(mod.diff)
-            __has_impact_loc_calculation_static_method(parsed_lines)
-
-    except Developer.DoesNotExist:
-        raise Http404("Question does not exist")
-    return render(request, 'contributions/detail.html', {'commit': commit})
-
-
-@require_GET
-def detail_in_committer(request, committer_id):
-    try:
-        project = project_repository.find_project_by_name(name="Apache Ant")
-        path = ""
-        if request.GET.get('path'):
-            path = request.GET.get('path')
-
-        tag = ViewUtils.load_tag(request)
-
-        latest_commit_list = list(
-            commit_repository.find_all_distinct_commits_by_committer_and_modifications_for_specific_directory(
-                committer_id=committer_id, tag_id=tag.id,
-                modifications=modification_repository.find_all_modifications_by_path(
-                    directory_id=int(path))))
-        context = {
-            'latest_commit_list': latest_commit_list,
-            'project': project,
-        }
-    except Developer.DoesNotExist:
-        raise Http404("Question does not exist")
-    return render(request, 'contributions/index.html', context)
-
-
-''' Load all commits including all previous tag of current tag
-param: current tag
-return all commits up to current tag '''
-
-
 def load_commits_from_tags(tag):
+    ''' Load all commits including all previous tag of current tag
+    param: current tag
+    return all commits up to current tag '''
     commits = commit_repository.find_all_distinct_commits_by_tag_description(description=tag.description)
     if len(commits) == 0:
         return commits
