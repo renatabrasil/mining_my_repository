@@ -2,8 +2,6 @@
 import logging
 import re
 
-# third-party
-# Django
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -14,6 +12,9 @@ from common.utils import CommitUtils
 # local Django
 from contributions.constants import RegexConstants
 from contributions.helpers.models_helper import detect_impact_loc, count_loc
+
+# third-party
+# Django
 
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
@@ -71,16 +72,14 @@ class Developer(models.Model):
 
             self.name = author_name.strip()
 
-    def update_existing_developer(self, developer_db) -> None:
-        if developer_db:
-            if self.login == developer_db.login:  # Atualiza tudo menos o login
-                developer_db.email = self.email
-                developer_db.name = self.name
-                self = developer_db
-            else:
-                developer_db.email = self.email  # Atualiza tudo menos o nome
-                developer_db.login = self.login
-                self = developer_db
+    def update_existing_developer(self, developer):
+        if self.login == developer.login:  # Atualiza tudo menos o login
+            self.email = developer.email
+            self.name = developer.name
+        else:
+            self.email = developer.email  # Atualiza tudo menos o nome
+            self.login = developer.login
+        return self
 
 
 class Project(models.Model):
@@ -280,14 +279,14 @@ class Commit(models.Model):
         self.author.save()
         self.committer.save()
 
-        for hash in self.parents:
-            self.parent = Commit.objects.filter(hash=hash).first()
-            break
+        self.get_parent_commit()
 
         if self.pk is None:
             logger.info(f'Commit: {self}')
 
             self.has_submitted_by = self.__has_submitted_by_in_the_commit_msg__()
+
+            self.refresh_measures_diff()
 
             self.author_experience = self.determine_author_experience()
             self.total_commits += 1
@@ -299,28 +298,42 @@ class Commit(models.Model):
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
 
-    def determine_author_experience(self) -> float:
-        previous_commit_of_the_author = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
-                                                              tag__project=self.tag.project).last()
-        first_commit_of_the_author = Commit.objects.filter(author=self.author, has_submitted_by=False,
-                                                           tag_id__lte=self.tag.id,
-                                                           tag__project=self.tag.project).first()
-        self.total_commits = previous_commit_of_the_author.total_commits if previous_commit_of_the_author is not None else 0
-        self.cloc_activity = 0
-        if previous_commit_of_the_author:
-            self.cloc_activity = previous_commit_of_the_author.cloc_activity
-        if first_commit_of_the_author:
-            self.author_seniority = self.author_date - first_commit_of_the_author.author_date
+    def get_parent_commit(self):
+        for hash in self.parents:
+            self.parent = Commit.objects.filter(hash=hash).first()
+            break
+
+    def refresh_measures_diff(self) -> None:
+        authors_previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                        tag__project=self.tag.project).last()
+        authors_first_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                     tag__project=self.tag.project).first()
+
+        if authors_previous_commit:
+            self.total_commits = authors_previous_commit.total_commits
+            self.cloc_activity = authors_previous_commit.cloc_activity
+            self.author_seniority = self.author_date - authors_first_commit.author_date
             self.author_seniority = abs(self.author_seniority.days)
-        self.author_experience = 0.0
-        file_by_authors = Modification.objects.none()
-        if self.total_commits > 0:
+
+    def determine_author_experience(self) -> float:
+
+        # Formula weights for each measure
+        c_weight = 0.2  # commits
+        f_weight = 0.4  # files
+        cloc_weight = 0.4  # lines of code
+
+        files = 0
+        authors_previous_commit = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                        tag__project=self.tag.project).last()
+        if authors_previous_commit:
             file_by_authors = Modification.objects.filter(commit__author=self.author,
                                                           commit__tag_id__lte=self.tag.id,
                                                           commit__tag__project=self.tag.project,
-                                                          commit_id__lte=previous_commit_of_the_author.id)
-        files = file_by_authors.values("path").distinct().count()
-        return 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
+                                                          commit_id__lte=authors_previous_commit.id)
+
+            files = file_by_authors.values("path").distinct().count()
+
+        return c_weight * self.total_commits + f_weight * files + cloc_weight * self.cloc_activity
 
     class Meta:
         ordering = ['tag_id', 'id']

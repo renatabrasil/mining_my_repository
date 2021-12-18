@@ -25,209 +25,215 @@
 {{commit.hash}}
 
 <div class="container">
-  <div class="row">
-    <div class="col-4">
-      <div class="card border-light mb-5" style="max-width: 38rem;">
-          <div class="card-header">X</div>
-          <div class="card-body">
-            <h5 class="card-title">Experiência</h5>
-            <p class="card-text">{{commit.author_experience|floatformat:2}}</p>
-          </div>
+    <div class="row">
+        <div class="col-4">
+            <div class="card border-light mb-5" style="max-width: 38rem;">
+                <div class="card-header">X</div>
+                <div class="card-body">
+                    <h5 class="card-title">Experiência</h5>
+                    <p class="card-text">{{commit.author_experience|floatformat:2}}</p>
+                </div>
+            </div>
+
         </div>
+        <div class="col">
+            <div class="card border-light mb-5" style="max-width: 38rem;">
+                <div class="card-header">Y</div>
+                <div class="card-body">
+                    <h5 class="card-title">Impacto na arquitetura <small>(em componentes de interesse)</small></h5>
+                    <p class="card-text">
+                        Design evaluation: {{commit.mean_rmd_components|floatformat:8}} <br/>
+                        Delta: {{commit.delta_rmd_components|floatformat:8}} <br/>
+                        Delta normalizado: {{commit.normalized_delta|floatformat:8}} <br/>
 
-    </div>
-    <div class="col">
-        <div class="card border-light mb-5" style="max-width: 38rem;">
-          <div class="card-header">Y</div>
-          <div class="card-body">
-            <h5 class="card-title">Impacto na arquitetura <small>(em componentes de interesse)</small></h5>
-            <p class="card-text">
-                Design evaluation: {{commit.mean_rmd_components|floatformat:8}} <br/>
-                Delta: {{commit.delta_rmd_components|floatformat:8}} <br/>
-                Delta normalizado: {{commit.normalized_delta|floatformat:8}} <br/>
+                        {% for metric in commit.component_commits.all %}
+                        {% if metric.delta_rmd != 0.0 %}
+                        * {{metric.delta_rmd|floatformat:8}} ({{metric.component.name}}) - <strong>Exp
+                        especializada:</strong> {{metric.author_experience|floatformat:2}}<br/>
+                        {% endif %}
+                        {% endfor %}
 
-                {% for metric in commit.component_commits.all %}
-                    {% if metric.delta_rmd != 0.0 %}
-                * {{metric.delta_rmd|floatformat:8}} ({{metric.component.name}}) - <strong>Exp especializada:</strong> {{metric.author_experience|floatformat:2}}<br/>
-                    {% endif %}
-                {% endfor %}
+                    <hr style="border: 0.5px solid"/>
+                    <p class="{% if commit.total_delta > 0 %} text-danger {% elif commit.total_delta < 0 %} text-success {% endif %}">
+                        <strong>{{commit.total_delta|floatformat:8}}</strong>
+                    </p>
+                    </p>
+                </div>
+            </div>
 
-                <hr style="border: 0.5px solid"/>
-              <p class="{% if commit.total_delta > 0 %} text-danger {% elif commit.total_delta < 0 %} text-success {% endif %}">
-                  <strong>{{commit.total_delta|floatformat:8}}</strong>
-              </p>
-            </p>
-          </div>
         </div>
-
     </div>
-  </div>
-<div class="table-responsive">
+    <div class="table-responsive">
 
-    <table class="table table-striped table-sm">
-        <caption>Commit details</caption>
-        <tr>
-            <th scope="col" style="text-align: right">Compila</th>
-            <td style="text-align: center;" class="{% if not commit.compilable %} text-danger {% else %} text-success {% endif %}" colspan="2">
-            <strong>
-                {% if not commit.compilable %}
-                Não compila
-                {% else %}
-                    Compila
-                {% endif %}
-            </strong>
-            </td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Tem linhas de código:</th>
-            <td colspan="2">{{commit.has_impact_loc}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Tag:</th>
-            <td colspan="2">{{commit.tag.description}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Real Tag:</th>
-            <td colspan="2">{{commit.real_tag_description}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Autor:</th>
-            <td colspan="2">{{commit.author.name}} - Moment Experience: {{commit.author_experience|floatformat:2}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Senioridade do Autor:</th>
-            <td colspan="2">{{commit.author_seniority}} dias</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Numero de commits:</th>
-            <td colspan="2">{{commit.total_commits}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Committer:</th>
-            <td colspan="2">{{commit.committer.name}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Data:</th>
-            <td colspan="2">{{commit.committer_date | date:'d/m/Y H:i'}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Cloc (without commented and blank lines):</th>
-            <td colspan="2">{{commit.u_cloc}} </td>
-        </tr>
-        parents_str
-        {% for parent_commit in commit.parents %}
-        <tr>
-            <th scope="col" style="text-align: right">Parent (real):</th>
-            <td colspan="2"><a href="/contributions/{{ parent_commit.id }}/">{{parent_commit.hash}}</a></td>
-        </tr>
-        {% endfor %}
-        <tr>
-            <th scope="col" style="text-align: right">Parent:</th>
-            <td colspan="2"><a href="/contributions/{{ commit.previous_impactful_commit.id }}/">{{commit.previous_impactful_commit.hash}}</a></td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Hash</th>
-            <td colspan="2">{{commit.hash}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Filho</th>
-            <td colspan="2">{{commit.children_commit.hash}}</td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Mensagem do commit:</th>
-            <td colspan="2">
+        <table class="table table-striped table-sm">
+            <caption>Commit details</caption>
+            <tr>
+                <th scope="col" style="text-align: right">Compila</th>
+                <td style="text-align: center;"
+                    class="{% if not commit.compilable %} text-danger {% else %} text-success {% endif %}" colspan="2">
+                    <strong>
+                        {% if not commit.compilable %}
+                        Não compila
+                        {% else %}
+                        Compila
+                        {% endif %}
+                    </strong>
+                </td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Tem linhas de código:</th>
+                <td colspan="2">{{commit.has_impact_loc}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Tag:</th>
+                <td colspan="2">{{commit.tag.description}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Real Tag:</th>
+                <td colspan="2">{{commit.real_tag_description}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Autor:</th>
+                <td colspan="2">{{commit.author.name}} - Moment Experience: {{commit.author_experience|floatformat:2}}
+                </td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Senioridade do Autor:</th>
+                <td colspan="2">{{commit.author_seniority}} dias</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Numero de commits:</th>
+                <td colspan="2">{{commit.total_commits}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Committer:</th>
+                <td colspan="2">{{commit.committer.name}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Data:</th>
+                <td colspan="2">{{commit.committer_date | date:'d/m/Y H:i'}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Cloc (without commented and blank lines):</th>
+                <td colspan="2">{{commit.u_cloc}}</td>
+            </tr>
+            parents_str
+            {% for parent_commit in commit.parents %}
+            <tr>
+                <th scope="col" style="text-align: right">Parent (real):</th>
+                <td colspan="2"><a href="/contributions/{{ parent_commit.id }}/">{{parent_commit.hash}}</a></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <th scope="col" style="text-align: right">Parent:</th>
+                <td colspan="2"><a href="/contributions/{{ commit.previous_impactful_commit.id }}/">{{commit.previous_impactful_commit.hash}}</a>
+                </td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Hash</th>
+                <td colspan="2">{{commit.hash}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Filho</th>
+                <td colspan="2">{{commit.children_commit.hash}}</td>
+            </tr>
+            <tr>
+                <th scope="col" style="text-align: right">Mensagem do commit:</th>
+                <td colspan="2">
                 <pre>
                     {{commit.msg}}
                 </pre>
-            </td>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: right">Quantidade de arquivos:</th>
-            <td colspan="2">{{commit.modifications.all.count}}</td>
-        </tr>
-
-        {% for modification in commit.modifications.all %}
+                </td>
+            </tr>
             <tr>
-                <td colspan="3" style="text-align: center;"><strong>File {{forloop.counter}} - é java? {{modification.is_java_file}}</strong></td>
+                <th scope="col" style="text-align: right">Quantidade de arquivos:</th>
+                <td colspan="2">{{commit.modifications.all.count}}</td>
+            </tr>
+
+            {% for modification in commit.modifications.all %}
+            <tr>
+                <td colspan="3" style="text-align: center;"><strong>File {{forloop.counter}} - é java?
+                    {{modification.is_java_file}}</strong></td>
             </tr>
             <tr>
                 <th scope="col" style="text-align: right; vertical-align: top" rowspan="10">
                     {{modification.file}}:
                 </th>
                 <td>
-                    <tr>
-        <td style="width='14%', text-decoration: underline">Path:</td>
-                        <td>{{ modification.path }}</td>
-                    </tr>
-                    <tr>
-                        <td style="width='14%', text-decoration: underline">New path:</td>
-                        <td>{{ modification.new_path }}</td>
-                    </tr>
-                    <tr>
-                        <td style="width='14%', text-decoration: underline">Old path:</td>
-                        <td>{{ modification.old_path }}</td>
-                    </tr>
-                    <tr>
-                        <td style="width='14%', text-decoration: underline">Change type:</td>
-                        <td>{{ modification.change_type }}</td>
-                    </tr>
-                    <tr>
-                        <td style="width='14%', text-decoration: underline">Cloc (without commented and blank lines):
-                        </td>
-                        <td>{{ modification.u_cloc }}</td>
-                    </tr>
-                    <tr>
-                        <td style="text-decoration: underline">Linhas modificadas (CLOC):</td>
-                        <td>
-                            <a data-toggle="collapse" href="#collapseExample{{forloop.counter}}" role="button" aria-expanded="false" aria-controls="collapseExample{{forloop.counter}}">
-                               {{ modification.cloc}}
-                            </a>
-                        </td>
-                    </tr>
-                    <tr >
-                        <td colspan="2">
-                            <div class="collapse" id="collapseExample{{forloop.counter}}">
-                              <div class="card card-body">
-                                  <h5>Diff:</h5>
-                                  <pre style="text-align: left" class="alert alert-success">
+            <tr>
+                <td style="width='14%', text-decoration: underline">Path:</td>
+                <td>{{ modification.path }}</td>
+            </tr>
+            <tr>
+                <td style="width='14%', text-decoration: underline">New path:</td>
+                <td>{{ modification.new_path }}</td>
+            </tr>
+            <tr>
+                <td style="width='14%', text-decoration: underline">Old path:</td>
+                <td>{{ modification.old_path }}</td>
+            </tr>
+            <tr>
+                <td style="width='14%', text-decoration: underline">Change type:</td>
+                <td>{{ modification.change_type }}</td>
+            </tr>
+            <tr>
+                <td style="width='14%', text-decoration: underline">Cloc (without commented and blank lines):
+                </td>
+                <td>{{ modification.u_cloc }}</td>
+            </tr>
+            <tr>
+                <td style="text-decoration: underline">Linhas modificadas (CLOC):</td>
+                <td>
+                    <a data-toggle="collapse" href="#collapseExample{{forloop.counter}}" role="button"
+                       aria-expanded="false" aria-controls="collapseExample{{forloop.counter}}">
+                        {{ modification.cloc}}
+                    </a>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="collapse" id="collapseExample{{forloop.counter}}">
+                        <div class="card card-body">
+                            <h5>Diff:</h5>
+                            <pre style="text-align: left" class="alert alert-success">
                                 {% autoescape on %}
                                     {{modification.diff_added}}
                                 {% endautoescape %}
                                   </pre>
-                                  <pre style="text-align: left" class="alert alert-danger">
+                            <pre style="text-align: left" class="alert alert-danger">
                                 {% autoescape on %}
                                     {{modification.diff_removed}}
                                 {% endautoescape %}
                                   </pre>
-                              </div>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-decoration: underline">Number of lines added:</td>
-                        <td>
-                            {{ modification.added }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-decoration: underline">Number of lines removed:</td>
-                        <td>
-                            {{ modification.removed }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-decoration: underline" colspan="2">Number of lines:</td>
-                        <td>
-                            {{ modification.nloc }}
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 </td>
             </tr>
-        {% endfor %}
+            <tr>
+                <td style="text-decoration: underline">Number of lines added:</td>
+                <td>
+                    {{ modification.added }}
+                </td>
+            </tr>
+            <tr>
+                <td style="text-decoration: underline">Number of lines removed:</td>
+                <td>
+                    {{ modification.removed }}
+                </td>
+            </tr>
+            <tr>
+                <td style="text-decoration: underline" colspan="2">Number of lines:</td>
+                <td>
+                    {{ modification.nloc }}
+                </td>
+            </tr>
+            </td>
+            </tr>
+            {% endfor %}
 
-    </table>
-</div>
+        </table>
+    </div>
 
-{% endif %}
+    {% endif %}
 
-{% endblock %}
+    {% endblock %}

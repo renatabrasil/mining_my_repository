@@ -153,18 +153,18 @@ class ContributionsService:
             self.logger.exception(err)
             raise
 
-    def __configure_author_and_committer(self, commit_from_repo):
+    def __configure_author_and_committer(self, commit_from_repo) -> tuple[Developer, Developer]:
         author = Developer.create(name=commit_from_repo.author.name, email=commit_from_repo.author.email,
                                   login=commit_from_repo.author.email.split("@")[0])
         author.format_data(commit_from_repo.msg)
 
         author_db = self.developer_repository.find_all_developer_by_iexact_name(name=author.name).first()
         if author_db:
-            author.update_existing_developer(author_db)
+            author = author_db.update_existing_developer(author)
         else:
             author_db = self.developer_repository.find_all_developer_by_login(login=author.login).first()
             if author_db:
-                author.update_existing_developer(author_db)
+                author = author_db.update_existing_developer(author)
 
         committer = Developer.create(name=commit_from_repo.committer.name,
                                      email=commit_from_repo.committer.email,
@@ -173,11 +173,11 @@ class ContributionsService:
 
         committer_db = self.developer_repository.find_all_developer_by_iexact_name(name=committer.name).first()
         if committer_db:
-            committer.update_existing_developer(committer_db)
+            committer = committer_db.update_existing_developer(committer)
         else:
             committer_db = self.developer_repository.find_all_developer_by_login(login=committer.login).first()
             if committer_db:
-                committer.update_existing_developer(committer_db)
+                committer = committer_db.update_existing_developer(committer)
 
         return author, committer
 

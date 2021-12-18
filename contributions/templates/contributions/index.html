@@ -9,10 +9,10 @@
 
 
 <div class="alert alert-info" role="alert">
-  <h4 class="alert-heading">Aviso</h4>
-  <p>Apenas commits que possuem arquivos <strong>.java</strong> serão mostrados.</p>
+    <h4 class="alert-heading">Aviso</h4>
+    <p>Apenas commits que possuem arquivos <strong>.java</strong> serão mostrados.</p>
 
-  <hr>
+    <hr>
     <p><strong>{{ latest_commit_list|length }}</strong> commits encontrados.</p>
 </div>
 
@@ -33,57 +33,64 @@
         {% endif %}
     </span>
 </div>
-    <div class="table-responsive">
-        <table class="table table-striped table-sm" id="example2" style="font-size: 0.95em">
-            <caption>Commits</caption>
-            <thead>
-            <tr>
-                <th scope="col" style="text-align:center; width:5%">#</th>
-                <th scope="col">hash</th>
-                <th scope="col" style="text-align: center;">Versão</th>
-                <th scope="col" style="text-align: center;width:12%">Tem LOC de código:</th>
-                <th scope="col" style="text-align: center;width:12%">CLOC (no blank lines)</th>
-                <th scope="col" style="text-align: center;width:12%">delta</th>
-                <th scope="col" style="width:15%">Committer</th>
-                <th scope="col">Autor</th>
-                <th scope="col" style="text-align: center;width:12%">Author Exp</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% if latest_commit_list %}
-            {% for commit in latest_commit_list %}
-            <tr>
-                <th scope="col" style="text-align: center; r" rowspan="{{commit.parents|length|add:1}}">
-                    {{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}
-                </th>
-                <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
-                <td style="text-align: center;">{{commit.tag.description}}</td>
+<div class="table-responsive">
+    <table class="table table-striped table-sm" id="example2" style="font-size: 0.95em">
+        <caption>Commits</caption>
+        <thead>
+        <tr>
+            <th scope="col" style="text-align:center; width:5%">#</th>
+            <th scope="col">hash</th>
+            <th scope="col" style="text-align: center;">Versão</th>
+            <th scope="col" style="text-align: center;width:12%">Tem LOC de código:</th>
+            <th scope="col" style="text-align: center;width:12%">CLOC (no blank lines)</th>
+            <th scope="col" style="text-align: center;width:12%">delta</th>
+            <th scope="col" style="width:15%">Committer</th>
+            <th scope="col">Autor</th>
+            <th scope="col" style="text-align: center;width:12%">Author Exp</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if latest_commit_list %}
+        {% for commit in latest_commit_list %}
 
-                <td style="text-align: center;">{{commit.has_impact_loc}}</td>
-                <td style="text-align: center;">{{commit.u_cloc}}</td>
-                <td style="text-align: center;"
-                    class="{% if commit.normalized_delta > 0 %} text-danger {% elif commit.normalized_delta < 0 %} text-success {% endif %}">
-                    <strong>{{commit.normalized_delta|floatformat:8}}</strong>
-                </td>
-                <td style="white-space:nowrap">{{ commit.committer.name}}</td>
-                <td style="white-space:nowrap">{{ commit.author.name}}</td>
-                <td style="text-align: center;"><strong>{{commit.author_experience|floatformat:2}}</strong></td>
 
-            </tr>
-                        {% for parent_commit in commit.parents %}
-                        <tr><td colspan="7">pai: {{parent_commit.hash}}</td></tr>
-                        {% endfor %}
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="9" style="text-align:center;">No commits are available. Please check 'Carregar commits' to load all commits to this tag.</td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-    <ul>
+        <tr>
+            <th scope="col" style="text-align: center;" rowspan="{{commit.parents|length|add:1}}">
+                {{latest_commit_list.number|sub:1|mul:100|add:forloop.counter}}
+            </th>
+            <td><a href="/contributions/{{ commit.id }}/">{{commit.hash}}</a></td>
+            <td style="text-align: center;">{{commit.tag.description}}</td>
 
-    </ul>
+            <td style="text-align: center;">{{commit.has_impact_loc}}</td>
+            <td style="text-align: center;">{{commit.u_cloc}}</td>
+            <td style="text-align: center;"
+                class="{% if commit.normalized_delta > 0 %} text-danger {% elif commit.normalized_delta < 0 %} text-success {% endif %}">
+                <strong>{{commit.normalized_delta|floatformat:8}}</strong>
+            </td>
+            <td style="white-space:nowrap">{{ commit.committer.name}}</td>
+            <td style="white-space:nowrap">{{ commit.author.name}}</td>
+            <td style="text-align: center;"><strong>{{commit.author_experience|floatformat:2}}</strong></td>
+        </tr>
+
+        {% for parent_commit in commit.parents %}
+        <tr>
+            <td colspan="8"><strong>Pai:</strong> {{parent_commit.hash}}</td>
+        </tr>
+        {% endfor %}
+
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="9" style="text-align:center;">No commits are available. Please check 'Carregar commits' to
+                load all commits to this tag.
+            </td>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+<ul>
+
+</ul>
 
 {% endblock %}
