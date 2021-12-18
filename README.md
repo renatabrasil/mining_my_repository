@@ -26,9 +26,9 @@ Java projects.
 
 * Implement unit tests
 * Refactoring design to reach a sustainable level of maintainability
-  * Change functions based view for class based views
-  * Separate views from user cases
-  * Bring some logic to models
+    * Change functions based view for class based views
+    * Separate views from user cases
+    * Bring some logic to models
 
 ## Getting Started
 
@@ -87,7 +87,6 @@ To generate test coverage report:
 ## Built With
 
 * [PyDriller](https://github.com/ishepard/pydriller/) - Python Framework to analyse Git repositories
-
 
 ## Authors
 

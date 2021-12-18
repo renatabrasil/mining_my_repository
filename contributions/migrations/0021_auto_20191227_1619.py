@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0020_modification_u_cloc'),
     ]
@@ -30,7 +29,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individualcontribution',
             name='previous_individual_contribution',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.IndividualContribution'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING,
+                                    to='contributions.IndividualContribution'),
         ),
         migrations.AlterField(
             model_name='commit',

@@ -38,7 +38,6 @@ def humanbytes(b):
         return '{0:.2f} TB'.format(b / TB)
 
 
-
 def file_size(file_path):
     """
     this function will return the file size
@@ -47,16 +46,16 @@ def file_size(file_path):
         file_info = os.stat(file_path)
         return humanbytes(file_info.st_size)
 
-TRED =  '\033[1;31;40m '
-TGREEN =  '\033[32m' # Green Text
-ENDC = '\033[m' # reset to the defaults
-TBLUE  = "\033[1;34m"
-TCYAN  = "\033[1;36m"
+
+TRED = '\033[1;31;40m '
+TGREEN = '\033[32m'  # Green Text
+ENDC = '\033[m'  # reset to the defaults
+TBLUE = "\033[1;34m"
+TCYAN = "\033[1;36m"
 TGREEN = "\033[0;32m"
 RESET = "\033[0;0m"
-BOLD    = "\033[;1m"
+BOLD = "\033[;1m"
 REVERSE = "\033[;7m"
-
 
 average = 0
 number_of_files = 0
@@ -75,9 +74,9 @@ if directory:
             hasJar = False
             for filename in [f for f in os.listdir(subdirectory)]:
                 if filename.endswith(".jar"):
-                    file = os.path.join(subdirectory,filename)
+                    file = os.path.join(subdirectory, filename)
                     hasJar = True
-                    number_of_files+=1
+                    number_of_files += 1
                     average += os.stat(file).st_size
                     if os.stat(file).st_size >= maximo:
                         maximo = os.stat(file).st_size
@@ -92,12 +91,12 @@ if directory:
 
             if not hasJar:
                 print(REVERSE + 'SEM JAR' + ENDC)
-                
+
     print("\n----------------------\n")
     average = average / number_of_files
     print("Media do tamanho de arquivos: " + BOLD + humanbytes(average) + ENDC + '\n')
-    print("Minimo: " + BOLD + humanbytes(minimo) + ENDC + ' ('+minor_file+')\n')
+    print("Minimo: " + BOLD + humanbytes(minimo) + ENDC + ' (' + minor_file + ')\n')
     print("Maximo: " + BOLD + humanbytes(maximo) + ENDC + '\n')
-    
+
 else:
     print("Processo encerrado\nTempo de execucao:")

@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0012_auto_20191029_1832'),
     ]
@@ -14,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='commit',
             name='children_commit',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='parent_commits', to='contributions.Commit'),
+            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                    related_name='parent_commits', to='contributions.Commit'),
         ),
     ]

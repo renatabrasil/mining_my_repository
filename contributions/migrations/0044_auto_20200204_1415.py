@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0043_directory_initial_commit'),
     ]
@@ -14,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='directory',
             name='initial_commit',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='starter_directories', to='contributions.Commit'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE,
+                                    related_name='starter_directories', to='contributions.Commit'),
         ),
     ]

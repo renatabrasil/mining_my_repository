@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0029_commit_hash'),
     ]
@@ -21,12 +20,14 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='commit',
             name='children_commit',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='contributions.Commit'),
+            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                    to='contributions.Commit'),
         ),
         migrations.AddField(
             model_name='commit',
             name='committer',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='committer_id', to='contributions.Developer'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='committer_id',
+                                    to='contributions.Developer'),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -47,7 +48,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='commit',
             name='author',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author_id', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author_id',
+                                    to='contributions.Developer'),
         ),
         migrations.AlterField(
             model_name='commit',

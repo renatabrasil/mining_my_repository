@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0003_directoryreport_experience_threshold'),
     ]
@@ -18,7 +17,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individualcontribution',
             name='tag',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.DO_NOTHING, related_name='directory_reports', to='contributions.Tag'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.DO_NOTHING,
+                                    related_name='directory_reports', to='contributions.Tag'),
             preserve_default=False,
         ),
     ]

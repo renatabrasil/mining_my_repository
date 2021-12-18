@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('architecture', '0026_remove_architecturalmetricsbycommit_author_experience'),
     ]

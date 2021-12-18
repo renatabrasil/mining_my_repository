@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0032_commit_author_experience'),
     ]
@@ -14,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='commit',
             name='author',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits',
+                                    to='contributions.Developer'),
         ),
     ]

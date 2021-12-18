@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0001_initial'),
     ]
@@ -71,8 +70,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('description', models.CharField(max_length=100)),
-                ('previous_tag', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='contributions.Tag')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tags', to='contributions.Project')),
+                ('previous_tag',
+                 models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                   to='contributions.Tag')),
+                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tags',
+                                              to='contributions.Project')),
             ],
         ),
         migrations.CreateModel(
@@ -82,7 +84,9 @@ class Migration(migrations.Migration):
                 ('old_path', models.CharField(max_length=200, null=True)),
                 ('new_path', models.CharField(max_length=200, null=True)),
                 ('path', models.CharField(default='-', max_length=200, null=True)),
-                ('change_type', models.CharField(choices=[('ADD', 'Added'), ('DEL', 'Deleted'), ('MOD', 'Modified'), ('REN', 'Renamed')], default='MOD', max_length=10)),
+                ('change_type', models.CharField(
+                    choices=[('ADD', 'Added'), ('DEL', 'Deleted'), ('MOD', 'Modified'), ('REN', 'Renamed')],
+                    default='MOD', max_length=10)),
                 ('diff', models.TextField()),
                 ('source_code', models.TextField(null=True)),
                 ('source_code_before', models.TextField(null=True)),
@@ -91,8 +95,11 @@ class Migration(migrations.Migration):
                 ('cloc', models.IntegerField(default=0)),
                 ('nloc', models.IntegerField(null=True)),
                 ('complexity', models.IntegerField(null=True)),
-                ('commit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='modifications', to='contributions.Commit')),
-                ('directory', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='modifications', to='contributions.Directory')),
+                ('commit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='modifications',
+                                             to='contributions.Commit')),
+                ('directory',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='modifications',
+                                   to='contributions.Directory')),
             ],
         ),
         migrations.CreateModel(
@@ -106,8 +113,10 @@ class Migration(migrations.Migration):
                 ('ownership_files', models.FloatField(default=0.0, null=True)),
                 ('ownership_commits', models.FloatField(default=0.0, null=True)),
                 ('experience', models.FloatField(default=0.0, null=True)),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.Developer')),
-                ('directory_report', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.DirectoryReport')),
+                ('author',
+                 models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.Developer')),
+                ('directory_report',
+                 models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.DirectoryReport')),
             ],
         ),
         migrations.AddField(
@@ -118,36 +127,43 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='directoryreport',
             name='directory',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='directory_reports', to='contributions.Directory'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='directory_reports',
+                                    to='contributions.Directory'),
         ),
         migrations.AddField(
             model_name='directoryreport',
             name='tag',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='directory_reports', to='contributions.Tag'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='directory_reports',
+                                    to='contributions.Tag'),
         ),
         migrations.AddField(
             model_name='directory',
             name='project',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directories', to='contributions.Project'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directories',
+                                    to='contributions.Project'),
         ),
         migrations.AddField(
             model_name='commit',
             name='author',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author_id', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author_id',
+                                    to='contributions.Developer'),
         ),
         migrations.AddField(
             model_name='commit',
             name='committer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='committer_id', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='committer_id',
+                                    to='contributions.Developer'),
         ),
         migrations.AddField(
             model_name='commit',
             name='project',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits', to='contributions.Project'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits',
+                                    to='contributions.Project'),
         ),
         migrations.AddField(
             model_name='commit',
             name='tag',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits', to='contributions.Tag'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='commits',
+                                    to='contributions.Tag'),
         ),
     ]

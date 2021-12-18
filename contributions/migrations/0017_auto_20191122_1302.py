@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0016_commit_children_commit'),
     ]
@@ -33,7 +32,8 @@ class Migration(migrations.Migration):
                 ('bf_commit', models.FloatField(default=0.0, null=True)),
                 ('bf_file', models.FloatField(default=0.0, null=True)),
                 ('bf_cloc', models.FloatField(default=0.0, null=True)),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.Developer')),
+                ('author',
+                 models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='contributions.Developer')),
             ],
         ),
         migrations.CreateModel(
@@ -50,8 +50,11 @@ class Migration(migrations.Migration):
                 ('standard_deviation', models.FloatField(default=0, null=True)),
                 ('mean', models.FloatField(default=0, null=True)),
                 ('median', models.FloatField(default=0, null=True)),
-                ('authors', models.ManyToManyField(through='contributions.ProjectIndividualContribution', to='contributions.Developer')),
-                ('tag', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='project_reports', to='contributions.Tag')),
+                ('authors', models.ManyToManyField(through='contributions.ProjectIndividualContribution',
+                                                   to='contributions.Developer')),
+                ('tag',
+                 models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='project_reports',
+                                   to='contributions.Tag')),
             ],
         ),
         migrations.AddField(

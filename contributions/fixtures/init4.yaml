@@ -159,9 +159,9 @@
     major: True
     build_command: 'build.bat'
     prepare_build_command: 'ant clean'
-#    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
-#        rel/1.9.8,*rel/1.10.1,rel/1.9.9,rel/1.9.10,*rel/1.10.2,rel/1.9.11,*rel/1.10.3,rel/1.9.12,*rel/1.10.4,rel/1.9.13,
-#        *rel/1.10.5,rel/1.9.14'
+    #    max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7,*rel/1.10.0,
+    #        rel/1.9.8,*rel/1.10.1,rel/1.9.9,rel/1.9.10,*rel/1.10.2,rel/1.9.11,*rel/1.10.3,rel/1.9.12,*rel/1.10.4,rel/1.9.13,
+    #        *rel/1.10.5,rel/1.9.14'
     max_minor_version_description: 'rel/1.9.1,rel/1.9.2,rel/1.9.3,rel/1.9.4,rel/1.9.5,rel/1.9.6,rel/1.9.7'
 - model: contributions.tag
   pk: 15

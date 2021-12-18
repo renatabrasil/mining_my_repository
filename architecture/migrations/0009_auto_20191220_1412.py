@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0020_modification_u_cloc'),
         ('architecture', '0008_auto_20191212_1523'),
@@ -19,7 +18,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='architecturequalitybydeveloper',
             name='project_individual_contribution',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='project_individual_contribution_id', to='contributions.ProjectIndividualContribution'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE,
+                                    related_name='project_individual_contribution_id',
+                                    to='contributions.ProjectIndividualContribution'),
             preserve_default=False,
         ),
     ]

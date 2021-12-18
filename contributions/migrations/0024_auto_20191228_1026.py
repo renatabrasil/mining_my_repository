@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0023_auto_20191228_0902'),
     ]
@@ -14,12 +13,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='directoryreport',
             name='directory',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directory_reports', to='contributions.Directory'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directory_reports',
+                                    to='contributions.Directory'),
         ),
         migrations.AlterField(
             model_name='directoryreport',
             name='tag',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directory_reports', to='contributions.Tag'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='directory_reports',
+                                    to='contributions.Tag'),
         ),
         migrations.AlterField(
             model_name='individualcontribution',
@@ -34,7 +35,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='individualcontribution',
             name='previous_individual_contribution',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='contributions.IndividualContribution'),
+            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                    to='contributions.IndividualContribution'),
         ),
         migrations.AlterField(
             model_name='projectindividualcontribution',
@@ -44,7 +46,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='projectindividualcontribution',
             name='previous_individual_contribution',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='contributions.ProjectIndividualContribution'),
+            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                    to='contributions.ProjectIndividualContribution'),
         ),
         migrations.AlterField(
             model_name='projectindividualcontribution',
@@ -54,6 +57,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='projectreport',
             name='tag',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='project_reports', to='contributions.Tag'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='project_reports',
+                                    to='contributions.Tag'),
         ),
     ]

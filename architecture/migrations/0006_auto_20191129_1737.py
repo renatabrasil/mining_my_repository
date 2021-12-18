@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0017_auto_20191122_1302'),
         ('architecture', '0005_auto_20191128_1757'),
@@ -23,7 +22,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='architecturequalitybydeveloper',
             name='directory',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='contributions.Directory'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE,
+                                    to='contributions.Directory'),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -35,7 +35,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='architecturequalitymetrics',
             name='architecture_quality_by_developer_and_directory',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='metrics', to='architecture.ArchitectureQualityByDeveloper'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='metrics',
+                                    to='architecture.ArchitectureQualityByDeveloper'),
             preserve_default=False,
         ),
     ]

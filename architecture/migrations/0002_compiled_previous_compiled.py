@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('architecture', '0001_initial'),
     ]
@@ -14,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='compiled',
             name='previous_compiled',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='architecture.Compiled'),
+            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                    to='architecture.Compiled'),
         ),
     ]

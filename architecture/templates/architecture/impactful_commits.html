@@ -12,33 +12,34 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <label for="directory_selector" class="sr-only">Component</label>
-            <select class="form-control mb-6" id="directory_selector" placeholder="Selecione a tag" name="directory_id" >
-              <option selected value="{{developer.id}}">Selecione o componente</option>
-              {% for directory in directories %} {{current_directory}}
+            <select class="form-control mb-6" id="directory_selector" placeholder="Selecione a tag" name="directory_id">
+                <option selected value="{{developer.id}}">Selecione o componente</option>
+                {% for directory in directories %} {{current_directory}}
                 <option value="{{directory.id}}"
-                   {% if directory.id == current_directory_id %}selected="selected"{% endif %}>
-                   {{directory.name}}
+                        {% if directory.id== current_directory_id %}selected="selected" {% endif %}>
+                    {{directory.name}}
                 </option>
                 {% endfor %}
-              </select>
+            </select>
         </div>
     </div>
     <div class="form-row align-items-center">
         <div class="col-auto">
             <label for="tag_selector" class="sr-only">Tag</label>
-            <select class="form-control mb-6" id="tag_selector" placeholder="Selecione a tag" name="tag_id" >
-              <option selected value="{{tag.id}}">Selecione a versão</option>
-              {% for tag in tags %} {{current_tag}}
+            <select class="form-control mb-6" id="tag_selector" placeholder="Selecione a tag" name="tag_id">
+                <option selected value="{{tag.id}}">Selecione a versão</option>
+                {% for tag in tags %} {{current_tag}}
                 <option value="{{tag.id}}"
-                   {% if tag.id == current_tag_id %}selected="selected"{% endif %}>
-                   {{tag.description}}
+                        {% if tag.id== current_tag_id %}selected="selected" {% endif %}>
+                    {{tag.description}}
                 </option>
                 {% endfor %}
-              </select>
+            </select>
         </div>
         <div class="col-auto">
             <div class="custom-control custom-checkbox form-check mb-2">
-                <input class="custom-control-input" type="checkbox" name="until_tag" {% if until_tag_state %}checked {% endif%} id="until_tag_id">
+                <input class="custom-control-input" type="checkbox" name="until_tag" {% if until_tag_state %}checked {%
+                       endif%} id="until_tag_id">
                 <label class="custom-control-label" for="until_tag_id">
                     Somente esta versão
                 </label>
@@ -48,30 +49,34 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <label for="developer_selector" class="sr-only"></label>
-            <select class="form-control mb-6" id="developer_selector" placeholder="Selecione o desenvolvedor" name="developer_id" >
-              <option selected value="{{developer.id}}">Selecione o desenvolvedor</option>
-              {% for developer in developers %} {{current_developer}}
+            <select class="form-control mb-6" id="developer_selector" placeholder="Selecione o desenvolvedor"
+                    name="developer_id">
+                <option selected value="{{developer.id}}">Selecione o desenvolvedor</option>
+                {% for developer in developers %} {{current_developer}}
                 <option value="{{developer.id}}"
-                   {% if developer.id == current_developer_id %}selected="selected"{% endif %}>
-                   {{developer.name}}
+                        {% if developer.id== current_developer_id %}selected="selected" {% endif %}>
+                    {{developer.name}}
                 </option>
                 {% endfor %}
-              </select>
+            </select>
         </div>
     </div>
     <div class="form-row align-items-center">
         <div class="col-auto">
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioGeral" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
-              <label class="custom-control-label" for="radioGeral">Geral</label>
+                <input type="radio" id="radioGeral" name="delta_rmd_components" value="geral" {% if delta_check== ""
+                %}checked="checked"{% endif %} class="custom-control-input">
+                <label class="custom-control-label" for="radioGeral">Geral</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %}checked="checked"{% endif %} class="custom-control-input">
-              <label class="custom-control-label" for="radioDegrada">Degrada</label>
+                <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check==
+                "positive" %}checked="checked"{% endif %} class="custom-control-input">
+                <label class="custom-control-label" for="radioDegrada">Degrada</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioMelhora" name="delta_rmd_components" value="negative" {% if delta_check == "negative" %}checked="checked"{% endif %} class="custom-control-input">
-              <label class="custom-control-label" for="radioMelhora">Melhora</label>
+                <input type="radio" id="radioMelhora" name="delta_rmd_components" value="negative" {% if delta_check==
+                "negative" %}checked="checked"{% endif %} class="custom-control-input">
+                <label class="custom-control-label" for="radioMelhora">Melhora</label>
             </div>
 
         </div>
@@ -80,14 +85,16 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioCommitsImpactantes" name="analysis" value="impactful_commits" {% if analysis_check == "impactful_commits" or analysis_check == "" %}checked="checked"{% endif %} class="custom-control-input">
-              <label class="custom-control-label" for="radioCommitsImpactantes">Apenas commits impactantes</label>
+                <input type="radio" id="radioCommitsImpactantes" name="analysis" value="impactful_commits" {% if
+                       analysis_check== "impactful_commits" or analysis_check == "" %}checked="checked"{% endif %}
+                class="custom-control-input">
+                <label class="custom-control-label" for="radioCommitsImpactantes">Apenas commits impactantes</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-              <input type="radio" id="radioTodosCommits" name="analysis" value="geral" {% if analysis_check == "geral" %}checked="checked"{% endif %} class="custom-control-input">
-              <label class="custom-control-label" for="radioTodosCommits">Todos</label>
+                <input type="radio" id="radioTodosCommits" name="analysis" value="geral" {% if analysis_check== "geral"
+                %}checked="checked"{% endif %} class="custom-control-input">
+                <label class="custom-control-label" for="radioTodosCommits">Todos</label>
             </div>
-
 
 
         </div>
@@ -102,7 +109,8 @@
 <hr>
 <div class="float-right">
     <form action="{{request_path}}" method="post">{% csrf_token %}
-        <a class="btn btn-primary" href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analysis_check}}">
+        <a class="btn btn-primary"
+           href="{{request.path}}?export_csv=true&directory_id={{current_directory_id}}&tag_id={{current_tag_id}}&developer_id={{current_developer_id}}&delta_rmd_components={{delta_check}}&until_tag={{until_tag_state}}&analysis={{analysis_check}}">
             <em class="fas sm fa-arrow-alt-circle-down"></em> CSV
         </a>
     </form>
@@ -119,51 +127,62 @@
             <th scope="col" style="text-align:right">Delta</th>
             <th scope="col" style="text-align:right">Delta normalizado</th>
         </tr>
-{% if metrics %}
+        {% if metrics %}
 
-    {% for metric in metrics %}
+        {% for metric in metrics %}
         <tr style="background-color: rgba(0,123,255, 0.15)">
-        <td colspan="4">{{metric.tag.description}}</td>
+            <td colspan="4">{{metric.tag.description}}</td>
             <td style="text-align: right"></td>
         </tr>
 
         <tr>
             <td><span class="text-muted">Commit anterior:</span>
-                {{metric.previous_impactful_commit.hash}} - Tem linha de código: {{metric.previous_impactful_commit.has_impact_loc}}
+                {{metric.previous_impactful_commit.hash}} - Tem linha de código:
+                {{metric.previous_impactful_commit.has_impact_loc}}
             </td>
             <td>{{metric.previous_impactful_commit.author.name}}</td>
             <td style="text-align:right">{{metric.previous_impactful_commit.author_experience|floatformat:2}}</td>
             <td style="text-align:right">
                 {% if not metric.previous_impactful_commit %}
-                    Commit orfão (introduziu novos comp)
+                Commit orfão (introduziu novos comp)
                 {% elif not metric.previous_impactful_commit.compilable %}
-                    Não compilou
+                Não compilou
                 {% else %}
-                    {{metric.previous_impactful_commit.mean_rmd_components|mul:1000000|floatformat:2}}
+                {{metric.previous_impactful_commit.mean_rmd_components|mul:1000000|floatformat:2}}
                 {% endif %}
             </td>
             <td></td>
         </tr>
         <tr style="border-bottom: solid 2px">
-            <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> - Tem linha de codigo: {{metric.has_impact_loc}}</td>
+            <td><span class="text-muted">Commit:</span> <a href="/contributions/{{ metric.id }}/">{{metric.hash}}</a> -
+                Tem linha de codigo: {{metric.has_impact_loc}}
+            </td>
             <td>{{metric.author.name}}</td>
             <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
             <td style="text-align:right;">{{metric.mean_rmd_components|mul:1000000|floatformat:2}}</td>
             <td></td>
         </tr>
-    <tr style="font-weight: bold">
-        <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
-        <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %}Novato{% else %}Long-term dev{% endif %})</td>
-        <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
-        <td style="text-align:right" class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}"  >{{metric.delta_rmd_components|mul:1000000|floatformat:2}}</td>
-        <td style="text-align:right" class="{% if metric.normalized_delta > 0 %} text-danger {% elif metric.normalized_delta < 0 %} text-success {% endif %}"  >{{metric.normalized_delta|mul:1000000|floatformat:2}}</td>
-    </tr>
-    {% endfor %}
-{% else %}
+        <tr style="font-weight: bold">
+            <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
+            <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %}Novato{% else
+                %}Long-term dev{% endif %})
+            </td>
+            <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
+            <td style="text-align:right"
+                class="{% if metric.delta_rmd_components > 0 %} text-danger {% elif metric.delta_rmd_components < 0 %} text-success {% endif %}">
+                {{metric.delta_rmd_components|mul:1000000|floatformat:2}}
+            </td>
+            <td style="text-align:right"
+                class="{% if metric.normalized_delta > 0 %} text-danger {% elif metric.normalized_delta < 0 %} text-success {% endif %}">
+                {{metric.normalized_delta|mul:1000000|floatformat:2}}
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
         <tr>
             <td colspan="5" style="text-align: center">No impactful commits were found.</td>
         </tr>
-{% endif %}
+        {% endif %}
     </table>
 </div>
 

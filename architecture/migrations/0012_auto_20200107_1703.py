@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0038_commit_cloc_activity_str'),
         ('architecture', '0011_auto_20200107_1626'),
@@ -21,9 +20,15 @@ class Migration(migrations.Migration):
                 ('rmi', models.FloatField(default=0.0, null=True)),
                 ('ca', models.IntegerField(default=0, null=True)),
                 ('ce', models.IntegerField(default=0, null=True)),
-                ('commit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics', to='contributions.Commit')),
-                ('directory', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics', to='contributions.Directory')),
-                ('previous_architecture_quality_metrics', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='architecture.ArchitecturalMetricsByCommit')),
+                ('commit',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics',
+                                   to='contributions.Commit')),
+                ('directory',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics',
+                                   to='contributions.Directory')),
+                ('previous_architecture_quality_metrics',
+                 models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                   to='architecture.ArchitecturalMetricsByCommit')),
             ],
         ),
         migrations.DeleteModel(

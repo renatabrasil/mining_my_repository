@@ -2,6 +2,7 @@ from django import template
 
 register = template.Library()
 
+
 class SetVarNode(template.Node):
 
     def __init__(self, var_name, var_value):
@@ -17,6 +18,7 @@ class SetVarNode(template.Node):
 
         return u""
 
+
 # returns a value of a given array
 @register.filter()
 def get(value, arg):
@@ -24,21 +26,25 @@ def get(value, arg):
         return value[arg]
     return None
 
+
 @register.filter(name="get_list")
 def get_list(value, arg):
     if value:
         return value[arg]
     return None
 
+
 @register.filter()
 def div(value, arg):
     if arg == 0:
         return 0
-    return value/arg
+    return value / arg
+
 
 @register.filter
 def percentage(value):
     return format(value, ".2%")
+
 
 @register.filter()
 def get_field(value, args):
@@ -49,7 +55,8 @@ def get_field(value, args):
         return getattr(value, arg_list[0])
     index = int(arg_list[0])
     object = value[int(arg_list[0])]
-    return getattr(object[index],arg_list[1])
+    return getattr(object[index], arg_list[1])
+
 
 @register.tag(name='set')
 def set_var(parser, token):

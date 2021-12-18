@@ -5,7 +5,6 @@ import sys
 
 path = sys.argv[1]
 
-
 arr = os.listdir(path)
 sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
 for folder in sorted_files:
@@ -18,7 +17,8 @@ for folder in sorted_files:
             if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
                 print(folder)
                 try:
-                    rc = os.system('java -jar Arcan-1.2.1-SNAPSHOT.jar -p ' + '"' + folder + '"'+ ' -out ' + '"' + folder + '"' +' -pm -folderOfJars')
+                    rc = os.system(
+                        'java -jar Arcan-1.2.1-SNAPSHOT.jar -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars')
                 except Exception as er:
                     print(er)
             else:

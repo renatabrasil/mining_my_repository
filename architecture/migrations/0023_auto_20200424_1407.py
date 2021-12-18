@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0071_auto_20200424_1312'),
         ('architecture', '0022_auto_20200423_1449'),
@@ -19,7 +18,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='architecturalmetricsbycommit',
             name='component_commit',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics', to='contributions.ComponentCommit'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE,
+                                    related_name='architectural_metrics', to='contributions.ComponentCommit'),
             preserve_default=False,
         ),
     ]

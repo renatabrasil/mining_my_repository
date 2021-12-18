@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0025_auto_20191228_1900'),
     ]
@@ -20,7 +19,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='commit',
             name='author',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='author',
+                                    to='contributions.Developer'),
         ),
         migrations.AlterField(
             model_name='commit',
@@ -30,7 +30,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='commit',
             name='committer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='committer', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='committer',
+                                    to='contributions.Developer'),
         ),
         migrations.AlterField(
             model_name='commit',

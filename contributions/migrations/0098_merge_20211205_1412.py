@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0054_commit_changed_architecture'),
         ('contributions', '0097_alter_commit_compilable'),

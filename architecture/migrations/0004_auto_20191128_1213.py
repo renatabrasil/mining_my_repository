@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0017_auto_20191122_1302'),
         ('architecture', '0003_file'),
@@ -27,9 +26,14 @@ class Migration(migrations.Migration):
                 ('rmi', models.FloatField(default=0.0, null=True)),
                 ('ca', models.FloatField(default=0.0, null=True)),
                 ('ce', models.FloatField(default=0.0, null=True)),
-                ('commit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics', to='contributions.Commit')),
-                ('directory', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contributions.Directory')),
-                ('previous_architecture_quality_metrics', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='architecture.ArchitectureQualityMetrics')),
+                ('commit',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='architectural_metrics',
+                                   to='contributions.Commit')),
+                ('directory',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contributions.Directory')),
+                ('previous_architecture_quality_metrics',
+                 models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                   to='architecture.ArchitectureQualityMetrics')),
             ],
         ),
         migrations.CreateModel(
@@ -40,8 +44,10 @@ class Migration(migrations.Migration):
                 ('directory', models.CharField(max_length=100)),
                 ('has_compileds', models.BooleanField(default=False)),
                 ('build_path', models.CharField(max_length=200)),
-                ('local_repository', models.CharField(default='G:/My Drive/MestradoUSP/programacao/projetos/git/ant', max_length=200)),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='files', to='contributions.Project')),
+                ('local_repository',
+                 models.CharField(default='G:/My Drive/MestradoUSP/programacao/projetos/git/ant', max_length=200)),
+                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='files',
+                                              to='contributions.Project')),
             ],
         ),
         migrations.DeleteModel(
@@ -54,17 +60,20 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='architecturequalitybydeveloper',
             name='architecture_quality_metrics',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='metrics_by_developer', to='architecture.ArchitectureQualityMetrics'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='metrics_by_developer',
+                                    to='architecture.ArchitectureQualityMetrics'),
         ),
         migrations.AddField(
             model_name='architecturequalitybydeveloper',
             name='developer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='developer_id', to='contributions.Developer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='developer_id',
+                                    to='contributions.Developer'),
         ),
         migrations.AddField(
             model_name='compiled',
             name='file',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='compileds', to='architecture.FileCommits'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='compileds',
+                                    to='architecture.FileCommits'),
             preserve_default=False,
         ),
     ]

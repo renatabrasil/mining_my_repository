@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('contributions', '0018_auto_20191202_1142'),
         ('architecture', '0007_delete_compiled'),
@@ -19,7 +18,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='filecommits',
             name='tag',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='files', to='contributions.Tag'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='files',
+                                    to='contributions.Tag'),
             preserve_default=False,
         ),
     ]
