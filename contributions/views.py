@@ -5,11 +5,11 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import loader
 from django.views import View
-from django.views.generic.detail import BaseDetailView, DetailView
+from django.views.generic.detail import DetailView
 from injector import inject
 
 from contributions.models import Commit
-from contributions.services import ContributionsService, ContributionsDetailsService
+from contributions.services import ContributionsService
 
 logger = logging.getLogger(__name__)
 
@@ -52,31 +52,15 @@ class ContributionsListView(View):
 class CommitDetailView(DetailView):
     model = Commit
     template_name = 'contributions/detail.html'
+    context = {'title': 'Detalhes do commit'}
 
-
-class ContributionsDetailView(BaseDetailView):
-    @inject
-    def __init__(self, contributions_service: ContributionsDetailsService):
-        self.contributions_service = contributions_service
-
-    model = Commit
-    template_name = 'contributions/detail.html'
-    context_object_name = 'commit'
-
-    def get(self, request):
-        return render(request, self.template_name, {'commit': None})
+    def get_object(self):
+        self.extra_context = self.context
+        if self.request.path == '/contributions/commits/':
+            return []
+        return self.model.objects.get(pk=self.kwargs['pk'])
 
     def post(self, request):
-        hash_commit = request.POST.get('hash')
-        if hash_commit:
-            request.session['hash'] = hash_commit
-        else:
-            if 'hash' in request.session:
-                hash_commit = request.session['hash']
-            else:
-                hash_commit = None
-
-        commit = self.contributions_service.show_commit(hash_commit)
-
-        return render(request, self.template_name,
-                      {'commit': commit, 'current_commit_hash': hash_commit, 'title': 'Detalhes do commit'})
+        context = {'commit': self.model.objects.filter(hash=self.request.POST['hash']).first(),
+                   'current_commit_hash': self.request.POST['hash'], **self.context}
+        return self.render_to_response(context)
