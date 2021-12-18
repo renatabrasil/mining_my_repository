@@ -2,7 +2,7 @@ name: Django CI
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ master ]
   pull_request:
     types: [ opened, synchronize, reopened ]
 
