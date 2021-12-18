@@ -28,7 +28,7 @@
                 <option selected value="{{tag.id}}">Selecione a versão</option>
                 {% for tag in tags %} {{current_tag}}
                 <option value="{{tag.id}}"
-                        {% if tag.id== current_tag_id %}selected="selected" {% endif %}>
+                        {% if tag.id == current_tag_id %}selected="selected" {% endif %}>
                     {{tag.description}}
                 </option>
                 {% endfor %}
