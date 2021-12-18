@@ -227,23 +227,21 @@ class ViewUtilsTests(TestCase):
         mock_tag.assert_called_once
 
     @patch("contributions.models.Tag.objects")
-    def test_should_throws_exception_when_calls_load_tag_that_neither_stored_in_session_nor_in_request_successfully(
+    def test_should_return_first_tag_when_calls_load_tag_that_neither_stored_in_session_nor_in_request_successfully(
             self, mock_tag):
         # Given
         mock_tag.filter.return_value = Mock()
-        mock_tag.filter.return_value.first.return_value.get.return_value = 2
+        mock_tag.all.return_value.first.return_value = Tag(id=3)
 
         rf = RequestFactory()
         post_request = rf.post('/submit/')
         post_request.session = {'project': '1'}
 
         # When
-        with self.assertRaises(ValueError) as context:
-            ViewUtils.load_tag(post_request)
+        ViewUtils.load_tag(post_request)
 
         # Then
-        self.assertEqual('Enter in admin session and provide a project and a tag belong to it.',
-                         context.exception.args[0])
+        self.assertEqual('3', str(post_request.session['tag']))
         mock_tag.assert_called_once
 
     @patch("contributions.models.Tag.objects")

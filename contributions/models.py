@@ -499,25 +499,17 @@ class Modification(models.Model):
         else:
             directory_str = "/"
         directory = Directory.objects.filter(name__iexact=directory_str)
-        if directory.count() == 0:
-            directory = Directory(name=directory_str, project=self.commit.tag.project,
-                                  initial_commit=self.commit)
-            directory.save()
-            self.directory = directory
-        else:
-            self.directory = directory[0]
-
-        return directory
+        if directory.exists():
+            return directory[0]
+        return Directory.objects.create(name=directory_str, project=self.commit.tag.project,
+                                        initial_commit=self.commit)
 
     def __prepare_component_commit(self) -> ComponentCommit:
         component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
         if component_commit_repo.exists():
-            self.component_commit = component_commit_repo[0]
-        else:
-            self.component_commit = ComponentCommit(component=self.directory, commit=self.commit)
-            self.component_commit.save()
+            return component_commit_repo[0]
 
-        return ComponentCommit
+        return ComponentCommit.objects.create(component=self.directory, commit=self.commit)
 
     def __update_commit_cloc_activity(self) -> None:
         self.commit.cloc_activity += self.u_cloc
