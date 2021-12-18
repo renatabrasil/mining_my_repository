@@ -11,3 +11,4 @@ pyyaml
 openpyxl
 xlwt
 xlsxwriter
+django-injector==0.2.4

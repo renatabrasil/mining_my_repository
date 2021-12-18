@@ -5,9 +5,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('<int:commit_id>/', views.detail, name='detail'),
-    path('commits/search/', views.detail_by_hash, name='detail_by_hash'),
-    path('developers/<int:committer_id>/', views.detail_in_committer, ),
-    path('<int:directory_id>/change', views.visible_directory),
+    path('', views.ContributionsListView.as_view(), name='index'),
+    path('<int:pk>/', views.CommitDetailView.as_view(), name='detail'),
+    path('commits/', views.CommitDetailView.as_view(), name='detail_by_hash'),
 ]

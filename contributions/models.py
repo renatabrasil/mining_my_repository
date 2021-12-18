@@ -10,12 +10,10 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from pydriller import GitRepository
 
-# local Django
 from common.utils import CommitUtils
-
-SUBMITTED_BY_PARTICLE_REGEX = r'\Submitted\s*([bB][yY])[:]*\s*[\s\S][^\r\n]*[a-zA-Z0-9_.+-]+((\[|\(|\<)|(\s*(a|A)(t|T)\s*|@)[a-zA-Z0-9-]+(\s*(d|D)(O|o)(t|T)\s*|\.)[a-zA-Z0-9-.]+|(\)|\>|\]))'
-
-COMMENTARY_REGEX = r'(\/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n]))){0,100}\*+\/)|\/{0,1}[^0-9][a-zA-Z]*\*[^;]([^0-9][a-zA-Z]+)[^\r\n]*'
+# local Django
+from contributions.constants import RegexConstants
+from contributions.helpers.models_helper import detect_impact_loc, count_loc
 
 AUTHOR_FILTER = ["Peter Donald"]
 HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207db05d8616ba14d7ef23b",
@@ -27,12 +25,6 @@ HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207
                "1de4dfa58f198e1590294951183ff61210d48549", "0c4f5b1b629f96ffda3d4aca672e10c40b55bf0b",
                "ba9a8832d043d876fd18b2027cc933fc6689ca9c", "2e84be2474b10adb04c13fc622483be04ee3be4d",
                "6fcbf9b848c63465d26a40387a9be212e708f80b"]
-ANT = 1
-LUCENE = 2
-MAVEN = 3
-OPENJPA = 4
-CASSANDRA = 5
-HADOOP = 6
 
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
@@ -45,8 +37,50 @@ class Developer(models.Model):
     login = models.CharField(max_length=60, default='')
     email = models.CharField(max_length=200)
 
+    @classmethod
+    def create(cls, name="", email="", login=""):
+        developer = cls(name=CommitUtils.strip_accents(name).strip(), email=email.lower(), login=login.lower())
+        return developer
+
     def __str__(self):
         return f'{self.name} (login: {self.login}, email: {self.email})'
+
+    def format_data(self, message: str):
+        match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
+        if match:
+            found = match.group(0)
+            if found:
+                author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
+                author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
+                author_name = author_name.replace("\"", "")
+                author_name = CommitUtils.strip_accents(author_name)
+                author_name = author_name.strip()
+
+                email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                if email_pattern:
+                    email_found = email_pattern.group(0)
+                    if email_found:
+                        self.email = email_found.lower()
+                elif full_email_pattern:
+                    # Full email
+                    email_found = full_email_pattern.group(0)
+                    if email_found:
+                        self.email = CommitUtils.get_email(email_found)
+                self.login = self.email.split("@")[0].lower()
+
+            self.name = author_name.strip()
+
+    def update_existing_developer(self, developer_db) -> None:
+        if developer_db:
+            if self.login == developer_db.login:  # Atualiza tudo menos o login
+                developer_db.email = self.email
+                developer_db.name = self.name
+                self = developer_db
+            else:
+                developer_db.email = self.email  # Atualiza tudo menos o nome
+                developer_db.login = self.login
+                self = developer_db
 
 
 class Project(models.Model):
@@ -75,7 +109,6 @@ class Tag(models.Model):
     prepare_build_command = models.CharField(max_length=800, null=True)
     core_component = models.CharField(max_length=280, default='')
     main_directory = models.CharField(max_length=280, default='')
-    v1_1 = 1
 
     @property
     def minors(self):
@@ -237,56 +270,26 @@ class Commit(models.Model):
 
     def update_component_commits(self):
         for component in self.component_commits.all():
-            component.calculate_experience()
+            component.calculate_author_experience_for_component()
 
     def __has_submitted_by_in_the_commit_msg__(self):
-        m = re.search(SUBMITTED_BY_PARTICLE_REGEX, self.msg, re.IGNORECASE)
-        if m:
-            found = m.group(0)
-            return found
-        return False
+        m = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, self.msg, re.IGNORECASE)
+        return (m and m.group(0)) is not None
 
     def save(self, *args, **kwargs):
         self.author.save()
         self.committer.save()
 
         for hash in self.parents:
-            parent = Commit.objects.filter(hash=hash)
-            if parent.count() > 0:
-                self.parent = parent[0]
+            self.parent = Commit.objects.filter(hash=hash).first()
+            break
 
         if self.pk is None:
+            logger.info(f'Commit: {self}')
 
             self.has_submitted_by = self.__has_submitted_by_in_the_commit_msg__()
 
-            previous_commit_of_the_author = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
-                                                                  tag__project=self.tag.project).last()
-            first_commit_of_the_author = Commit.objects.filter(author=self.author, has_submitted_by=False,
-                                                               tag_id__lte=self.tag.id,
-                                                               tag__project=self.tag.project).first()
-
-            self.total_commits = previous_commit_of_the_author.total_commits if previous_commit_of_the_author is not None else 0
-
-            self.cloc_activity = 0
-            if previous_commit_of_the_author is not None:
-                self.cloc_activity = previous_commit_of_the_author.cloc_activity
-
-            if first_commit_of_the_author is not None:
-                self.author_seniority = self.author_date - first_commit_of_the_author.author_date
-                self.author_seniority = abs(self.author_seniority.days)
-
-            self.author_experience = 0.0
-
-            file_by_authors = Modification.objects.none()
-            if self.total_commits > 0:
-                file_by_authors = Modification.objects.filter(commit__author=self.author,
-                                                              commit__tag_id__lte=self.tag.id,
-                                                              commit__tag__project=self.tag.project,
-                                                              commit_id__lte=previous_commit_of_the_author.id)
-
-            files = file_by_authors.values("path").distinct().count()
-
-            self.author_experience = 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
+            self.author_experience = self.determine_author_experience()
             self.total_commits += 1
 
             logger.info("###")
@@ -295,6 +298,29 @@ class Commit(models.Model):
             logger.info(f'Autor: {self.author.name}')
 
         super(Commit, self).save(*args, **kwargs)  # Call the "real" save() method.
+
+    def determine_author_experience(self) -> float:
+        previous_commit_of_the_author = Commit.objects.filter(author=self.author, tag_id__lte=self.tag.id,
+                                                              tag__project=self.tag.project).last()
+        first_commit_of_the_author = Commit.objects.filter(author=self.author, has_submitted_by=False,
+                                                           tag_id__lte=self.tag.id,
+                                                           tag__project=self.tag.project).first()
+        self.total_commits = previous_commit_of_the_author.total_commits if previous_commit_of_the_author is not None else 0
+        self.cloc_activity = 0
+        if previous_commit_of_the_author:
+            self.cloc_activity = previous_commit_of_the_author.cloc_activity
+        if first_commit_of_the_author:
+            self.author_seniority = self.author_date - first_commit_of_the_author.author_date
+            self.author_seniority = abs(self.author_seniority.days)
+        self.author_experience = 0.0
+        file_by_authors = Modification.objects.none()
+        if self.total_commits > 0:
+            file_by_authors = Modification.objects.filter(commit__author=self.author,
+                                                          commit__tag_id__lte=self.tag.id,
+                                                          commit__tag__project=self.tag.project,
+                                                          commit_id__lte=previous_commit_of_the_author.id)
+        files = file_by_authors.values("path").distinct().count()
+        return 0.2 * self.total_commits + 0.4 * files + 0.4 * self.cloc_activity
 
     class Meta:
         ordering = ['tag_id', 'id']
@@ -326,9 +352,9 @@ class ComponentCommit(models.Model):
     no_outliers_objects = NoOutlierMetricManager()  # The specific manager.
 
     def __str__(self):
-        return self.component.name + ', Commit id: ' + str(self.commit.id) + ', Autor: ' + self.commit.author.name
+        return self.component.name
 
-    def calculate_experience(self):
+    def calculate_author_experience_for_component(self):
         previous_component_commit = ComponentCommit.objects.filter(commit__author=self.commit.author,
                                                                    component=self.component,
                                                                    commit__id__lt=self.commit.id,
@@ -379,16 +405,11 @@ class Modification(models.Model):
         default=MODIFIED,
     )
     diff = models.TextField(default="")
-    source_code = models.TextField(null=True)
-    source_code_before = models.TextField(null=True)
     added = models.IntegerField(default=0)
     removed = models.IntegerField(default=0)
     cloc = models.IntegerField(default=0)
     u_cloc = models.IntegerField(default=0)
     has_impact_loc = models.BooleanField(default=False)
-
-    nloc = models.IntegerField(default=0, null=True)
-    complexity = models.IntegerField(null=True)
 
     def __str__(self):
         return f"Commit: {self.commit.hash}, Path: {self.path}"
@@ -463,34 +484,36 @@ class Modification(models.Model):
             if self.commit.pk is None:
                 self.commit.save()
 
-            index = self.path.rfind("/")
-            directory_str = ""
-            if index > -1:
-                directory_str = self.path[:index]
-            else:
-                directory_str = "/"
-
-            directory = Directory.objects.filter(name__iexact=directory_str)
-            if directory.count() == 0:
-                directory = Directory(name=directory_str, project=self.commit.tag.project,
-                                      initial_commit=self.commit)
-                directory.save()
-                self.directory = directory
-            else:
-                self.directory = directory[0]
-
-            component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
-            if component_commit_repo.exists():
-                self.component_commit = component_commit_repo[0]
-            else:
-                self.component_commit = ComponentCommit(component=self.directory, commit=self.commit)
-                self.component_commit.save()
+            self.directory = self.__prepare_directory()
+            self.component_commit = self.__prepare_component_commit()
 
             self.cloc = self.added + self.removed
-            self.commit.cloc_activity += self.u_cloc
-            self.commit.save()
+            self.__update_commit_cloc_activity()
 
             super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
+
+    def __prepare_directory(self) -> Directory:
+        index = self.path.rfind("/")
+        if index > -1:
+            directory_str = self.path[:index]
+        else:
+            directory_str = "/"
+        directory = Directory.objects.filter(name__iexact=directory_str)
+        if directory.exists():
+            return directory[0]
+        return Directory.objects.create(name=directory_str, project=self.commit.tag.project,
+                                        initial_commit=self.commit)
+
+    def __prepare_component_commit(self) -> ComponentCommit:
+        component_commit_repo = ComponentCommit.objects.filter(component=self.directory, commit=self.commit)
+        if component_commit_repo.exists():
+            return component_commit_repo[0]
+
+        return ComponentCommit.objects.create(component=self.directory, commit=self.commit)
+
+    def __update_commit_cloc_activity(self) -> None:
+        self.commit.cloc_activity += self.u_cloc
+        self.commit.save()
 
 
 @receiver(post_save, sender=Commit, dispatch_uid="update_commit")
@@ -503,56 +526,3 @@ def update_commit(sender, instance, **kwargs):
             parent.children_commit = instance
             instance.parent = parent
             parent.save(update_fields=['children_commit'])
-
-
-def detect_impact_loc(code):
-    total_lines = code.count('\n')
-    if total_lines > 0:
-        lines = code.split("\n")
-        # In case we should consider commented lines
-        for line in lines:
-            m = re.search(r"\u002F/.*", line)
-            n = re.search(COMMENTARY_REGEX, line)
-            if m or n:
-                if m:
-                    found = m.group(0)
-                    line = line.replace(found, '')
-                    line.replace(' ', '', 1)
-                    if not line.strip().isdigit():
-                        return True
-                elif n:
-                    found = n.group(0)
-                    line = line.replace(found, '')
-                    line.replace(' ', '', 1)
-                    if not line.strip().isdigit():
-                        return True
-            elif not line.replace(" ", "").isdigit() and (line != '' and line != '\n'):
-                return True
-
-    return False
-
-
-def count_loc(code):
-    total_lines = code.count('\n')
-    return total_lines - __count_blank_lines(code)
-
-
-def __count_blank_lines(code):
-    blank_lines = 0
-    lines = code.split('\n')
-    for line in lines[1:]:
-        if not line.strip() or line.replace(" ", "").isdigit():
-            blank_lines += 1
-    return blank_lines
-
-
-def __prepare_diff_text(text, result, type_symbol):
-    for line in text:
-        result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
-    return result
-
-
-def __has_impact_loc_calculation_static_method(diff):
-    added_text = __prepare_diff_text(diff['added'], "", "")
-    deleted_text = __prepare_diff_text(diff['deleted'], "", "")
-    return detect_impact_loc(added_text) or detect_impact_loc(deleted_text)
