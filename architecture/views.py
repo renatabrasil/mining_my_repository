@@ -1,7 +1,9 @@
 import logging
 
 from django.contrib import messages
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
+from django.urls import reverse
 from django.views import View
 from injector import inject
 
@@ -28,14 +30,10 @@ class ArchitectureListView(View):
 
     def get(self, request):
 
-        project_id = request.session['project']
-        project = self.project_repository.find_by_primary_key(pk=project_id)
-
+        project = self.project_repository.find_by_primary_key(pk=request.session['project'])
         files = FileCommits.objects.filter(tag__project=project).order_by("name")
 
         return render(request, self.template_name, {'files': files, **self.context})
-
-    queryset = FileCommits.objects.all().order_by("name")
 
     def post(self, request):
 
@@ -47,19 +45,13 @@ class ArchitectureListView(View):
 
         # check whether it's valid:
         if self.form_class.is_valid:
-            # process the data in form.cleaned_data as required
-            # ...
-            # redirect to a new URL:
+
             files = self.arch_service.create_files(project_id)
             if files:
                 messages.success(request, 'Files successfully created!')
             else:
                 messages.error(request, 'Could not create files.')
 
-        self.form_class = FilesCompiledForm(
-            initial={'directory': 'compiled/' + project.project_name.lower().replace(' ', '-'),
-                     'git_local_repository': 'G:/My Drive/MestradoUSP/programacao/projetos/git/ant',
-                     'build_path': 'build/classes'})
         files = FileCommits.objects.filter(tag__project=project).order_by("name")
 
         context = {
@@ -77,5 +69,7 @@ class ArchitecturalMetricsView(View):
         self.arch_service = arch_service
         self.project_repository = project_repository
 
-    def post(self, request):
-        print("")
+    def get(self, request, file_id):
+        self.arch_service.compile_commits(file_id)
+
+        return HttpResponseRedirect(reverse('architecture:index', ))

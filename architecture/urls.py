@@ -8,7 +8,7 @@ app_name = 'architecture'
 
 urlpatterns = [
     path('', views.ArchitectureListView.as_view(), name='index'),
-    path('compileds/<int:file_id>/', views2.compiled, name='compileds'),
+    path('compileds/<int:file_id>/', views.ArchitecturalMetricsView.as_view(), name='compileds'),
     path('metrics/<int:file_id>/', views2.calculate_metrics, name='calculate_metrics'),
     path('metrics_by_commits/', views2.metrics_by_commits, name='metrics_by_commits'),
     path('metrics_by_developer/', views2.metrics_by_developer, name='metrics_by_developer'),
