@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET
 from scipy.stats import spearmanr
 
-from architecture.views import ROUDING_SCALE
+from architecture.views2 import ROUDING_SCALE
 from contributions.helpers import ant_project_helper
 from contributions.models import Tag, ComponentCommit
 

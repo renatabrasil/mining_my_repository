@@ -17,7 +17,7 @@
                 <option selected value="{{developer.id}}">Selecione desenvolvedores</option>
                 {% for developer in developers %} {{current_developer}}
                 <option value="{{developer.id}}"
-                        {% if developer.id== current_developer.id %}selected="selected" {% endif %}>
+                        {% if developer.id == current_developer.id %}selected="selected" {% endif %}>
                     {{developer.name}}
                 </option>
                 {% endfor %}
