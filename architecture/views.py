@@ -1,8 +1,9 @@
 import logging
 
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
+from django.template import loader
 from django.urls import reverse
 from django.views import View
 from injector import inject
@@ -10,6 +11,8 @@ from injector import inject
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits
 from architecture.services import ArchitectureService
+from common.constants import ConstantsUtils
+from contributions.models import Commit
 from contributions.repositories.project_repository import ProjectRepository
 
 logger = logging.getLogger(__name__)
@@ -70,6 +73,35 @@ class ArchitecturalMetricsView(View):
         self.project_repository = project_repository
 
     def get(self, request, file_id):
-        self.arch_service.compile_commits(file_id)
+        path = request.path.split(ConstantsUtils.PATH_SEPARATOR)[2]
+
+        if path == 'compileds':
+            self.arch_service.compile_commits(file_id)
+        elif path == 'extract_metrics_csv':
+            self.arch_service.extract_and_calculate_architecture_metrics(request, file_id)
+        elif path == 'metrics':
+            self.arch_service.calculate_metrics(request, file_id)
 
         return HttpResponseRedirect(reverse('architecture:index', ))
+
+
+class ImpactfulCommitsMetricsView(View):
+    model = Commit
+    template_name = 'architecture/impactful_commits.html'
+
+    @inject
+    def __init__(self, arch_service: ArchitectureService, project_repository: ProjectRepository):
+        self.arch_service = arch_service
+        self.project_repository = project_repository
+
+    def get(self, request):
+        self.arch_service.impactful_commits(request)
+
+        template = loader.get_template(self.template_name)
+
+        # if directory_filter > 0:
+        #     template = loader.get_template('architecture/old_impactful_commits.html')
+        # else:
+        #     template = loader.get_template('architecture/impactful_commits.html')
+
+        return HttpResponse(template.render({}, request))

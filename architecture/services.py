@@ -4,10 +4,13 @@ import re
 import shutil
 import subprocess
 
+import pandas as pd
 from django.contrib import messages
 from django.core.files import File
-from django.http import request
+from django.http import request, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
 from injector import inject
 
 from architecture.forms import FilesCompiledForm
@@ -15,15 +18,20 @@ from architecture.helpers import has_jar_file, delete_not_compiled_version, gene
     get_compiled_directory_name, build_path_name
 from architecture.models import FileCommits
 from common.constants import ConstantsUtils, ExtensionsFile
-from contributions.models import Project
+from contributions.models import Project, Directory
 from contributions.repositories.commit_repository import CommitRepository
+from contributions.repositories.developer_repository import DeveloperRepository
+from contributions.repositories.directory_repository import DirectoryRepository
 
 
 class ArchitectureService:
     @inject
-    def __init__(self, form: FilesCompiledForm, commit_repository: CommitRepository):
+    def __init__(self, form: FilesCompiledForm, commit_repository: CommitRepository,
+                 developer_repository: DeveloperRepository, directory_repository: DirectoryRepository):
         self.form = form
         self.commit_repository = commit_repository
+        self.developer_repository = developer_repository
+        self.directory_repository = directory_repository
         self.logger = logging.getLogger(__name__)
 
     def create_files(self, project_id):
@@ -40,9 +48,11 @@ class ArchitectureService:
         # Restricting to commits which has children
         FileCommits.objects.filter(tag__project=project).delete()
 
-        folder = self.form['directory'].subwidgets[0].data['attrs']['value']
+        folder_form = self.form['directory'].subwidgets[0].data['attrs']['value']
+        git_local_directory_form = self.form['git_local_repository'].subwidgets[0].data['attrs']['value']
+        build_path_form = self.form['build_path'].subwidgets[0].data['attrs']['value']
 
-        if not folder:
+        if not folder_form:
             raise ValueError("Directory is not informed")
 
         commits = self.commit_repository.find_all_commits_by_project_order_by_id_asc_as_list(project=project)
@@ -54,44 +64,52 @@ class ArchitectureService:
 
         files = []
 
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        j = first_commit.tag.description
+        if not os.path.exists(folder_form):
+            os.mkdir(folder_form)
+        tag_description = first_commit.tag.description
         try:
-            j = j.replace("/", "-")
-            filename = "commits-" + j + ".txt"
-            file = self.update_file_commits(filename)
+            tag_description = tag_description.replace(ConstantsUtils.PATH_SEPARATOR, "-")
+            filename = "commits-" + tag_description + ExtensionsFile.TXT
+
+            file = self.update_current_file(filename)
+
             file.tag = first_commit.tag
             files.append(file)
+
             f = open(file.__str__(), 'w')
             my_file = File(f)
-            my_file.write(
-                self.form['git_local_repository'].subwidgets[0].data['attrs']['value'] + ConstantsUtils.END_STR)
-            my_file.write(self.form['build_path'].subwidgets[0].data['attrs']['value'] + ConstantsUtils.END_STR)
+            my_file.write(git_local_directory_form + ConstantsUtils.END_STR)
+            my_file.write(build_path_form + ConstantsUtils.END_STR)
+
             i = 1
             for commit in commits:
 
-                commit_tag = commit.tag.description.replace("/", "-")
+                commit_tag = commit.tag.description.replace(ConstantsUtils.PATH_SEPARATOR, "-")
 
-                if j != commit_tag:
+                if tag_description != commit_tag:
                     my_file.closed
                     f.closed
                     file.save()
+
                     i = 1
-                    j = commit_tag
-                    filename = "commits-" + j + ".txt"
-                    file = self.update_file_commits(filename)
+                    tag_description = commit_tag
+                    filename = "commits-" + tag_description + ExtensionsFile.TXT
+
+                    file = self.update_current_file(filename)
                     file.tag = commit.tag
+
                     f = open(file.__str__(), 'w')
                     my_file = File(f)
+
                     files.append(file)
-                    my_file.write(
-                        self.form['git_local_repository'].subwidgets[0].data['attrs']['value'] + ConstantsUtils.END_STR)
-                    my_file.write(self.form['build_path'].subwidgets[0].data['attrs']['value'] + ConstantsUtils.END_STR)
+                    my_file.write(git_local_directory_form + ConstantsUtils.END_STR)
+                    my_file.write(build_path_form + ConstantsUtils.END_STR)
+
                 if not commit.has_impact_loc and not commit.children_commit:
                     continue
                 my_file.write(str(i) + "-" + commit.hash + ConstantsUtils.END_STR)
                 i += 1
+
             my_file.closed
             f.closed
             file.save()
@@ -101,7 +119,7 @@ class ArchitectureService:
             raise
         return files
 
-    def update_file_commits(self, filename: str) -> FileCommits:
+    def update_current_file(self, filename: str) -> FileCommits:
         file = FileCommits.objects.filter(name=filename)
         if file.count() > 0:
             file = file[0]
@@ -281,3 +299,248 @@ class ArchitectureService:
                     f.close()
         file_db.has_compileds = True
         file_db.save()
+
+    def extract_and_calculate_architecture_metrics(request, file_id):
+        file = FileCommits.objects.get(pk=file_id)
+        directory_name = file.__str__().replace(".txt", "")
+        directory_name = directory_name + "/jars"
+        if os.path.exists(directory_name):
+            arr = os.listdir(directory_name)
+            sorted_files = sorted(arr, key=lambda x: int(x.split('-')[1]))
+            for subdirectory in sorted_files:
+                generate_csv(directory_name + "/" + subdirectory)
+        return HttpResponseRedirect(reverse('architecture:index', ))
+
+    def calculate_metrics(self, request, file_id):
+        """
+        Process metrics calculation request from view
+        """
+        file = FileCommits.objects.get(pk=file_id)
+        directory_name = file.__str__().replace(ExtensionsFile.TXT, "")
+        metrics_directory = directory_name + ConstantsUtils.PATH_SEPARATOR + "metrics"
+        if not os.path.exists(metrics_directory):
+            os.makedirs(metrics_directory, exist_ok=True)
+
+        error_file_name = directory_name + ConstantsUtils.PATH_SEPARATOR + "log-compilation-errors" + ExtensionsFile.TXT
+        if os.path.exists(error_file_name):
+            self.__update_compilable_commits(error_file_name)
+
+        file.metrics_calculated_at = timezone.localtime(timezone.now())
+        file.save()
+
+        return HttpResponseRedirect(reverse('architecture:index', ))
+
+    def impactful_commits(self, request):
+        export_csv = (request.GET.get("export_csv") or request.POST.get("export_csv") == "true")
+
+        full_tag = request.POST.get('until_tag')
+
+        if not full_tag and (request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on'):
+            full_tag = 'on'
+
+        directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by("name")
+        developers = self.developer_repository.find_all().order_by("name")
+        developers = [d for d in developers if
+                      d.commits.exclude(normalized_delta=0).filter(tag__project=request.session['project'])]
+        commits = []
+        directory_name = ''
+        tag_name = ''
+        dev_name = ''
+        directory_filter = 0
+        tag_filter = 0
+        developer_filter = 0
+        delta_check = ''
+        analysis_check = ''
+
+        query = {}
+
+        if request.POST.get('directory_id') or request.GET.get('directory_id'):
+            directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else int(
+                request.GET.get('directory_id'))
+            if directory_filter > 0:
+                query.setdefault('directory_id', directory_filter)
+                directory_name = directory_repository.find_by_primary_key(pk=directory_filter).name.replace('/', '_')
+
+        if request.POST.get('tag_id') or request.GET.get('tag_id'):
+            tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(
+                request.GET.get('tag_id'))
+            if tag_filter > 0:
+                if full_tag:
+                    tag_query_str = 'tag_id'
+                else:
+                    tag_query_str = 'tag_id__lte'
+                if directory_filter > 0:
+                    query.setdefault('commit__' + tag_query_str, tag_filter)
+                else:
+                    query.setdefault(tag_query_str, tag_filter)
+                query.setdefault('tag__project_id', request.session['project'])
+                tag_name = tag_repository.find_by_primary_key(pk=tag_filter).description.replace('/', '_')
+
+        if request.POST.get('developer_id') or request.GET.get('developer_id'):
+            developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(
+                request.GET.get('developer_id'))
+            if developer_filter > 0:
+                if directory_filter > 0:
+                    query.setdefault('commit__author_id', developer_filter)
+                else:
+                    query.setdefault('author_id', developer_filter)
+                dev_name = developer_repository.find_by_primary_key(pk=developer_filter).name.replace(" ", "_").lower()
+
+        if len(query) > 0:
+            if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
+                query.setdefault('delta_rmd__gt', 0)
+                delta_check = 'positive'
+            elif request.POST.get('delta_rmd_components') == 'positive' or request.GET.get(
+                    'delta_rmd_components') == 'positive':
+                query.setdefault('normalized_delta__gt', 0)
+                delta_check = 'positive'
+            elif request.POST.get('delta_rmd_components') == 'negative' or request.GET.get(
+                    'delta_rmd_components') == 'negative':
+                query.setdefault('normalized_delta__lt', 0)
+                delta_check = 'negative'
+            elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':
+                query.setdefault('delta_rmd__lt', 0) if directory_filter > 0 else query.setdefault(
+                    'normalized_delta__lt',
+                    0)
+                delta_check = 'negative'
+
+            if directory_filter > 0:
+                if 'delta_rmd__lt' in query or 'delta_rmd__gt' in query:
+                    commits = ComponentCommit.objects.filter(**query)
+                else:
+                    commits = ComponentCommit.objects.exclude(delta_rmd=0).filter(**query)
+
+                commits = sorted(commits, key=lambda x: x.commit.author_experience, reverse=False)
+            else:
+                if 'normalized_delta__lt' in query or 'normalized_delta__gt' in query:
+                    commits = request.commit_db.filter(**query)
+                else:
+                    if request.POST.get('analysis') == 'geral' or request.GET.get('analysis') == 'geral':
+                        analysis_check = 'geral'
+                        commits = request.commit_db.filter(**query)
+                    else:
+                        analysis_check = 'impactful_commits'
+                        commits = request.commit_db.exclude(normalized_delta=0).filter(**query)
+                commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
+
+        if export_csv:
+
+            if directory_filter > 0:
+                commits = sorted(commits, key=lambda x: x.id, reverse=False)
+                metrics_dict = [
+                    [x.commit.id, x.commit.author_experience, x.commit.delta_rmd * ROUDING_SCALE,
+                     x.commit.total_commits,
+                     x.commit.author_seniority, x.commit.u_cloc] for x in commits]
+
+                del query['directory_id']
+                components = ComponentCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
+                    'id')
+                components_metrics = [
+                    [x.id, x.author_experience, x.delta_rmd / x.commit.u_cloc * ROUDING_SCALE, x.commit.u_cloc] for x in
+                    components]
+
+                my_df = pd.DataFrame(components_metrics,
+                                     columns=['time', 'experiencia', 'degradacao', 'LOC'])
+                my_df.to_csv('component_metrics.csv', index=False, header=True)
+            else:
+                commits = sorted(commits, key=lambda x: x.id, reverse=False)
+
+                name = ''
+                if dev_name:
+                    name += dev_name + '-'
+                if directory_name:
+                    name += directory_name + '-'
+                if tag_name:
+                    name += tag_name + '-'
+                if delta_check:
+                    name += delta_check
+                if name.endswith('-'):
+                    name = name[:-1]
+                if analysis_check == 'geral':
+                    name += 't'
+
+                metrics_dict = [
+                    [x.id, x.author_experience, x.normalized_delta * ROUDING_SCALE, x.total_commits, x.author_seniority,
+                     x.u_cloc] for x in commits]
+
+                components_metrics = []
+                metrics_count = 0
+                for commit in commits:
+                    for component_degradation in commit.component_commits.all():
+                        if component_degradation.delta_rmd != 0:
+                            components_metrics.append(
+                                [component_degradation.id, component_degradation.author_experience,
+                                 component_degradation.delta_rmd * ROUDING_SCALE,
+                                 commit.u_cloc])
+                        else:
+                            metrics_count += 1
+                            print('Component does not degrade. Counter: ' + str(
+                                metrics_count))
+
+                my_df = pd.DataFrame(components_metrics,
+                                     columns=['time', 'experiencia', 'degradacao', 'LOC'])
+                my_df.to_csv('component_metrics_' + name + '.csv', index=False, header=True)
+
+            if len(metrics_dict) > 0:
+                if directory_filter > 0:
+                    my_df = pd.DataFrame(metrics_dict,
+                                         columns=['commit', 'experiencia', 'degradacao', 'q_commit', 'senioridade',
+                                                  'LOC'])
+                else:
+                    my_df = pd.DataFrame(metrics_dict,
+                                         columns=['commit', 'experiencia', 'degradacao', 'q_commit', 'senioridade',
+                                                  'LOC'])
+
+                name += ExtensionsFile.CSV
+
+                my_df.to_csv(name, index=False, header=True)
+
+        context = {
+            'title': 'Relatório de commits impactantes',
+            'metrics': commits,
+            'current_directory_id': directory_filter,
+            'current_tag_id': tag_filter,
+            'current_developer_id': developer_filter,
+            'directories': directories,
+            'developers': developers,
+            'delta_check': delta_check,
+            'analysis_check': analysis_check,
+            'until_tag_state': full_tag,
+        }
+
+        return request
+
+    def __update_compilable_commits(self, commits_with_errors):
+        try:
+            f = open(commits_with_errors, 'r')
+            my_file = File(f)
+            i = 0
+            for commit in my_file:
+                if i > 1:
+                    commit = commit.replace(ConstantsUtils.END_STR, '')
+                    try:
+                        # Go to version
+                        hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace('-', '')
+                        object_commit = self.commit_repository.find_all_compilable_commits_by_hash(hash=hash_commit)
+                        if not object_commit.exists():
+                            continue
+                        else:
+                            object_commit = object_commit[0]
+
+                        object_commit.compilable = False
+                        object_commit.mean_rmd_components = 0.0
+                        object_commit.std_rmd_components = 0.0
+                        object_commit.delta_rmd_components = 0.0
+                        object_commit.normalized_delta = 0.0
+                        object_commit.save()
+
+                    except OSError as e:
+                        self.logger.exception("Error: %s - %s." % (e.filename, e.strerror))
+                    except Exception as er:
+                        self.logger.exception(er.with_traceback())
+                i += 1
+        except Exception as e:
+            self.logger.exception(e.with_traceback())
+            raise
+        finally:
+            f.close()
