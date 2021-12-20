@@ -12,4 +12,5 @@ class ExtensionsFile:
 @dataclass
 class ConstantsUtils:
     PATH_SEPARATOR = '/'
+    HYPHEN_SEPARATOR = '-'
     END_STR = '\n'

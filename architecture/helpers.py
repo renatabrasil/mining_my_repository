@@ -9,7 +9,7 @@ from common.constants import ExtensionsFile, ConstantsUtils
 
 def get_compiled_directory_name(file: FileCommits) -> str:
     return build_path_name(
-        [file.directory, file.name.replace(ExtensionsFile.TXT, ""), 'jars'])  # With no separator in the beginning
+        [file.directory, file.name.replace(ExtensionsFile.TXT, ""), 'jars'])
 
 
 def build_path_name(path: list[str]) -> str:
@@ -21,18 +21,15 @@ def build_path_name(path: list[str]) -> str:
     build_path = ''
     for name in path:
         build_path += ConstantsUtils.PATH_SEPARATOR + name
-    return build_path.replace(ConstantsUtils.PATH_SEPARATOR, '', 1)
+    return build_path.replace(ConstantsUtils.PATH_SEPARATOR, '', 1)  # With no separator in the beginning
 
 
 def has_jar_file(directory: str) -> bool:
-    exists = False
     if os.path.exists(directory):
         for filename in os.listdir(directory):
-            if exists:
-                break
             if filename.endswith(ExtensionsFile.JAR) or filename.endswith(ExtensionsFile.CSV):
-                exists = True
-    return exists
+                return True
+    return False
 
 
 def generate_csv(folder: str) -> bool:
@@ -53,25 +50,24 @@ def generate_csv(folder: str) -> bool:
         return False
 
 
-def delete_not_compiled_version(commit: str, compiled_directory: str,
-                                current_project_path: str, jar_filename: str) -> list[str]:
-    commits_with_errors = []
+def delete_not_compiled_version_and_return_filename(commit: str, directory: str, jar_filename: str) -> str:
+    os.chdir(directory)
 
-    os.chdir(current_project_path + ConstantsUtils.PATH_SEPARATOR + compiled_directory)
+    filename = commit.replace(ConstantsUtils.PATH_SEPARATOR, "").replace(".", "-")
 
-    folder = 'version-' + commit.replace(ConstantsUtils.PATH_SEPARATOR, "").replace(".", "-")
-    commits_with_errors.append(commit.replace(ConstantsUtils.PATH_SEPARATOR, "").replace(".", "-"))
+    folder = 'version-' + filename
 
     shutil.rmtree(folder, ignore_errors=True)
 
     print("BUILD FAILED or Jar creation failed\n")
     print(jar_filename + " DELETED\n")
 
-    return commits_with_errors
+    return filename
 
 
-def create_jar_file(build_path, jar_file, jar_folder, local_repository):
+def create_jar_file(build_path: str, jar_file: str, jar_folder: str, local_repository: str) -> None:
     os.makedirs(jar_folder, exist_ok=True)
+
     input_files = f'"{local_repository}/{build_path}"'
     # self.logger.info(f'comando: jar -cf {jar_file} {input_files}')
     process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository,
