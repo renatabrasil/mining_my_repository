@@ -46,31 +46,36 @@ class Developer(models.Model):
     def __str__(self):
         return f'{self.name} (login: {self.login}, email: {self.email})'
 
-    def format_data(self, message: str):
-        match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
-        if match:
-            found = match.group(0)
-            if found:
-                author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
-                author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
-                author_name = author_name.replace("\"", "")
-                author_name = CommitUtils.strip_accents(author_name)
-                author_name = author_name.strip()
+    def format_data(self, message: str, is_consider_submitted_by: bool = False):
+        author_name = self.name
 
-                email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
-                full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
-                if email_pattern:
-                    email_found = email_pattern.group(0)
-                    if email_found:
-                        self.email = email_found.lower()
-                elif full_email_pattern:
-                    # Full email
-                    email_found = full_email_pattern.group(0)
-                    if email_found:
-                        self.email = CommitUtils.get_email(email_found)
-                self.login = self.email.split("@")[0].lower()
+        if is_consider_submitted_by:
+            match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
+            if match:
+                found = match.group(0)
+                if found:
+                    author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
+                    author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
 
-            self.name = author_name.strip()
+                    email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                    full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email,
+                                                   re.IGNORECASE)
+                    if email_pattern:
+                        email_found = email_pattern.group(0)
+                        if email_found:
+                            self.email = email_found.lower()
+                    elif full_email_pattern:
+                        # Full email
+                        email_found = full_email_pattern.group(0)
+                        if email_found:
+                            self.email = CommitUtils.get_email(email_found)
+
+        author_name = author_name.replace("\"", "")
+        author_name = CommitUtils.strip_accents(author_name)
+        author_name = author_name.strip()
+
+        self.login = self.email.split("@")[0].lower()
+        self.name = author_name.strip()
 
     def update_existing_developer(self, developer):
         if self.login == developer.login:  # Atualiza tudo menos o login

@@ -156,7 +156,7 @@ class ContributionsService:
     def __configure_author_and_committer(self, commit_from_repo) -> tuple[Developer, Developer]:
         author = Developer.create(name=commit_from_repo.author.name, email=commit_from_repo.author.email,
                                   login=commit_from_repo.author.email.split("@")[0])
-        author.format_data(commit_from_repo.msg)
+        author.format_data(commit_from_repo.msg, is_consider_submitted_by=True)
 
         author_db = self.developer_repository.find_all_developer_by_iexact_name(name=author.name).first()
         if author_db:
