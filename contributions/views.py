@@ -13,9 +13,6 @@ from contributions.services import ContributionsService
 
 logger = logging.getLogger(__name__)
 
-def trigger_error(request):
-    division_by_zero = 1 / 0
-
 class ContributionsListView(View):
     @inject
     def __init__(self, contributions_service: ContributionsService):
