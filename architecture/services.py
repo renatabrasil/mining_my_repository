@@ -17,8 +17,10 @@ from architecture.forms import FilesCompiledForm
 from architecture.helpers import has_jar_file, delete_not_compiled_version_and_return_filename, generate_csv, \
     get_compiled_directory_name, build_path_name
 from architecture.models import FileCommits
-from common.constants import ConstantsUtils, ExtensionsFile
-from contributions.models import Project, Directory, ComponentCommit
+from common import constants
+from common.constants import ConstantsUtils
+from common.constants import ExtensionsFile
+from contributions.models import Project, ComponentCommit
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
@@ -341,19 +343,19 @@ class ArchitectureService:
 
         return HttpResponseRedirect(reverse('architecture:index', ))
 
-    def impactful_commits(self, request):
-        export_csv = (request.GET.get('export_csv') or request.POST.get('export_csv') == 'true')
+    def filter_impactful_commits(self, request, request_params: dict):
 
-        full_tag = request.POST.get('until_tag')
+        export_csv = request_params.get('export_csv') == 'true'
+        full_tag = request_params.get('until_tag')
 
-        if not full_tag and (request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on'):
-            full_tag = 'on'
-
-        directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by('name')
+        directories = self.directory_repository.find_all_visible_directories_by_project_id_order_by_name(
+            project_id=request.session['project'])
         developers = self.developer_repository.find_all().order_by('name')
         developers = [d for d in developers if
                       d.commits.exclude(normalized_delta=0).filter(tag__project=request.session['project'])]
+
         commits = []
+
         directory_name = ''
         tag_name = ''
         dev_name = ''
@@ -365,17 +367,15 @@ class ArchitectureService:
 
         query = {}
 
-        if request.POST.get('directory_id') or request.GET.get('directory_id'):
-            directory_filter = int(request.POST.get('directory_id')) if request.POST.get('directory_id') else int(
-                request.GET.get('directory_id'))
+        if request_params.get('directory_id'):
+            directory_filter = int(request_params.get('directory_id'))
             if directory_filter > 0:
                 query.setdefault('directory_id', directory_filter)
                 directory_name = self.directory_repository.find_by_primary_key(pk=directory_filter).name.replace(
-                    ConstantsUtils.PATH_SEPARATOR, '_')
+                    constants.ConstantsUtils.PATH_SEPARATOR, '_')
 
-        if request.POST.get('tag_id') or request.GET.get('tag_id'):
-            tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(
-                request.GET.get('tag_id'))
+        if request_params.get('tag_id'):
+            tag_filter = int(request_params.get('tag_id'))
             if tag_filter > 0:
                 if full_tag:
                     tag_query_str = 'tag_id'
@@ -385,34 +385,33 @@ class ArchitectureService:
                     query.setdefault('commit__' + tag_query_str, tag_filter)
                 else:
                     query.setdefault(tag_query_str, tag_filter)
+
                 query.setdefault('tag__project_id', request.session['project'])
                 tag_name = self.tag_repository.find_by_primary_key(pk=tag_filter).description.replace(
-                    ConstantsUtils.PATH_SEPARATOR, '_')
+                    constants.ConstantsUtils.PATH_SEPARATOR, '_')
 
-        if request.POST.get('developer_id') or request.GET.get('developer_id'):
-            developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(
-                request.GET.get('developer_id'))
+        if request_params.get('developer_id'):
+            developer_filter = int(request_params.get('developer_id'))
             if developer_filter > 0:
                 if directory_filter > 0:
                     query.setdefault('commit__author_id', developer_filter)
                 else:
                     query.setdefault('author_id', developer_filter)
+
                 dev_name = self.developer_repository.find_by_primary_key(pk=developer_filter).name.replace(' ',
                                                                                                            '_').lower()
 
         if len(query) > 0:
-            if request.POST.get('delta_rmd') == 'positive' or request.GET.get('delta_rmd') == 'positive':
+            if request_params.get('delta_rmd') == 'positive':
                 query.setdefault('delta_rmd__gt', 0)
                 delta_check = 'positive'
-            elif request.POST.get('delta_rmd_components') == 'positive' or request.GET.get(
-                    'delta_rmd_components') == 'positive':
+            elif request_params.get('delta_rmd_components') == 'positive':
                 query.setdefault('normalized_delta__gt', 0)
                 delta_check = 'positive'
-            elif request.POST.get('delta_rmd_components') == 'negative' or request.GET.get(
-                    'delta_rmd_components') == 'negative':
+            elif request_params.get('delta_rmd_components') == 'negative':
                 query.setdefault('normalized_delta__lt', 0)
                 delta_check = 'negative'
-            elif request.POST.get('delta_rmd') == 'negative' or request.GET.get('delta_rmd') == 'negative':
+            elif request_params.get('delta_rmd') == 'negative':
                 query.setdefault('delta_rmd__lt', 0) if directory_filter > 0 else query.setdefault(
                     'normalized_delta__lt',
                     0)
@@ -429,12 +428,13 @@ class ArchitectureService:
                 if 'normalized_delta__lt' in query or 'normalized_delta__gt' in query:
                     commits = request.commit_db.filter(**query)
                 else:
-                    if request.POST.get('analysis') == 'geral' or request.GET.get('analysis') == 'geral':
+                    if request_params.get('analysis') == 'geral':
                         analysis_check = 'geral'
                         commits = request.commit_db.filter(**query)
                     else:
                         analysis_check = 'impactful_commits'
                         commits = request.commit_db.exclude(normalized_delta=0).filter(**query)
+
                 commits = sorted(commits, key=lambda x: x.author_experience, reverse=False)
 
         if export_csv:
@@ -524,7 +524,7 @@ class ArchitectureService:
             'until_tag_state': full_tag,
         }
 
-        return request
+        return context
 
     def __update_compilable_commits(self, commits_with_errors):
         try:

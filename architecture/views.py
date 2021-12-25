@@ -94,8 +94,8 @@ class ImpactfulCommitsMetricsView(View):
         self.arch_service = arch_service
         self.project_repository = project_repository
 
-    def get(self, request):
-        self.arch_service.impactful_commits(request)
+    def post(self, request):
+        context = self.arch_service.filter_impactful_commits(request, request.POST)
 
         template = loader.get_template(self.template_name)
 
@@ -104,4 +104,16 @@ class ImpactfulCommitsMetricsView(View):
         # else:
         #     template = loader.get_template('architecture/impactful_commits.html')
 
-        return HttpResponse(template.render({}, request))
+        return HttpResponse(template.render(context, request))
+
+    def get(self, request):
+        context = self.arch_service.filter_impactful_commits(request=request, request_params=request.GET)
+
+        template = loader.get_template(self.template_name)
+
+        # if directory_filter > 0:
+        #     template = loader.get_template('architecture/old_impactful_commits.html')
+        # else:
+        #     template = loader.get_template('architecture/impactful_commits.html')
+
+        return HttpResponse(template.render(context, request))

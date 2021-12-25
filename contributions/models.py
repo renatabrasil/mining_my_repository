@@ -134,7 +134,7 @@ class Tag(models.Model):
 class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
-    visible = models.BooleanField(default=False)
+    visible = models.BooleanField(default=True)
     initial_commit = models.ForeignKey('Commit', on_delete=models.CASCADE, related_name='starter_directories',
                                        null=True)
 
@@ -514,6 +514,7 @@ class Modification(models.Model):
         directory = Directory.objects.filter(name__iexact=directory_str)
         if directory.exists():
             return directory[0]
+
         return Directory.objects.create(name=directory_str, project=self.commit.tag.project,
                                         initial_commit=self.commit)
 
