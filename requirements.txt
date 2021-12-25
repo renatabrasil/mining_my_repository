@@ -12,3 +12,4 @@ openpyxl
 xlwt
 xlsxwriter
 django-injector==0.2.4
+sentry-sdk>=1.5.1
