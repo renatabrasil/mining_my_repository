@@ -1,6 +1,7 @@
 import logging
 
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.http import Http404
 from injector import inject
 from pydriller import RepositoryMining
@@ -113,45 +114,59 @@ class ContributionsService:
 
     def __load_commits_from_repo_and_save_in_db(self, current_tag: Tag, filter_: dict) -> Commit:
         try:
+            transaction.set_autocommit(False)
+
             commits = []
             for commit_from_repository in RepositoryMining(current_tag.project.project_path,
                                                            **filter_).traverse_commits():
                 commit = self.commit_repository.find_all_commits_by_hash(hash=commit_from_repository.hash)
                 if not commit.exists():
                     author, committer = self.__configure_author_and_committer(commit_from_repository)
+                    modifications = []
+                    try:
+                        commit = Commit.objects.create(hash=commit_from_repository.hash, tag=current_tag,
+                                                       parents_str=str(commit_from_repository.parents)[1:-1].replace(
+                                                           " ",
+                                                           "").replace(
+                                                           "'", ""),
+                                                       msg=commit_from_repository.msg,
+                                                       author=author,
+                                                       author_date=commit_from_repository.author_date,
+                                                       committer=committer,
+                                                       committer_date=commit_from_repository.committer_date,
+                                                       real_tag_description=filter_['to_tag'])
 
-                    commit = Commit.objects.create(hash=commit_from_repository.hash, tag=current_tag,
-                                                   parents_str=str(commit_from_repository.parents)[1:-1].replace(" ",
-                                                                                                                 "").replace(
-                                                       "'", ""),
-                                                   msg=commit_from_repository.msg,
-                                                   author=author,
-                                                   author_date=commit_from_repository.author_date,
-                                                   committer=committer,
-                                                   committer_date=commit_from_repository.committer_date,
-                                                   real_tag_description=filter_['to_tag'])
+                        for modification_repo in commit_from_repository.modifications:
+                            # Save only commits with java file and not in test directory
+                            if self.__has_no_constraints(modification_repo, current_tag):
+                                modification = Modification.objects.create(commit=commit,
+                                                                           old_path=modification_repo.old_path,
+                                                                           new_path=modification_repo.new_path,
+                                                                           change_type=modification_repo.change_type,
+                                                                           diff=modification_repo.diff,
+                                                                           added=modification_repo.added,
+                                                                           removed=modification_repo.removed)
 
-                    for modification_repo in commit_from_repository.modifications:
-                        # Save only commits with java file and not in test directory
-                        if self.__has_no_constraints(modification_repo, current_tag):
-                            modification = Modification.objects.create(commit=commit,
-                                                                       old_path=modification_repo.old_path,
-                                                                       new_path=modification_repo.new_path,
-                                                                       change_type=modification_repo.change_type,
-                                                                       diff=modification_repo.diff,
-                                                                       added=modification_repo.added,
-                                                                       removed=modification_repo.removed)
+                                self.logger.info(modification.__str__())
+                                modifications.append(modification)
+                        if commit.pk:
+                            commit.update_component_commits()
+                        if len(modifications) > 0:
+                            transaction.commit()
+                            commits.append(commit)
+                        else:
+                            transaction.rollback()
+                    except:
+                        transaction.rollback()
+                        pass
 
-                            self.logger.info(modification.__str__())
-                    if commit.pk:
-                        commit.update_component_commits()
-
-                    commits.append(commit)
             return commits
         except Exception as err:
             self.logger.exception(f'Erro ao salvar arquivo.')
             self.logger.exception(err)
             raise
+        finally:
+            transaction.set_autocommit(True)
 
     def __configure_author_and_committer(self, commit_from_repo) -> tuple[Developer, Developer]:
         author = Developer.create(name=commit_from_repo.author.name, email=commit_from_repo.author.email,

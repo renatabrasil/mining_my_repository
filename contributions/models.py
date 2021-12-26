@@ -1,6 +1,8 @@
 # standard library
 import logging
+import os
 import re
+import subprocess
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -339,6 +341,46 @@ class Commit(models.Model):
             files = file_by_authors.values("path").distinct().count()
 
         return c_weight * self.total_commits + f_weight * files + cloc_weight * self.cloc_activity
+
+    #
+    def prepare_build(self, validation_skip_error: bool = False) -> bool:
+        JAVA_HOME = os.environ.get('JAVA_HOME')
+        if not JAVA_HOME:
+            raise RuntimeError(
+                'There is no JAVA_HOME environment variable defined. Please install a valid version of JDK.')
+        print(JAVA_HOME)
+
+        ANT_HOME = os.environ.get('ANT_HOME')
+        if not ANT_HOME:
+            raise RuntimeError('There is no ANT_HOME environment variable defined. Please install ANT')
+        print(ANT_HOME)
+
+        M2_HOME = os.environ.get('M2_HOME')
+        if not M2_HOME:
+            raise RuntimeError('There is no M2_HOME environment variable defined. Please install Maven')
+        print(M2_HOME)
+
+        if self.tag.prepare_build_command:
+            for command in self.tag.prepare_build_command:
+                rc = os.system(command)
+                if rc != 0:
+                    self.logger.error('Error on compile')
+                    if not validation_skip_error:
+                        return False
+        return True
+
+    def build(self) -> bool:
+        rc = os.system(self.tag.build_command)
+        if rc != 0:
+            logger.error('Error on compile')
+            return False
+        return True
+
+    def compile(self, jar_name: str, build_path: str, repository: str) -> None:
+        logger.info(f'comando: jar -cf {jar_name} {build_path}')
+        process = subprocess.Popen(f'jar -cf {jar_name} {build_path}', cwd=repository,
+                                   shell=False)
+        process.wait()
 
     class Meta:
         ordering = ['tag_id', 'id']

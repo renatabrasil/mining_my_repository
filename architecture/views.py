@@ -23,6 +23,7 @@ class ArchitectureListView(View):
     def __init__(self, arch_service: ArchitectureService, project_repository: ProjectRepository):
         self.arch_service = arch_service
         self.project_repository = project_repository
+        self.logger = logging.getLogger(__name__)
 
     model = FileCommits
     template_name = 'architecture/index.html'
@@ -33,12 +34,15 @@ class ArchitectureListView(View):
 
     def get(self, request):
 
+        logger.info('[VIEW] - Display Project Settings form')
+
         project = self.project_repository.find_by_primary_key(pk=request.session['project'])
         files = FileCommits.objects.filter(tag__project=project).order_by("name")
 
         return render(request, self.template_name, {'files': files, **self.context})
 
     def post(self, request):
+        logger.info('[VIEW] - Starting Project Settings')
 
         project_id = request.session['project']
         project = self.project_repository.find_by_primary_key(pk=project_id)
@@ -48,8 +52,8 @@ class ArchitectureListView(View):
 
         # check whether it's valid:
         if self.form_class.is_valid:
-
-            files = self.arch_service.create_files(project_id)
+            logger.info('[x] Form is valid')
+            files = self.arch_service.create_files(request, project_id)
             if files:
                 messages.success(request, 'Files successfully created!')
             else:
@@ -63,6 +67,7 @@ class ArchitectureListView(View):
             **self.context,
         }
 
+        logger.info('[VIEW] - Finishing Project Settings')
         return render(request, self.template_name, context)
 
 
@@ -71,17 +76,21 @@ class ArchitecturalMetricsView(View):
     def __init__(self, arch_service: ArchitectureService, project_repository: ProjectRepository):
         self.arch_service = arch_service
         self.project_repository = project_repository
+        self.logger = logging.getLogger(__name__)
 
     def get(self, request, file_id):
+        self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
+
         path = request.path.split(ConstantsUtils.PATH_SEPARATOR)[2]
 
         if path == 'compileds':
-            self.arch_service.compile_commits(file_id)
+            self.arch_service.compile_commits(request, file_id)
         elif path == 'extract_metrics_csv':
             self.arch_service.extract_and_calculate_architecture_metrics(request, file_id)
         elif path == 'metrics':
             self.arch_service.calculate_metrics(request, file_id)
 
+        self.logger.info('[VIEW] Done calculate metrics and impactful commits ...')
         return HttpResponseRedirect(reverse('architecture:index', ))
 
 
