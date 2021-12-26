@@ -1,6 +1,8 @@
 # standard library
 import logging
+import os
 import re
+import subprocess
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -46,31 +48,36 @@ class Developer(models.Model):
     def __str__(self):
         return f'{self.name} (login: {self.login}, email: {self.email})'
 
-    def format_data(self, message: str):
-        match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
-        if match:
-            found = match.group(0)
-            if found:
-                author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
-                author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
-                author_name = author_name.replace("\"", "")
-                author_name = CommitUtils.strip_accents(author_name)
-                author_name = author_name.strip()
+    def format_data(self, message: str, is_consider_submitted_by: bool = False):
+        author_name = self.name
 
-                email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
-                full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
-                if email_pattern:
-                    email_found = email_pattern.group(0)
-                    if email_found:
-                        self.email = email_found.lower()
-                elif full_email_pattern:
-                    # Full email
-                    email_found = full_email_pattern.group(0)
-                    if email_found:
-                        self.email = CommitUtils.get_email(email_found)
-                self.login = self.email.split("@")[0].lower()
+        if is_consider_submitted_by:
+            match = re.search(RegexConstants.SUBMITTED_BY__PARTICLE_REGEX, message, re.IGNORECASE)
+            if match:
+                found = match.group(0)
+                if found:
+                    author_and_email = re.sub(RegexConstants.SUBMITTED_BY_SIMPLE__REGEX, '', found)
+                    author_name = re.sub(RegexConstants.NAME_PATTERN__REGEX, '', author_and_email)
 
-            self.name = author_name.strip()
+                    email_pattern = re.search(RegexConstants.EMAIL_PATTERN_REGEX, author_and_email, re.IGNORECASE)
+                    full_email_pattern = re.search(RegexConstants.FULL_EMAIL_PATTERN_REGEX, author_and_email,
+                                                   re.IGNORECASE)
+                    if email_pattern:
+                        email_found = email_pattern.group(0)
+                        if email_found:
+                            self.email = email_found.lower()
+                    elif full_email_pattern:
+                        # Full email
+                        email_found = full_email_pattern.group(0)
+                        if email_found:
+                            self.email = CommitUtils.get_email(email_found)
+
+        author_name = author_name.replace("\"", "")
+        author_name = CommitUtils.strip_accents(author_name)
+        author_name = author_name.strip()
+
+        self.login = self.email.split("@")[0].lower()
+        self.name = author_name.strip()
 
     def update_existing_developer(self, developer):
         if self.login == developer.login:  # Atualiza tudo menos o login
@@ -134,7 +141,7 @@ class Tag(models.Model):
 class Directory(models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
-    visible = models.BooleanField(default=False)
+    visible = models.BooleanField(default=True)
     initial_commit = models.ForeignKey('Commit', on_delete=models.CASCADE, related_name='starter_directories',
                                        null=True)
 
@@ -335,6 +342,46 @@ class Commit(models.Model):
 
         return c_weight * self.total_commits + f_weight * files + cloc_weight * self.cloc_activity
 
+    #
+    def prepare_build(self, validation_skip_error: bool = False) -> bool:
+        JAVA_HOME = os.environ.get('JAVA_HOME')
+        if not JAVA_HOME:
+            raise RuntimeError(
+                'There is no JAVA_HOME environment variable defined. Please install a valid version of JDK.')
+        print(JAVA_HOME)
+
+        ANT_HOME = os.environ.get('ANT_HOME')
+        if not ANT_HOME:
+            raise RuntimeError('There is no ANT_HOME environment variable defined. Please install ANT')
+        print(ANT_HOME)
+
+        M2_HOME = os.environ.get('M2_HOME')
+        if not M2_HOME:
+            raise RuntimeError('There is no M2_HOME environment variable defined. Please install Maven')
+        print(M2_HOME)
+
+        if self.tag.prepare_build_command:
+            for command in self.tag.prepare_build_command:
+                rc = os.system(command)
+                if rc != 0:
+                    self.logger.error('Error on compile')
+                    if not validation_skip_error:
+                        return False
+        return True
+
+    def build(self) -> bool:
+        rc = os.system(self.tag.build_command)
+        if rc != 0:
+            logger.error('Error on compile')
+            return False
+        return True
+
+    def compile(self, jar_name: str, build_path: str, repository: str) -> None:
+        logger.info(f'comando: jar -cf {jar_name} {build_path}')
+        process = subprocess.Popen(f'jar -cf {jar_name} {build_path}', cwd=repository,
+                                   shell=False)
+        process.wait()
+
     class Meta:
         ordering = ['tag_id', 'id']
 
@@ -514,6 +561,7 @@ class Modification(models.Model):
         directory = Directory.objects.filter(name__iexact=directory_str)
         if directory.exists():
             return directory[0]
+
         return Directory.objects.create(name=directory_str, project=self.commit.tag.project,
                                         initial_commit=self.commit)
 

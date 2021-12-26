@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from architecture.views import SCALE
+from architecture.views2 import SCALE
 
 
 class Migration(migrations.Migration):

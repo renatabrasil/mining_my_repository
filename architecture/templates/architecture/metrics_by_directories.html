@@ -18,7 +18,7 @@
                 <option selected value="{{developer.id}}">Selecione diretórios</option>
                 {% for directory in directories %} {{current_directory}}
                 <option value="{{directory.id}}"
-                        {% if directory.id== current_directory_id %}selected="selected" {% endif %}>
+                        {% if directory.id == current_directory_id %}selected="selected" {% endif %}>
                     {{directory.name}}
                 </option>
                 {% endfor %}
@@ -31,7 +31,7 @@
                 <option selected value="{{developer.id}}">Selecione desenvolvedores</option>
                 {% for developer in developers %} {{current_developer}}
                 <option value="{{developer.id}}"
-                        {% if developer.id== current_developer_id %}selected="selected" {% endif %}>
+                        {% if developer.id == current_developer_id %}selected="selected" {% endif %}>
                     {{developer.name}}
                 </option>
                 {% endfor %}
