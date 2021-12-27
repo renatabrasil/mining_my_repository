@@ -1,10 +1,11 @@
 import logging
 
+import pydriller
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import Http404
 from injector import inject
-from pydriller import RepositoryMining
+from pydriller import RepositoryMining, Commit
 
 from common.utils import ViewUtils, CommitUtils
 from contributions.constants import ProjectsConstants, ConstantsUtils
@@ -168,7 +169,7 @@ class ContributionsService:
         finally:
             transaction.set_autocommit(True)
 
-    def __configure_author_and_committer(self, commit_from_repo) -> tuple[Developer, Developer]:
+    def __configure_author_and_committer(self, commit_from_repo: pydriller.Commit) -> tuple:
         author = Developer.create(name=commit_from_repo.author.name, email=commit_from_repo.author.email,
                                   login=commit_from_repo.author.email.split("@")[0])
         author.format_data(commit_from_repo.msg, is_consider_submitted_by=True)
