@@ -8,14 +8,14 @@ settings = {'runserver': 'mining_my_repository.settings.dev', 'test': 'mining_my
 
 
 def __get_settings_file(arg):
-    if arg not in settings:
+    if len(arg) == 0 or arg[1] not in settings:
         return 'mining_my_repository.settings.base'
     else:
-        return settings[arg]
+        return settings[arg[1]]
 
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', __get_settings_file(sys.argv[1]))
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', __get_settings_file(sys.argv))
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

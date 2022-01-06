@@ -10,6 +10,8 @@ print("SETTINGS DEV CARREGADO")
 DEBUG = True
 
 # logging.basicConfig(filename='architecture.log', encoding='utf-8', level=logging.DEBUG)
+LOGGING_CONFIG = None
+LOGLEVEL = os.getenv('DJ_LOGLEVEL', 'info').upper()
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
