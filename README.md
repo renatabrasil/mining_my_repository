@@ -64,6 +64,24 @@ Instructions for running the application and testing.
 > python manage.py runserver
 ```
 
+#### With docker
+
+```shell
+> docker-compose up --build
+```
+
+##### Logs
+
+```shell
+> http://localhost:3000
+```
+
+Loki query:
+
+```logQL
+> {container_name="mining_my_repository_app_1"} | json
+```
+
 ### Tests
 
 To run django unit tests:
