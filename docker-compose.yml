@@ -17,7 +17,7 @@ services:
   app:
     build: .
     image: mining_my_repository/app
-    #    restart: unless-stopped
+    restart: unless-stopped
     env_file:
       - ./config/django/django.env
       - ./config/gunicorn/gunicorn.env
