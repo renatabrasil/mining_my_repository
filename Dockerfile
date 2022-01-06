@@ -1,5 +1,9 @@
 FROM bitnami/python:3.8.2-prod
 
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
 RUN apt-get update && \
     apt-get install -y git && \
     apt-get install -y dumb-init

@@ -2,6 +2,9 @@
 
 cd /usr/web/app;
 
-python manage.py migrate --settings=mining_my_repository.settings.dev;
+python manage.py makemigrations;
+python manage.py migrate;
+python manage.py loaddata init4.yaml;
+#python manage.py runserver --settings=mining_my_repository.settings.dev;
 
 eval "$@";
