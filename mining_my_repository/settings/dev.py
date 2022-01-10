@@ -26,7 +26,7 @@ LOGGING = {
     },
     'handlers': {
         'file': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': 'logs/mining_my_repository.log',
             'when': 'D',  # this specifies the interval
@@ -56,7 +56,7 @@ LOGGING = {
 sentry_sdk.init(
     dsn="https://76f8b2c1a0f54883bcd435787eb68e5a@o1099084.ingest.sentry.io/6123558",
     integrations=[DjangoIntegration()],
-    debug=True,
+    debug=False,
     environment="dev",
 
     # Set traces_sample_rate to 1.0 to capture 100%

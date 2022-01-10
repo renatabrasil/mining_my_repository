@@ -22,6 +22,10 @@ services:
       - ./config/django/django.env
       - ./config/gunicorn/gunicorn.env
     command: gunicorn mining_my_repository.wsgi:application -c /usr/web/config/gunicorn/gunicorn-app.conf.py
+    depends_on:
+      - "grafana"
+      - "statsd-exporter"
+      - "prometheus"
     ports:
       - "8000:8000"
     networks:

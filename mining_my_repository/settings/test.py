@@ -63,7 +63,7 @@ LOGGING = {
 sentry_sdk.init(
     dsn="https://76f8b2c1a0f54883bcd435787eb68e5a@o1099084.ingest.sentry.io/6123558",
     integrations=[DjangoIntegration()],
-    debug=True,
+    debug=False,
     environment="test",
 
     # Set traces_sample_rate to 1.0 to capture 100%

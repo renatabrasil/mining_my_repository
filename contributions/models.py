@@ -32,7 +32,7 @@ HASH_FILTER = ["550a4ef1afd7651dc20110c0b079fb03665ca9da", "8f3a71443bd538c96207
 filter_outliers = {"author": AUTHOR_FILTER, "hash": HASH_FILTER}
 
 logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.DEBUG)
+logger.setLevel(level=logging.INFO)
 
 
 class Developer(models.Model):
