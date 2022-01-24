@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 
+import numpy as np
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -381,6 +382,34 @@ class Commit(models.Model):
         process = subprocess.Popen(f'jar -cf {jar_name} {build_path}', cwd=repository,
                                    shell=False)
         process.wait()
+
+    def h1_calculate_commit_degradation(self, commit_rmds):
+        '''Invoked by __read_PM_file__'''
+        if len(commit_rmds) > 0:
+            self.mean_rmd_components = np.mean([c[0] for c in commit_rmds])
+            self.std_rmd_components = np.std([c[0] for c in commit_rmds], ddof=1)
+            self.delta_rmd_components = self.mean_rmd_components
+
+        # Delta calculation
+        self.previous_impactful_commit = retrieve_previous_commit(commit)
+
+        if self.has_impact_loc and (
+                self.previous_impactful_commit is not None and self.previous_impactful_commit.compilable and self.previous_impactful_commit.tag == commit.tag):
+            self.delta_rmd_components -= self.previous_impactful_commit.mean_rmd_components
+        # elif commit.previous_impactful_commit is not None and not commit.previous_impactful_commit.compilable:
+        else:
+            self.delta_rmd_components = 0.0
+
+        # Delta normalization by LOC changed
+        if self.u_cloc > 0:
+            self.normalized_delta = self.delta_rmd_components / self.u_cloc
+        else:
+            self.normalized_delta = self.delta_rmd_components
+            logger.error(
+                "****** CASO ESPECIAL: commit sem linha de impacto (LOC=0) com delta diferentee de zero ******")
+
+        self.compilable = True
+        self.save()
 
     class Meta:
         ordering = ['tag_id', 'id']
