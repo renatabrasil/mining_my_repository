@@ -21,6 +21,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from architecture.models import FileCommits
+from common.constants import CommonsConstantsUtils
 from common.utils import ViewUtils
 from contributions.models import (Commit, Developer, Directory,
                                   Project,
@@ -171,9 +172,9 @@ def compiled(request, file_id):
 
                             object_commit.save()
 
-                        build_path_repository = local_repository + '/' + build_path
-                        if build_path.count('\\') <= 1 and build_path.count('/') <= 1:
-                            build_path_repository = local_repository + "/" + build_path
+                        build_path_repository = local_repository + CommonsConstantsUtils.PATH_SEPARATOR + build_path
+                        if build_path.count('\\') <= 1 and build_path.count(CommonsConstantsUtils.PATH_SEPARATOR) <= 1:
+                            build_path_repository = local_repository + CommonsConstantsUtils.PATH_SEPARATOR + build_path
                         if os.path.exists(build_path_repository):
                             shutil.rmtree(build_path_repository)
 
@@ -221,7 +222,7 @@ def impactful_commits(request):
 
     full_tag = request.POST.get('until_tag')
 
-    if not full_tag and (request.GET.get('until_tag') is not None and request.GET.get('until_tag') == 'on'):
+    if not full_tag and (request.GET.get('until_tag') and request.GET.get('until_tag') == 'on'):
         full_tag = 'on'
 
     directories = Directory.objects.filter(visible=True, project_id=request.session['project']).order_by("name")
@@ -245,7 +246,8 @@ def impactful_commits(request):
             request.GET.get('directory_id'))
         if directory_filter > 0:
             query.setdefault('directory_id', directory_filter)
-            directory_name = directory_repository.find_by_primary_key(pk=directory_filter).name.replace('/', '_')
+            directory_name = directory_repository.find_by_primary_key(pk=directory_filter).name.replace(
+                CommonsConstantsUtils.PATH_SEPARATOR, '_')
 
     if request.POST.get('tag_id') or request.GET.get('tag_id'):
         tag_filter = int(request.POST.get('tag_id')) if request.POST.get('tag_id') else int(request.GET.get('tag_id'))
@@ -259,7 +261,8 @@ def impactful_commits(request):
             else:
                 query.setdefault(tag_query_str, tag_filter)
             query.setdefault('tag__project_id', request.session['project'])
-            tag_name = tag_repository.find_by_primary_key(pk=tag_filter).description.replace('/', '_')
+            tag_name = tag_repository.find_by_primary_key(pk=tag_filter).description.replace(
+                CommonsConstantsUtils.PATH_SEPARATOR, '_')
 
     if request.POST.get('developer_id') or request.GET.get('developer_id'):
         developer_filter = int(request.POST.get('developer_id')) if request.POST.get('developer_id') else int(
@@ -538,8 +541,8 @@ def quality_between_versions(request):
                         content = f.readlines()
                         for line in content[1:]:
                             row = line.split(',')
-                            row[5] = row[5].replace('\n', '')
-                            row[0] = row[0].replace('.', '/')
+                            row[5] = row[5].replace(CommonsConstantsUtils.END_STR, '')
+                            row[0] = row[0].replace('.', CommonsConstantsUtils.PATH_SEPARATOR)
                             print(line.replace("\n", ""))
 
                             if row[0] not in metrics_by_directories:
@@ -575,7 +578,7 @@ def quality_between_versions(request):
         my_df = pd.DataFrame(metrics_by_directories)
         print(my_df)
         my_df_metrics.to_csv('metrics_by_version.csv', index=True, index_label='idx', header=True)
-        my_df.to_csv(directory.replace('/', '_') + '.csv', index=True, header=True)
+        my_df.to_csv(directory.replace(CommonsConstantsUtils.PATH_SEPARATOR, '_') + '.csv', index=True, header=True)
     context = {
         'title': 'Cálculo de qualidade da arquitetura por versões',
         'tag': tag,
@@ -623,8 +626,8 @@ def __read_pm_file(folder, tag_id):
 
                 for line in content[1:]:
                     row = line.split(',')
-                    row[5] = row[5].replace('\n', '')
-                    row[0] = row[0].replace('.', '/')
+                    row[5] = row[5].replace(CommonsConstantsUtils.END_STR, '')
+                    row[0] = row[0].replace('.', CommonsConstantsUtils.PATH_SEPARATOR)
 
                     directory_str = tag.main_directory_prefix + row[0]
                     directory = Directory.objects.filter(name__exact=directory_str)
@@ -774,9 +777,11 @@ def __update_file_commits__(form, filename):
 
 
 def __clean_not_compiled_version__(commit, commit_with_errors, compiled_directory, current_project_path, jar):
-    os.chdir(current_project_path + '/' + compiled_directory)
-    folder = 'version-' + commit.replace("/", "").replace(".", "-")
-    commit_with_errors.append(commit.replace("/", "").replace(".", "-"))
+    os.chdir(current_project_path + CommonsConstantsUtils.PATH_SEPARATOR + compiled_directory)
+    folder = 'version-' + commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".",
+                                                                                           CommonsConstantsUtils.HYPHEN_SEPARATOR)
+    commit_with_errors.append(
+        commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".", CommonsConstantsUtils.HYPHEN_SEPARATOR))
     shutil.rmtree(folder, ignore_errors=True)
     print("BUILD FAILED or Jar creation failed\n")
     print(jar + " DELETED\n")

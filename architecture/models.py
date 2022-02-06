@@ -35,7 +35,7 @@ class FileCommits(models.Model):
         return self.__file_sys__
 
     def __str__(self):
-        return self.directory + "/" + self.name
+        return self.directory + CommonsConstantsUtils.PATH_SEPARATOR + self.name
 
     def create_file_with_commits(self, commits: list[Commit]) -> list:
 
@@ -58,7 +58,7 @@ class FileCommits(models.Model):
 
                 if tag_description != commit_tag:
                     my_file.closed
-                    file.save()
+                    self.save()
 
                     i = 1
                     tag_description = commit_tag

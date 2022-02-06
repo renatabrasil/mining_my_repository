@@ -93,6 +93,11 @@ class ArchitecturalMetricsView(View):
         self.logger.info('[VIEW] Done calculate metrics and impactful commits ...')
         return HttpResponseRedirect(reverse('architecture:index', ))
 
+    def post(self, request):
+        self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
+
+        path = request.path.split(CommonsConstantsUtils.PATH_SEPARATOR)[2]
+
 
 class ImpactfulCommitsMetricsView(View):
     model = Commit

@@ -11,6 +11,7 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from pydriller import GitRepository
 
+from common.constants import CommonsConstantsUtils
 from common.utils import CommitUtils
 # local Django
 from contributions.constants import RegexConstants
@@ -128,7 +129,7 @@ class Tag(models.Model):
 
     @property
     def main_directory_prefix(self):
-        return self.main_directory + '/'
+        return self.main_directory + CommonsConstantsUtils.PATH_SEPARATOR
 
     def __str__(self):
         return f'{self.project.project_name}: {self.description}'
@@ -275,6 +276,16 @@ class Commit(models.Model):
     def delta_rmd(self):
         return self.delta_rmd_components
 
+    def clean_metrics(self):
+        self.compilable = False
+        self.mean_rmd_components = 0.0
+        self.std_rmd_components = 0.0
+        self.delta_rmd_components = 0.0
+        self.normalized_delta = 0.0
+
+    def set_compilable(self, status: bool):
+        self.compilable = status
+
     def update_component_commits(self):
         for component in self.component_commits.all():
             component.calculate_author_experience_for_component()
@@ -289,7 +300,7 @@ class Commit(models.Model):
 
         self.get_parent_commit()
 
-        if self.pk is None:
+        if not self.pk:
             logger.info(f'Commit: {self}')
 
             self.has_submitted_by = self.__has_submitted_by_in_the_commit_msg__()
@@ -391,10 +402,10 @@ class Commit(models.Model):
             self.delta_rmd_components = self.mean_rmd_components
 
         # Delta calculation
-        self.previous_impactful_commit = retrieve_previous_commit(commit)
+        self.previous_impactful_commit = self.__retrieve_previous_commit()
 
         if self.has_impact_loc and (
-                self.previous_impactful_commit is not None and self.previous_impactful_commit.compilable and self.previous_impactful_commit.tag == commit.tag):
+                self.previous_impactful_commit and self.previous_impactful_commit.compilable and self.previous_impactful_commit.tag == self.tag):
             self.delta_rmd_components -= self.previous_impactful_commit.mean_rmd_components
         # elif commit.previous_impactful_commit is not None and not commit.previous_impactful_commit.compilable:
         else:
@@ -413,6 +424,20 @@ class Commit(models.Model):
 
     class Meta:
         ordering = ['tag_id', 'id']
+
+    def __retrieve_previous_commit(self):
+        if len(self.parents) > 0:
+            return self.parents[0]
+        return Commit.objects.filter(tag=self.tag, id__lt=self.id,
+                                     tag__real_tag_description__iexact=self.tag.real_tag_description).last()
+
+    def __retrieve_previous_component_commit(self, directory):
+        component = ComponentCommit.objects.filter(component=directory, commit_id__lt=self.id,
+                                                   commit__author=self.author, commit__tag=self.tag,
+                                                   commit__tag__real_tag_description__iexact=self.tag.real_tag_description)
+        if component.exists():
+            return component.last()
+        return None
 
 
 class NoOutlierMetricManager(models.Manager):
@@ -451,7 +476,7 @@ class ComponentCommit(models.Model):
         file_by_authors = Modification.objects.none()
 
         # because components are saved directly
-        if previous_component_commit is not None:
+        if previous_component_commit:
             self.commits_accumulation = previous_component_commit.commits_accumulation
             self.cloc_accumulation = previous_component_commit.cloc_accumulation
             # because Modification model imply any directory whether they are components or not
@@ -512,7 +537,7 @@ class Modification(models.Model):
 
     def __print_text_in_lines(self, text, result, type_symbol):
         for line in text:
-            result = result + "\n" + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
+            result = result + CommonsConstantsUtils.END_STR + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
         return result
 
     def __cloc_uncommented__(self):
@@ -553,7 +578,7 @@ class Modification(models.Model):
 
     @property
     def file(self):
-        index = self.path.rfind("/")
+        index = self.path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
         if index > -1:
             return self.path[index + 1:]
         return self.path
@@ -570,7 +595,7 @@ class Modification(models.Model):
         if self.is_java_file:
             self.u_cloc = self.__cloc_uncommented__()
 
-            if self.commit.pk is None:
+            if not self.commit.pk:
                 self.commit.save()
 
             self.directory = self.__prepare_directory()
@@ -582,11 +607,11 @@ class Modification(models.Model):
             super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
     def __prepare_directory(self) -> Directory:
-        index = self.path.rfind("/")
+        index = self.path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
         if index > -1:
             directory_str = self.path[:index]
         else:
-            directory_str = "/"
+            directory_str = CommonsConstantsUtils.PATH_SEPARATOR
         directory = Directory.objects.filter(name__iexact=directory_str)
         if directory.exists():
             return directory[0]

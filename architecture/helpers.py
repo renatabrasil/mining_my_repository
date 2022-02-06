@@ -52,7 +52,8 @@ def generate_csv(folder: str) -> bool:
 def delete_not_compiled_version_and_return_filename(commit: str, directory: str, jar_filename: str) -> str:
     os.chdir(directory)
 
-    filename = commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".", "-")
+    filename = commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".",
+                                                                                CommonsConstantsUtils.HYPHEN_SEPARATOR)
 
     folder = 'version-' + filename
 
@@ -72,3 +73,7 @@ def create_jar_file(build_path: str, jar_file: str, jar_folder: str, local_repos
     process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository,
                                shell=False)
     process.wait()
+
+
+def sort_files_by_commit_order_asc(files: [str]):
+    return sorted(files, key=lambda x: int(x.split('-')[1]))
