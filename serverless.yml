@@ -11,9 +11,9 @@
 #
 # Happy Coding!
 
-service: aws-api-mining-my-repository
+#service: aws-api-mining-my-repository
 # app and org for use with dashboard.serverless.com
-#app: your-app-name
+app: aws-api-mining-my-repository
 #org: your-org-name
 
 # You can pin your service to only deploy with a specific Serverless version
