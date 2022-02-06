@@ -3,6 +3,7 @@ import logging
 import unicodedata
 from typing import Optional
 
+from common.constants import CommonsConstantsUtils
 from contributions import models
 
 logger = logging.getLogger(__name__)
@@ -53,9 +54,9 @@ class CommitUtils(object):
         new_path = ''
 
         if modification.old_path:
-            old_path = modification.old_path.replace("\\", "/")
+            old_path = modification.old_path.replace("\\", CommonsConstantsUtils.PATH_SEPARATOR)
         if modification.new_path:
-            new_path = modification.new_path.replace("\\", "/")
+            new_path = modification.new_path.replace("\\", CommonsConstantsUtils.PATH_SEPARATOR)
         if modification.change_type.name == 'DELETE':
             path = old_path
         else:
@@ -95,11 +96,11 @@ class CommitUtils(object):
         Returns:
             str: directory path
         """
-        index = path.rfind("/")
+        index = path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
         if index > -1:
             directory_str = path[:index]
         else:
-            directory_str = "/"
+            directory_str = CommonsConstantsUtils.PATH_SEPARATOR
 
         return directory_str
 

@@ -13,7 +13,7 @@ class SetupMiddleware:
 
         request.project_base = None
 
-        if request.POST.get('project_base_id') is not None:
+        if request.POST.get('project_base_id'):
             request.project_base = request.POST.get('project_base_id')
             request.session['project'] = request.POST.get('project_base_id')
         else:

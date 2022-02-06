@@ -48,7 +48,7 @@ def percentage(value):
 
 @register.filter()
 def get_field(value, args):
-    if args is None:
+    if not args:
         return False
     arg_list = [arg.strip() for arg in args.split(',')]
     if isinstance(arg_list[0], str):

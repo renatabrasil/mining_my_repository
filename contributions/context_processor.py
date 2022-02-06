@@ -4,7 +4,7 @@ from contributions.models import Developer, Project, Tag
 
 def tags_processor(request):
     project_id = request.session['project']
-    if project_id is not None:
+    if project_id:
         project = Project.objects.get(id=project_id)
     else:
         project = Project.objects.all().first()
