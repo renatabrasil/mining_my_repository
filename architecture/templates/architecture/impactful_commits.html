@@ -160,8 +160,7 @@
         </tr>
         <tr style="font-weight: bold">
             <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
-            <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %}Novato{% else
-                %}Long-term dev{% endif %})
+            <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %} Novato {% else %} Long-term dev {% endif %})
             </td>
             <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
             <td style="text-align:right"
