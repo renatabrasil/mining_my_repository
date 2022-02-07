@@ -54,18 +54,16 @@ provider:
 # you can add packaging information here
 #package:
 #  patterns:
-#    - '!exclude-me.py'
-#    - '!exclude-me-dir/**'
-#    - include-me.py
-#    - include-me-dir/**
+#    - /**
+package:
+  exclude:
+    - ./**
+  include:
+    - ./lambdas/**
 
 functions:
   processor:
     handler: lambdas/handler.process
-    package:
-      individually: true
-      exclude:
-        - ./*
     # Packaging rules specific to this function
 #    package:
 #      # Directories and files to include in the deployed package
