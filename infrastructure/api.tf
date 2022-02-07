@@ -14,8 +14,8 @@ module "api_gateway" {
   }
 
   # Custom domain
-  #  domain_name                 = "terraform-aws-modules.modules.tf"
-  #  domain_name_certificate_arn = "arn:aws:acm:eu-west-1:052235179155:certificate/2b3a7ed9-05e1-4f9e-952b-27744ba06da6"
+  domain_name                 = "terraform-aws-modules.modules.tf"
+  domain_name_certificate_arn = "arn:aws:acm:sa-east-1:251675404411:certificate/2b3a7ed9-05e1-4f9e-952b-27744ba06da6"
 
   # Access logs
   default_stage_access_log_destination_arn = "arn:aws:logs:sa-east-1:251675404411:log-group:debug-apigateway"
