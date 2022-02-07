@@ -1,4 +1,8 @@
 /.idea
+**/.terraform
+**/.serverless
+functions/.serverless
+**/.terraform.lock.hcl
 /.ipynb_checkpoints
 /compiled
 */__pycache__
