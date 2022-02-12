@@ -11,11 +11,11 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET
 from scipy.stats import spearmanr
 
-from architecture.views2 import ROUDING_SCALE
 from contributions.helpers import ant_project_helper
 from contributions.models import Tag, ComponentCommit
-
 # OPERATIONS
+from dataanalysis.constants import ConstantsUtils
+
 POPULATION_MEANS = 1
 CORRELATION_BY_VERSION = 2
 CORRELATION_BY_DEV = 3
@@ -115,9 +115,11 @@ def descriptive_statistics(request, type):
             for dev in metric_by_dev:
                 loc = sum([x.u_cloc for x in all_commits if x.author == dev])
                 if metric_by_dev[dev][0] != 0.0:
-                    pioram_contributions_list.append([dev.name, metric_by_dev[dev][0] * ROUDING_SCALE / loc])
+                    pioram_contributions_list.append(
+                        [dev.name, metric_by_dev[dev][0] * ConstantsUtils.ROUDING_SCALE / loc])
                 if metric_by_dev[dev][1] != 0.0:
-                    melhoram_contributions_list.append([dev.name, metric_by_dev[dev][1] * ROUDING_SCALE / loc])
+                    melhoram_contributions_list.append(
+                        [dev.name, metric_by_dev[dev][1] * ConstantsUtils.ROUDING_SCALE / loc])
 
             my_df = pd.DataFrame(pioram_contributions_list, columns=['autor', 'cum_delta'])
             my_df.index = np.arange(1, len(my_df) + 1)
@@ -414,7 +416,8 @@ def __process_metrics__(type, commit_db, request):
 
     if type == CORRELATION_BY_VERSION:
         metric_by_dev = {
-            key: [[c.author_experience, c.normalized_delta * ROUDING_SCALE] for c in commits if c.tag == key] for key in
+            key: [[c.author_experience, c.normalized_delta * ConstantsUtils.ROUDING_SCALE] for c in commits if
+                  c.tag == key] for key in
             set([c.tag for c in commits])}
 
     try:
@@ -429,7 +432,7 @@ def __process_metrics__(type, commit_db, request):
                 if key not in metric_by_dev:
                     metric_by_dev.setdefault(key, [[], []])
                 metric_by_dev[key][0].append(commit.author_experience)
-                metric_by_dev[key][1].append(commit.normalized_delta * ROUDING_SCALE)
+                metric_by_dev[key][1].append(commit.normalized_delta * ConstantsUtils.ROUDING_SCALE)
             elif type == CONTRIBUTIONS_BY_DEV:
                 key = commit.author
                 if key not in metric_by_dev:

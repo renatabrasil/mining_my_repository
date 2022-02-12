@@ -16,6 +16,8 @@ from contributions.models import Commit
 from contributions.repositories.project_repository import ProjectRepository
 
 logger = logging.getLogger(__name__)
+# 1: ON, Otherwise: OFF
+NO_OUTLIERS = 1
 
 
 class ArchitectureListView(View):
@@ -89,6 +91,8 @@ class ArchitecturalMetricsView(View):
             self.arch_service.extract_and_calculate_architecture_metrics(request, file_id)
         elif path == 'metrics':
             self.arch_service.calculate_metrics(request, file_id)
+        elif path == 'quality_between_versions':
+            self.arch_service.calculate_metrics_between_versions(request)
 
         self.logger.info('[VIEW] Done calculate metrics and impactful commits ...')
         return HttpResponseRedirect(reverse('architecture:index', ))
