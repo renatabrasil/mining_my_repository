@@ -1,3 +1,8 @@
+locals {
+  domain_name = "terraform-aws-modules.modules.tf" # trimsuffix(data.aws_route53_zone.this.name, ".")
+  subdomain   = "complete-http"
+}
+
 module "api_gateway" {
   source = "terraform-aws-modules/apigateway-v2/aws"
 
@@ -14,8 +19,8 @@ module "api_gateway" {
   }
 
   # Custom domain
-  domain_name                 = "terraform-aws-modules.modules.tf"
-  domain_name_certificate_arn = "arn:aws:acm:sa-east-1:251675404411:certificate/2b3a7ed9-05e1-4f9e-952b-27744ba06da6"
+  domain_name                 = local.domain_name
+  domain_name_certificate_arn = module.acm.acm_certificate_arn
 
   # Access logs
   default_stage_access_log_destination_arn = "arn:aws:logs:sa-east-1:251675404411:log-group:debug-apigateway"
@@ -30,11 +35,28 @@ module "api_gateway" {
     }
 
     "$default" = {
-      lambda_arn = "arn:aws:lambda:eu-west-1:251675404411:function:processor"
+      lambda_arn = "arn:aws:lambda:sa-east-1:251675404411:function:processor"
     }
   }
 
   tags = {
     Name = "http-apigateway"
   }
+}
+
+######
+# ACM
+######
+
+data "aws_route53_zone" "this" {
+  name = local.domain_name
+}
+
+module "acm" {
+  source  = "terraform-aws-modules/acm/aws"
+  version = "~> 3.0"
+
+  domain_name               = local.domain_name
+#  zone_id                   = data.aws_route53_zone.this.id
+  subject_alternative_names = ["${local.subdomain}.${local.domain_name}"]
 }

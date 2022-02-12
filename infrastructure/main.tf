@@ -2,7 +2,7 @@ terraform {
   backend "remote" {
     organization = "renata-corporation"
     workspaces {
-      name = "Example-Workspace"
+      name = "mining_my_repository"
     }
   }
   required_providers {
@@ -16,6 +16,6 @@ terraform {
 
 provider "aws" {
   profile                 = "default"
-  region                  = "us-west-2"
+  region                  = "sa-east-1"
   shared_credentials_file = "~/.aws/credentials"
 }
