@@ -1,3 +1,4 @@
+#
 #locals {
 #  domain_name = "terraform-aws-modules.modules.tf" # trimsuffix(data.aws_route53_zone.this.name, ".")
 #  subdomain   = "complete-http"
@@ -10,13 +11,13 @@
 #  description   = "My awesome HTTP API Gateway"
 #  protocol_type = "HTTP"
 #
-#  #  cors_configuration = {
-#  #    allow_headers = [
-#  #      "content-type", "x-amz-date", "authorization", "x-api-key", "x-amz-security-token", "x-amz-user-agent"
-#  #    ]
-#  #    allow_methods = ["*"]
-#  #    allow_origins = ["*"]
-#  #  }
+#  cors_configuration = {
+#    allow_headers = [
+#      "content-type", "x-amz-date", "authorization", "x-api-key", "x-amz-security-token", "x-amz-user-agent"
+#    ]
+#    allow_methods = ["*"]
+#    allow_origins = ["*"]
+#  }
 #
 #  # Custom domain
 #  domain_name                 = local.domain_name
