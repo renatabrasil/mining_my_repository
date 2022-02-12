@@ -3,12 +3,15 @@ import os
 import re
 import shutil
 import subprocess
+from collections import OrderedDict
 
+import numpy as np
 import pandas as pd
 from django.contrib import messages
 from django.core.files import File
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.template import loader
 from django.urls import reverse
 from django.utils import timezone
 from injector import inject
@@ -20,7 +23,8 @@ from architecture.models import FileCommits
 from common import constants
 from common.constants import CommonsConstantsUtils
 from common.constants import ExtensionsFile
-from contributions.models import Project, ComponentCommit, Commit, Directory
+from common.utils import ViewUtils
+from contributions.models import Project, ComponentCommit, Commit, Directory, Tag
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
@@ -344,6 +348,73 @@ class ArchitectureService:
 
         logger.info(f'[{__name__}] Done calculate metrics from file_id {file_id}')
         return HttpResponseRedirect(reverse('architecture:index', ))
+
+    def calculate_metrics_between_versions(self, request):
+        template = loader.get_template('architecture/metrics_between_versions.html')
+        tag = ViewUtils.load_tag(request)
+        directory = request.POST.get('directory')
+        metrics_by_directories = OrderedDict()
+        metrics = []
+        if directory:
+            if os.path.exists(directory):
+                arr = os.listdir(directory)
+                sorted_files = sorted(arr, key=lambda x: int(x.split('#')[len(x.split('#')) - 1]))
+                for subdirectory in sorted_files:
+                    generate_csv(directory + "/" + subdirectory)
+                    version = subdirectory
+                    subdirectory = os.path.join(directory, subdirectory)
+                    print("\n" + subdirectory + "\n----------------------\n")
+                    for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
+                        try:
+                            f = open(os.path.join(subdirectory, filename), "r")
+                            content = f.readlines()
+                            for line in content[1:]:
+                                row = line.split(',')
+                                row[5] = row[5].replace(CommonsConstantsUtils.END_STR, '')
+                                row[0] = row[0].replace('.', CommonsConstantsUtils.PATH_SEPARATOR)
+                                print(line.replace("\n", ""))
+
+                                if row[0] not in metrics_by_directories:
+                                    metrics_by_directories.setdefault(row[0], {})
+                                if version not in metrics_by_directories[row[0]]:
+                                    metrics_by_directories[row[0]].setdefault(version, 0.0)
+                                metrics_by_directories[row[0]][version] = row[5]
+
+                        finally:
+                            f.close()
+
+                    components_mean = []
+                    dict2 = list(metrics_by_directories.values())
+                    for value in dict2:
+                        if version in value:
+                            components_mean.append(float(value[version]))
+
+                    # ANT
+                    name_version = version.replace('rel#', '').replace('-', '', 1).replace('_', '.').replace('#',
+                                                                                                             '-')
+                    # Lucene
+                    name_version = version.replace('_', '.').replace('#', '-')
+                    # Cassandra
+                    name_version = version.replace('_', '.').replace('#', '-')
+
+                    architectural_quality = np.mean(components_mean)
+                    metrics.append([name_version, architectural_quality])
+
+                    # FIXME this is too naive and just work for this project. Should be fix soon.
+                    # Ant
+                    self.tag_repository.update(Tag, {'delta_rmd_components': architectural_quality})
+
+            my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
+            my_df = pd.DataFrame(metrics_by_directories)
+            print(my_df)
+            my_df_metrics.to_csv('metrics_by_version.csv', index=True, index_label='idx', header=True)
+            my_df.to_csv(directory.replace(CommonsConstantsUtils.PATH_SEPARATOR, '_') + '.csv', index=True,
+                         header=True)
+        context = {
+            'title': 'Cálculo de qualidade da arquitetura por versões',
+            'tag': tag,
+        }
+        return HttpResponse(template.render(context, request))
 
     def filter_impactful_commits(self, request, request_params: dict):
         logger.info(f'[{__name__}] Starting to filter metrics with params: [{request_params}]')
