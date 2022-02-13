@@ -2,8 +2,9 @@ import os
 import shutil
 import subprocess
 
+from architecture.constants import ConstantsUtils
 from architecture.models import FileCommits
-from common.constants import ExtensionsFile, CommonsConstantsUtils
+from common.constants import ExtensionsFile, CommonsConstants
 
 
 def get_compiled_directory_name(file: FileCommits) -> str:
@@ -19,8 +20,8 @@ def build_path_name(path: list) -> str:
     """
     build_path = ''
     for name in path:
-        build_path += CommonsConstantsUtils.PATH_SEPARATOR + name
-    return build_path.replace(CommonsConstantsUtils.PATH_SEPARATOR, '', 1)  # With no separator in the beginning
+        build_path += CommonsConstants.PATH_SEPARATOR + name
+    return build_path.replace(CommonsConstants.PATH_SEPARATOR, '', 1)  # With no separator in the beginning
 
 
 def has_jar_file(directory: str) -> bool:
@@ -37,7 +38,7 @@ def generate_csv(folder: str) -> bool:
             return True
         for filename in os.listdir(folder):
             if "PM.csv" not in os.listdir(folder) and filename.endswith(ExtensionsFile.JAR):
-                arcan_metrics = subprocess.Popen(CommonsConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
+                arcan_metrics = subprocess.Popen(CommonsConstants.ARCAN_CMD_EXECUTE_PREFIX +
                                                  ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
                                                  shell=False,
                                                  cwd=os.getcwd())
@@ -52,8 +53,8 @@ def generate_csv(folder: str) -> bool:
 def delete_not_compiled_version_and_return_filename(commit: str, directory: str, jar_filename: str) -> str:
     os.chdir(directory)
 
-    filename = commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".",
-                                                                                CommonsConstantsUtils.HYPHEN_SEPARATOR)
+    filename = commit.replace(CommonsConstants.PATH_SEPARATOR, "").replace(".",
+                                                                           CommonsConstants.HYPHEN_SEPARATOR)
 
     folder = 'version-' + filename
 
@@ -82,9 +83,9 @@ def sort_files_by_commit_order_asc(files: [str]):
 def generate_csv(folder):
     if os.path.exists(folder):
         for filename in os.listdir(folder):
-            if "PM.csv" not in os.listdir(folder) and filename.endswith(".jar"):
+            if "PM.csv" not in os.listdir(folder) and filename.endswith(ExtensionsFile.JAR):
                 try:
-                    arcan_metrics = subprocess.Popen('java -jar Arcan-1.2.1-SNAPSHOT.jar'
+                    arcan_metrics = subprocess.Popen(ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
                                                      ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
                                                      shell=False,
                                                      cwd=os.getcwd())

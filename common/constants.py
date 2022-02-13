@@ -10,7 +10,7 @@ class ExtensionsFile:
 
 
 @dataclass
-class CommonsConstantsUtils:
+class CommonsConstants:
     PATH_SEPARATOR = '/'
     HYPHEN_SEPARATOR = '-'
     END_STR = '\n'

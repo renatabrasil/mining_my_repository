@@ -11,7 +11,7 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from pydriller import GitRepository
 
-from common.constants import CommonsConstantsUtils
+from common.constants import CommonsConstants
 from common.utils import CommitUtils
 # local Django
 from contributions.constants import RegexConstants
@@ -129,7 +129,7 @@ class Tag(models.Model):
 
     @property
     def main_directory_prefix(self):
-        return self.main_directory + CommonsConstantsUtils.PATH_SEPARATOR
+        return self.main_directory + CommonsConstants.PATH_SEPARATOR
 
     def __str__(self):
         return f'{self.project.project_name}: {self.description}'
@@ -537,7 +537,7 @@ class Modification(models.Model):
 
     def __print_text_in_lines(self, text, result, type_symbol):
         for line in text:
-            result = result + CommonsConstantsUtils.END_STR + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
+            result = result + CommonsConstants.END_STR + str(line[0]) + ' ' + type_symbol + ' ' + line[1]
         return result
 
     def __cloc_uncommented__(self):
@@ -578,7 +578,7 @@ class Modification(models.Model):
 
     @property
     def file(self):
-        index = self.path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
+        index = self.path.rfind(CommonsConstants.PATH_SEPARATOR)
         if index > -1:
             return self.path[index + 1:]
         return self.path
@@ -607,11 +607,11 @@ class Modification(models.Model):
             super(Modification, self).save(*args, **kwargs)  # Call the "real" save() method.
 
     def __prepare_directory(self) -> Directory:
-        index = self.path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
+        index = self.path.rfind(CommonsConstants.PATH_SEPARATOR)
         if index > -1:
             directory_str = self.path[:index]
         else:
-            directory_str = CommonsConstantsUtils.PATH_SEPARATOR
+            directory_str = CommonsConstants.PATH_SEPARATOR
         directory = Directory.objects.filter(name__iexact=directory_str)
         if directory.exists():
             return directory[0]

@@ -5,7 +5,7 @@ from django.core.files import File
 from django.db import models
 
 # local Django
-from common.constants import CommonsConstantsUtils, ExtensionsFile
+from common.constants import CommonsConstants, ExtensionsFile
 from contributions.models import Tag, AUTHOR_FILTER, Developer, Commit
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class FileCommits(models.Model):
         return self.__file_sys__
 
     def __str__(self):
-        return self.directory + CommonsConstantsUtils.PATH_SEPARATOR + self.name
+        return self.directory + CommonsConstants.PATH_SEPARATOR + self.name
 
     def create_file_with_commits(self, commits: list[Commit]) -> list:
 
@@ -45,16 +45,16 @@ class FileCommits(models.Model):
             files = []
 
             my_file = File(open(self.__str__(), 'w'))
-            my_file.write(self.local_repository + CommonsConstantsUtils.END_STR)
-            my_file.write(self.build_path + CommonsConstantsUtils.END_STR)
+            my_file.write(self.local_repository + CommonsConstants.END_STR)
+            my_file.write(self.build_path + CommonsConstants.END_STR)
 
             tag_description = commits[0].tag.description
 
             i = 1
             for commit in commits:
 
-                commit_tag = commit.tag.description.replace(CommonsConstantsUtils.PATH_SEPARATOR,
-                                                            CommonsConstantsUtils.HYPHEN_SEPARATOR)
+                commit_tag = commit.tag.description.replace(CommonsConstants.PATH_SEPARATOR,
+                                                            CommonsConstants.HYPHEN_SEPARATOR)
 
                 if tag_description != commit_tag:
                     my_file.closed
@@ -71,15 +71,15 @@ class FileCommits(models.Model):
 
                     files.append(file)
 
-                    my_file.write(self.local_repository + CommonsConstantsUtils.END_STR)
-                    my_file.write(self.build_path + CommonsConstantsUtils.END_STR)
+                    my_file.write(self.local_repository + CommonsConstants.END_STR)
+                    my_file.write(self.build_path + CommonsConstants.END_STR)
 
                 if not commit.has_impact_loc and not commit.children_commit:
                     continue
 
                 my_file.write(
-                    str(i) + CommonsConstantsUtils.HYPHEN_SEPARATOR + commit.hash + CommonsConstantsUtils.END_STR)
-                self.logger.info(f'{str(i) + CommonsConstantsUtils.HYPHEN_SEPARATOR + commit.hash} saved')
+                    str(i) + CommonsConstants.HYPHEN_SEPARATOR + commit.hash + CommonsConstants.END_STR)
+                self.logger.info(f'{str(i) + CommonsConstants.HYPHEN_SEPARATOR + commit.hash} saved')
                 i += 1
 
             my_file.closed

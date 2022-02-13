@@ -11,7 +11,7 @@ from injector import inject
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits
 from architecture.services import ArchitectureService
-from common.constants import CommonsConstantsUtils
+from common.constants import CommonsConstants
 from contributions.models import Commit
 from contributions.repositories.project_repository import ProjectRepository
 
@@ -83,7 +83,7 @@ class ArchitecturalMetricsView(View):
     def get(self, request, file_id):
         self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
 
-        path = request.path.split(CommonsConstantsUtils.PATH_SEPARATOR)[2]
+        path = request.path.split(CommonsConstants.PATH_SEPARATOR)[2]
 
         if path == 'compileds':
             self.arch_service.compile_commits(request, file_id)
@@ -100,7 +100,7 @@ class ArchitecturalMetricsView(View):
     def post(self, request):
         self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
 
-        path = request.path.split(CommonsConstantsUtils.PATH_SEPARATOR)[2]
+        path = request.path.split(CommonsConstants.PATH_SEPARATOR)[2]
 
 
 class ImpactfulCommitsMetricsView(View):

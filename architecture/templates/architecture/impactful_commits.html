@@ -16,7 +16,7 @@
                 <option selected value="{{developer.id}}">Selecione o componente</option>
                 {% for directory in directories %} {{current_directory}}
                 <option value="{{directory.id}}"
-                        {% if directory.id== current_directory_id %}selected="selected" {% endif %}>
+                        {% if directory.id == current_directory_id %}selected="selected" {% endif %}>
                     {{directory.name}}
                 </option>
                 {% endfor %}
@@ -54,7 +54,7 @@
                 <option selected value="{{developer.id}}">Selecione o desenvolvedor</option>
                 {% for developer in developers %} {{current_developer}}
                 <option value="{{developer.id}}"
-                        {% if developer.id== current_developer_id %}selected="selected" {% endif %}>
+                        {% if developer.id == current_developer_id %}selected="selected" {% endif %}>
                     {{developer.name}}
                 </option>
                 {% endfor %}
@@ -64,18 +64,15 @@
     <div class="form-row align-items-center">
         <div class="col-auto">
             <div class="custom-control custom-radio custom-control-inline">
-                <input type="radio" id="radioGeral" name="delta_rmd_components" value="geral" {% if delta_check== ""
-                %}checked="checked"{% endif %} class="custom-control-input">
+                <input type="radio" id="radioGeral" name="delta_rmd_components" value="geral" {% if delta_check == "" %}checked="checked"{% endif %} class="custom-control-input">
                 <label class="custom-control-label" for="radioGeral">Geral</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-                <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check==
-                "positive" %} checked="checked" {% endif %} class="custom-control-input">
+                <input type="radio" id="radioDegrada" name="delta_rmd_components" value="positive" {% if delta_check == "positive" %} checked="checked" {% endif %} class="custom-control-input">
                 <label class="custom-control-label" for="radioDegrada">Degrada</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-                <input type="radio" id="radioMelhora" name="delta_rmd_components" value="negative" {% if delta_check==
-                "negative" %} checked= "checked" {% endif %} class="custom-control-input">
+                <input type="radio" id="radioMelhora" name="delta_rmd_components" value="negative" {% if delta_check == "negative" %} checked= "checked" {% endif %} class="custom-control-input">
                 <label class="custom-control-label" for="radioMelhora">Melhora</label>
             </div>
 
@@ -91,8 +88,7 @@
                 <label class="custom-control-label" for="radioCommitsImpactantes">Apenas commits impactantes</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">
-                <input type="radio" id="radioTodosCommits" name="analysis" value="geral" {% if analysis_check== "geral"
-                %} checked="checked" {% endif %} class="custom-control-input">
+                <input type="radio" id="radioTodosCommits" name="analysis" value="geral" {% if analysis_check == "geral" %} checked="checked" {% endif %} class="custom-control-input">
                 <label class="custom-control-label" for="radioTodosCommits">Todos</label>
             </div>
 
@@ -164,8 +160,7 @@
         </tr>
         <tr style="font-weight: bold">
             <td><strong>CLOC (commit): {{metric.u_cloc}}</strong></td>
-            <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %} Novato {% else %}
-                Long-term dev {% endif %})
+            <td>{{metric.author.name}} {{metric.has_submitted_by}}({% if metric.is_author_newcomer %} Novato {% else %} Long-term dev {% endif %})
             </td>
             <td style="text-align:right">{{metric.author_experience|floatformat:2}}</td>
             <td style="text-align:right"
