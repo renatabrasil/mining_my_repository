@@ -151,6 +151,6 @@ class ViewUtils(object):
             request.session['tag'] = tag_id
             return models.Tag.objects.filter(pk=tag_id).first()
         except Exception as e:
-            logger.exception(e.args[0])
+            logger.exception(e)
             logger.error("Enter in admin session and provide a project and a tag belong to it.")
             raise

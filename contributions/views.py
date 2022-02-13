@@ -13,6 +13,7 @@ from contributions.services import ContributionsService
 
 logger = logging.getLogger(__name__)
 
+
 class ContributionsListView(View):
     @inject
     def __init__(self, contributions_service: ContributionsService):
