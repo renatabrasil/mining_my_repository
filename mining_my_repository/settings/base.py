@@ -44,11 +44,9 @@ INSTALLED_APPS = [
     'mathfilters',
     'django.contrib.humanize',
     'django_injector',
-    'django_prometheus',
 ]
 
 MIDDLEWARE = [
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -59,7 +57,6 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django_injector.inject_request_middleware',
     'architecture.middleware.SetupMiddleware',
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'mining_my_repository.urls'

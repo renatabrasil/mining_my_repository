@@ -59,7 +59,6 @@ DATABASES['default'] = {
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
 }
 
-INSTALLED_APPS += ['contributions', ]
 
 LOGGING = {
     'version': 1,
