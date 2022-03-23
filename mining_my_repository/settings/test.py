@@ -23,6 +23,37 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'host.docker.internal']
 
+INSTALLED_APPS = [
+    'contributions.apps.ContributionsConfig',
+    'architecture.apps.ArchitectureConfig',
+    'dataanalysis.apps.DataanalysisConfig',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'mathfilters',
+    'django.contrib.humanize',
+    # 'django_injector',
+    # 'django_prometheus',
+]
+
+MIDDLEWARE = [
+    # 'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django_injector.inject_request_middleware',
+    'architecture.middleware.SetupMiddleware',
+    # 'django_prometheus.middleware.PrometheusAfterMiddleware',
+]
+
 DATABASES['default'] = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
