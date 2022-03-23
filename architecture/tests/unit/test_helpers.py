@@ -3,7 +3,9 @@ import shutil
 
 from django import test
 
-from architecture.helpers import build_path_name, has_jar_file, sort_files_by_commit_order_asc
+from architecture.helpers import build_path_name, has_jar_file, sort_files_by_commit_order_asc, \
+    get_compiled_directory_name
+from architecture.models import FileCommits
 
 
 class HelperTest(test.TestCase):
@@ -85,3 +87,13 @@ class HelperTest(test.TestCase):
 
         # Then
         self.assertEqual([], result)
+
+    def test_verify_get_compiled_directory_name(self):
+        # Given
+        file = FileCommits(name="commit-1.txt", directory='compiled/ant')
+
+        # When
+        result = get_compiled_directory_name(file=file)
+
+        # Then
+        self.assertEqual('compiled/ant/commit-1/jars', result)
