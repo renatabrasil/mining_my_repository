@@ -3,7 +3,7 @@ import shutil
 
 from django import test
 
-from architecture.helpers import build_path_name, has_jar_file
+from architecture.helpers import build_path_name, has_jar_file, sort_files_by_commit_order_asc
 
 
 class HelperTest(test.TestCase):
@@ -65,3 +65,23 @@ class HelperTest(test.TestCase):
         result = has_jar_file('test/bulba')
 
         self.assertFalse(result)
+
+    def test_verify_sort_files_by_commit_order_asc(self):
+        # Given
+        files = ["version-110-aaa", "version-22-dfdfd", "version-1-bce"]
+
+        # When
+        result = sort_files_by_commit_order_asc(files=files)
+
+        # Then
+        self.assertEqual(["version-1-bce", "version-22-dfdfd", "version-110-aaa"], result)
+
+    def test_verify_sort_files_by_commit_order_asc_returns_empty_file(self):
+        # Given
+        files = []
+
+        # When
+        result = sort_files_by_commit_order_asc(files=files)
+
+        # Then
+        self.assertEqual([], result)
