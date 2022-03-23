@@ -12,7 +12,7 @@ def get_compiled_directory_name(file: FileCommits) -> str:
         [file.directory, file.name.replace(ExtensionsFile.TXT, ""), 'jars'])
 
 
-def build_path_name(path: list) -> str:
+def build_path_name(path: [str]) -> str:
     """
         Returns relative path in str
 

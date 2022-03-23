@@ -3,15 +3,18 @@ import logging
 
 from django.core.files import File
 from django.db import models
-
 # local Django
+from django_prometheus.models import ExportModelOperationsMixin
+
 from common.constants import CommonsConstants, ExtensionsFile
 from contributions.models import Tag, AUTHOR_FILTER, Developer, Commit
 
 logger = logging.getLogger(__name__)
 
+logger.setLevel(logging.INFO)
 
-class FileCommits(models.Model):
+
+class FileCommits(ExportModelOperationsMixin('file_commit'), models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='files')
     metrics_calculated_at = models.DateTimeField(blank=True, null=True)
     name = models.CharField(max_length=200)

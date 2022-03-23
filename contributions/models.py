@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.timezone import now
+from django_prometheus.models import ExportModelOperationsMixin
 from pydriller import GitRepository
 
 from common.constants import CommonsConstants
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
 
-class Developer(models.Model):
+class Developer(ExportModelOperationsMixin('developer'), models.Model):
     name = models.CharField(max_length=200)
     login = models.CharField(max_length=60, default='')
     email = models.CharField(max_length=200)
@@ -91,7 +92,7 @@ class Developer(models.Model):
         return self
 
 
-class Project(models.Model):
+class Project(ExportModelOperationsMixin('project'), models.Model):
     project_name = models.CharField(max_length=200)
     project_path = models.CharField(max_length=200)
     main_branch = models.CharField(max_length=80, default='master')
@@ -104,7 +105,7 @@ class Project(models.Model):
         return self.tags.all().first()
 
 
-class Tag(models.Model):
+class Tag(ExportModelOperationsMixin('tag'), models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     description = models.CharField(max_length=100)
     real_tag_description = models.CharField(max_length=100, default='')
@@ -140,7 +141,7 @@ class Tag(models.Model):
         return [c.strip() for c in commands]
 
 
-class Directory(models.Model):
+class Directory(ExportModelOperationsMixin('directory'), models.Model):
     name = models.CharField(max_length=200)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='directories')
     visible = models.BooleanField(default=True)
@@ -175,7 +176,7 @@ class NoOutlierCommitManager(models.Manager):
         return super().get_queryset().exclude(author_id__in=ids).exclude(id__in=commit_ids)
 
 
-class Commit(models.Model):
+class Commit(ExportModelOperationsMixin('commit'), models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='commits')
     real_tag_description = models.CharField(max_length=300, default="", blank=True, null=True)
     children_commit = models.ForeignKey('Commit', on_delete=models.SET_NULL, related_name='parent_rel', null=True,
@@ -450,7 +451,7 @@ class NoOutlierMetricManager(models.Manager):
         return super().get_queryset().exclude(commit__author_id__in=ids)
 
 
-class ComponentCommit(models.Model):
+class ComponentCommit(ExportModelOperationsMixin('commit_component'), models.Model):
     component = models.ForeignKey(Directory, on_delete=models.CASCADE, related_name='component_commits')
     commit = models.ForeignKey(Commit, on_delete=models.CASCADE, related_name='component_commits')
     author_experience = models.FloatField(null=True, default=0.0)
@@ -496,7 +497,7 @@ class ComponentCommit(models.Model):
         self.save()
 
 
-class Modification(models.Model):
+class Modification(ExportModelOperationsMixin('modification'), models.Model):
     old_path = models.CharField(max_length=200, null=True)
     new_path = models.CharField(max_length=200, null=True)
     path = models.CharField(max_length=200, null=True, default="")

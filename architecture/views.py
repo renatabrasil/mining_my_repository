@@ -26,6 +26,7 @@ class ArchitectureListView(View):
         self.arch_service = arch_service
         self.project_repository = project_repository
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
     model = FileCommits
     template_name = 'architecture/index.html'

@@ -25,6 +25,7 @@ class ContributionsService:
         self.developer_repository = developer_repository
         self.project_repository = project_repository
         self.logger = logging.getLogger(__name__)
+        # self.logger.setLevel(logging.INFO)
 
     def process(self, request):
         tag = ViewUtils.load_tag(request)
@@ -252,6 +253,7 @@ class ContributionsDetailsService:
     def __init__(self, commit_repository: CommitRepository):
         self.commit_repository = commit_repository
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
     def show_commit(self, hash: str) -> Commit:
         try:

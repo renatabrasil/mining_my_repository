@@ -12,6 +12,7 @@ from contributions.models import Commit
 from contributions.services import ContributionsService
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ContributionsListView(View):

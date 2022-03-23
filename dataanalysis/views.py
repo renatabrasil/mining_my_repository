@@ -32,6 +32,7 @@ POPULATION = "author"
 DECAY = 1
 IMPROVEMENT = 2
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @require_GET
