@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'mathfilters',
     'django.contrib.humanize',
     'django_injector',
-    'django_prometheus',
+    # 'django_prometheus',
 ]
 
 MIDDLEWARE = [

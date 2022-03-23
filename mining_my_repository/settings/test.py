@@ -21,6 +21,8 @@ print(TESTS_IN_PROGRESS)
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'host.docker.internal']
+
 DATABASES['default'] = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
