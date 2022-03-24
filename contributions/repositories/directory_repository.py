@@ -6,11 +6,11 @@ class DirectoryRepository(ModelRepository):
     def __init__(self):
         super(DirectoryRepository, self).__init__(Directory)
 
-    def find_by_primary_key(self, pk: int):
+    def find_by_primary_key(self, pk: int):  # pragma: no cover
         return super(DirectoryRepository, self).find_by_primary_key(pk=pk)
 
-    def find_all_visible_directories_order_by_id(self):
+    def find_all_visible_directories_order_by_id(self):  # pragma: no cover
         return Directory.objects.filter(visible=True).order_by("id")
 
-    def find_all_visible_directories_by_project_id_order_by_name(self, project_id: int):
+    def find_all_visible_directories_by_project_id_order_by_name(self, project_id: int):  # pragma: no cover
         return Directory.objects.filter(visible=True, project_id=project_id).order_by('name')
