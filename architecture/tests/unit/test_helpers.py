@@ -7,7 +7,7 @@ from django import test
 
 from architecture.constants import ConstantsUtils
 from architecture.helpers import build_path_name, has_jar_file, sort_files_by_commit_order_asc, \
-    get_compiled_directory_name, create_jar_file, generate_csv
+    get_compiled_directory_name, create_jar_file, generate_csv, delete_not_compiled_version_and_return_filename
 from architecture.models import FileCommits
 
 
@@ -142,3 +142,34 @@ class HelperTest(test.TestCase):
             shell=False,
             cwd=os.getcwd())
         mock_popen.wait.assert_called
+
+    @patch('subprocess.Popen', return_value=Mock(spec=Popen))
+    def test_should_not_generate_csv_when_occurs_an_exception(self, mock_popen):
+        # Given
+        mock_popen.side_effect = Exception("Qualquer uma")
+        self.__setup_directory(name='bulba', csv_creation=False, jar_file=True)
+
+        # When and Then
+        self.assertFalse(generate_csv(folder='test/bulba'))
+        mock_popen.assert_called_with(
+            ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX + ' -p "test/bulba" -out "test/bulba" -pm -folderOfJars',
+            shell=False,
+            cwd=os.getcwd())
+        mock_popen.wait.assert_called
+
+    # TODO: TO REVIEW
+    @patch('shutil.rmtree', side_effect=None)
+    def test_delete_not_compiled_version_and_return_filename(self, mock_popen):
+        # Given
+        self.__setup_directory(name='compiled/ant/build',
+                               csv_creation=False, jar_file=True)
+        expected_result = "bce31805e9b4b1360d50be8e001886d58e087e38"
+
+        # When
+        result = delete_not_compiled_version_and_return_filename(
+            commit="bce31805e9b4b1360d50be8e001886d58e087e38",
+            directory="test/compiled/ant/build",
+            jar_filename="version-bce31805e9b4b1360d50be8e001886d58e087e38.jar")
+
+        self.assertEqual(expected_result, result)
+        mock_popen.assert_called_with("version-bce31805e9b4b1360d50be8e001886d58e087e38", ignore_errors=True)
