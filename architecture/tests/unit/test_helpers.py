@@ -1,14 +1,20 @@
 import os
 import shutil
+from subprocess import Popen
+from unittest.mock import patch, Mock
 
 from django import test
 
+from architecture.constants import ConstantsUtils
 from architecture.helpers import build_path_name, has_jar_file, sort_files_by_commit_order_asc, \
-    get_compiled_directory_name
+    get_compiled_directory_name, create_jar_file, generate_csv
 from architecture.models import FileCommits
 
 
 class HelperTest(test.TestCase):
+    def __create_jar(self, file_jar: str, local_repository: str, file_folder: str):
+        os.makedirs(f'{file_folder}', exist_ok=True)
+
     def __setup_directory(self, name, csv_creation: bool = False, jar_file: bool = True, any_ext: bool = False):
         os.makedirs(f'test/{name}', exist_ok=True)
 
@@ -97,3 +103,42 @@ class HelperTest(test.TestCase):
 
         # Then
         self.assertEqual('compiled/ant/commit-1/jars', result)
+
+    @patch('subprocess.Popen', return_value=Mock(spec=Popen))
+    def test_should_create_jar_file(self, mock_subprocess):
+        # Given
+        build_path = 'test/build'
+        jar_file = 'commit-1.jar'
+        jar_folder = 'test/jars'
+        local_repository = 'test/project'
+
+        mock_subprocess.wait.side_effect = None
+
+        # When
+        create_jar_file(jar_file=jar_file, build_path=build_path, jar_folder=jar_folder,
+                        local_repository=local_repository)
+
+        # Then
+        mock_subprocess.assert_called_with(f'jar -cf {jar_file} {build_path}', cwd=local_repository, shell=False)
+        mock_subprocess.wait.assert_called
+
+    def test_should_do_not_generate_csv_when_folder_doesnt_exist(self):
+        self.assertTrue(generate_csv(folder='test'))
+
+    def test_should_do_not_generate_csv_when_csv_already_exists(self):
+        self.__setup_directory('bulba')
+        self.assertTrue(generate_csv(folder='test'))
+
+    @patch('subprocess.Popen', return_value=Mock(spec=Popen))
+    def test_should_generate_csv(self, mock_popen):
+        # Given
+        mock_popen.wait.side_effect = None
+        self.__setup_directory(name='bulba', csv_creation=False, jar_file=True)
+
+        # When and Then
+        self.assertTrue(generate_csv(folder='test/bulba'))
+        mock_popen.assert_called_with(
+            ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX + ' -p "test/bulba" -out "test/bulba" -pm -folderOfJars',
+            shell=False,
+            cwd=os.getcwd())
+        mock_popen.wait.assert_called

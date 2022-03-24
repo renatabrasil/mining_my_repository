@@ -38,7 +38,7 @@ def generate_csv(folder: str) -> bool:
             return True
         for filename in os.listdir(folder):
             if "PM.csv" not in os.listdir(folder) and filename.endswith(ExtensionsFile.JAR):
-                arcan_metrics = subprocess.Popen(CommonsConstants.ARCAN_CMD_EXECUTE_PREFIX +
+                arcan_metrics = subprocess.Popen(ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
                                                  ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
                                                  shell=False,
                                                  cwd=os.getcwd())
@@ -78,21 +78,3 @@ def create_jar_file(build_path: str, jar_file: str, jar_folder: str, local_repos
 
 def sort_files_by_commit_order_asc(files: [str]):
     return sorted(files, key=lambda x: int(x.split('-')[1]))
-
-
-def generate_csv(folder):
-    if os.path.exists(folder):
-        for filename in os.listdir(folder):
-            if "PM.csv" not in os.listdir(folder) and filename.endswith(ExtensionsFile.JAR):
-                try:
-                    arcan_metrics = subprocess.Popen(ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
-                                                     ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
-                                                     shell=False,
-                                                     cwd=os.getcwd())
-                    arcan_metrics.wait()
-                except Exception as er:
-                    print(er)
-                    return False
-            else:
-                continue
-    return True
