@@ -69,8 +69,6 @@ def delete_not_compiled_version_and_return_filename(commit: str, directory: str,
 def create_jar_file(build_path: str, jar_file: str, jar_folder: str, local_repository: str) -> None:
     os.makedirs(jar_folder, exist_ok=True)
 
-    input_files = f'"{local_repository}/{build_path}"'
-    # self.logger.info(f'comando: jar -cf {jar_file} {input_files}')
     process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository,
                                shell=False)
     process.wait()

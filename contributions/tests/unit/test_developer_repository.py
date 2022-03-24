@@ -21,4 +21,4 @@ class TestDeveloperRepository(test.TestCase):
 
         # Then
         self.assertEquals([expected_result], result)
-        mock_developer.filter.assert_called_with(login="login")
+        mock_developer.filter.assert_called_with(login="jeff")
