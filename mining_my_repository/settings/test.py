@@ -21,12 +21,12 @@ print(TESTS_IN_PROGRESS)
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
-
 DATABASES['default'] = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
 }
 
+INSTALLED_APPS += ['contributions', ]
 
 LOGGING = {
     'version': 1,

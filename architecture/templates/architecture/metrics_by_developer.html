@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load contributions_extra %}
+
+{% block title %}Métricas da arquitetura por diretorio{% endblock %}
+
+{% block content %}
+<div class="alert alert-light" role="alert">
+    Select a tag and at least one developer to see a report with architectural metrics
+</div>
+{{ block.super }}
+<form action="{{request_path}}" method="post">{% csrf_token %}
+    <div class="form-group">
+        <div class="col-6">
+            <label for="developer_selector" class="sr-only">Tag</label>
+            <select class="form-control mb-8" id="developer_selector" placeholder="Selecione a tag" name="developer_id"
+                    size="8" multiple>
+                <option selected value="{{developer.id}}">Selecione desenvolvedores</option>
+                {% for developer in developers %} {{current_developer}}
+                <option value="{{developer.id}}"
+                        {% if developer.id == current_developer.id %}selected="selected" {% endif %}>
+                    {{developer.name}}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-6">
+            <button type="submit" class="btn btn-primary mb-2">Gerar Relatório</button>
+        </div>
+    </div>
+</form>
+
+<div class="table-responsive" id="metrics">
+    <table class="table table-striped table-sm" id="headingOne" style="font-size: small;">
+        <caption>Dados</caption>
+        <thead>
+        <tr>
+            <th scope="col">Commit</th>
+            <th scope="col">Diretorio</th>
+            <th scope="col">Delta RMD</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if results %}
+        {% for metrics_by_developer in results %}
+        <tr class="{% if metrics_by_developer.delta_rmd > 0 %} text-danger {% elif metrics_by_developer.delta_rmd < 0 %} text-success {% endif %}">
+            <td>{{metrics_by_developer.commit.hash}}</td>
+            <td>{{metrics_by_developer.directory.name}}</td>
+            <td>{{metrics_by_developer.delta_rmd|floatformat:7}}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="2" style="text-align:center">Select a developer to see his/her contributions</td>
+        </tr>
+
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

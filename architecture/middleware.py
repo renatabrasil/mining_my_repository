@@ -1,4 +1,4 @@
-from architecture.views import NO_OUTLIERS
+from architecture.views2 import NO_OUTLIERS
 from contributions.models import Commit, Project
 
 

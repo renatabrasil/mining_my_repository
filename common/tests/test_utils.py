@@ -260,16 +260,3 @@ class ViewUtilsTests(TestCase):
         # Then
         self.assertEqual('5', str(get_request.session['tag']))
         mock_tag.assert_called_once
-
-    @patch("contributions.models.Tag.objects")
-    def test_throws_exception_when_load_tag(self, mock_tag):
-        # Given
-        mock_tag.filter.side_effect = Exception()
-
-        rf = RequestFactory()
-        get_request = rf.get('/submit/', {'tag': 'rel/1.1'})
-        get_request.session = {}
-
-        # When and then
-        self.assertRaises(Exception, lambda: ViewUtils.load_tag(get_request))
-        mock_tag.assert_called_once

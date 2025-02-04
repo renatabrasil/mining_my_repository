@@ -11,13 +11,11 @@ from injector import inject
 from architecture.forms import FilesCompiledForm
 from architecture.models import FileCommits
 from architecture.services import ArchitectureService
-from common.constants import CommonsConstants
+from common.constants import CommonsConstantsUtils
 from contributions.models import Commit
 from contributions.repositories.project_repository import ProjectRepository
 
 logger = logging.getLogger(__name__)
-# 1: ON, Otherwise: OFF
-NO_OUTLIERS = 1
 
 
 class ArchitectureListView(View):
@@ -26,7 +24,6 @@ class ArchitectureListView(View):
         self.arch_service = arch_service
         self.project_repository = project_repository
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
 
     model = FileCommits
     template_name = 'architecture/index.html'
@@ -84,7 +81,7 @@ class ArchitecturalMetricsView(View):
     def get(self, request, file_id):
         self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
 
-        path = request.path.split(CommonsConstants.PATH_SEPARATOR)[2]
+        path = request.path.split(CommonsConstantsUtils.PATH_SEPARATOR)[2]
 
         if path == 'compileds':
             self.arch_service.compile_commits(request, file_id)
@@ -92,8 +89,6 @@ class ArchitecturalMetricsView(View):
             self.arch_service.extract_and_calculate_architecture_metrics(request, file_id)
         elif path == 'metrics':
             self.arch_service.calculate_metrics(request, file_id)
-        elif path == 'quality_between_versions':
-            self.arch_service.calculate_metrics_between_versions(request)
 
         self.logger.info('[VIEW] Done calculate metrics and impactful commits ...')
         return HttpResponseRedirect(reverse('architecture:index', ))
@@ -101,7 +96,7 @@ class ArchitecturalMetricsView(View):
     def post(self, request):
         self.logger.info(f'[VIEW] Starting calculate metrics and impactful commits ...')
 
-        path = request.path.split(CommonsConstants.PATH_SEPARATOR)[2]
+        path = request.path.split(CommonsConstantsUtils.PATH_SEPARATOR)[2]
 
 
 class ImpactfulCommitsMetricsView(View):

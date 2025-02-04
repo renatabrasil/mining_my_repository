@@ -2,9 +2,8 @@ import os
 import shutil
 import subprocess
 
-from architecture.constants import ConstantsUtils
 from architecture.models import FileCommits
-from common.constants import ExtensionsFile, CommonsConstants
+from common.constants import ExtensionsFile, CommonsConstantsUtils
 
 
 def get_compiled_directory_name(file: FileCommits) -> str:
@@ -12,7 +11,7 @@ def get_compiled_directory_name(file: FileCommits) -> str:
         [file.directory, file.name.replace(ExtensionsFile.TXT, ""), 'jars'])
 
 
-def build_path_name(path: [str]) -> str:
+def build_path_name(path: list) -> str:
     """
         Returns relative path in str
 
@@ -20,8 +19,8 @@ def build_path_name(path: [str]) -> str:
     """
     build_path = ''
     for name in path:
-        build_path += CommonsConstants.PATH_SEPARATOR + name
-    return build_path.replace(CommonsConstants.PATH_SEPARATOR, '', 1)  # With no separator in the beginning
+        build_path += CommonsConstantsUtils.PATH_SEPARATOR + name
+    return build_path.replace(CommonsConstantsUtils.PATH_SEPARATOR, '', 1)  # With no separator in the beginning
 
 
 def has_jar_file(directory: str) -> bool:
@@ -38,7 +37,7 @@ def generate_csv(folder: str) -> bool:
             return True
         for filename in os.listdir(folder):
             if "PM.csv" not in os.listdir(folder) and filename.endswith(ExtensionsFile.JAR):
-                arcan_metrics = subprocess.Popen(ConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
+                arcan_metrics = subprocess.Popen(CommonsConstantsUtils.ARCAN_CMD_EXECUTE_PREFIX +
                                                  ' -p ' + '"' + folder + '"' + ' -out ' + '"' + folder + '"' + ' -pm -folderOfJars',
                                                  shell=False,
                                                  cwd=os.getcwd())
@@ -53,8 +52,8 @@ def generate_csv(folder: str) -> bool:
 def delete_not_compiled_version_and_return_filename(commit: str, directory: str, jar_filename: str) -> str:
     os.chdir(directory)
 
-    filename = commit.replace(CommonsConstants.PATH_SEPARATOR, "").replace(".",
-                                                                           CommonsConstants.HYPHEN_SEPARATOR)
+    filename = commit.replace(CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".",
+                                                                                CommonsConstantsUtils.HYPHEN_SEPARATOR)
 
     folder = 'version-' + filename
 
@@ -69,6 +68,8 @@ def delete_not_compiled_version_and_return_filename(commit: str, directory: str,
 def create_jar_file(build_path: str, jar_file: str, jar_folder: str, local_repository: str) -> None:
     os.makedirs(jar_folder, exist_ok=True)
 
+    input_files = f'"{local_repository}/{build_path}"'
+    # self.logger.info(f'comando: jar -cf {jar_file} {input_files}')
     process = subprocess.Popen(f'jar -cf {jar_file} {build_path}', cwd=local_repository,
                                shell=False)
     process.wait()

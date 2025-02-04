@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from dataanalysis.constants import ConstantsUtils
+from architecture.views2 import SCALE
 
 
 class Migration(migrations.Migration):
@@ -14,14 +14,13 @@ class Migration(migrations.Migration):
         architectural_metrics_by_commit = apps.get_model('architecture', 'ArchitecturalMetricsByCommit')
 
         for commit in commit.objects.all():
-            commit.normalized_delta = 0.0 if round(commit.normalized_delta,
-                                                   ConstantsUtils.SCALE) == 0.0 else commit.normalized_delta
+            commit.normalized_delta = 0.0 if round(commit.normalized_delta, SCALE) == 0.0 else commit.normalized_delta
             commit.delta_rmd_components = 0.0 if round(commit.delta_rmd_components,
-                                                       ConstantsUtils.SCALE) == 0.0 else commit.delta_rmd_components
+                                                       SCALE) == 0.0 else commit.delta_rmd_components
             commit.save()
 
         for metric in architectural_metrics_by_commit.objects.all():
-            metric.delta_rmd = 0.0 if round(metric.delta_rmd, ConstantsUtils.SCALE) == 0.0 else metric.delta_rmd
+            metric.delta_rmd = 0.0 if round(metric.delta_rmd, SCALE) == 0.0 else metric.delta_rmd
             metric.save()
 
     dependencies = [
