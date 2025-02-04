@@ -3,7 +3,7 @@ import logging
 import unicodedata
 from typing import Optional
 
-from common.constants import CommonsConstants
+from common.constants import CommonsConstantsUtils
 from contributions import models
 
 logger = logging.getLogger(__name__)
@@ -54,9 +54,9 @@ class CommitUtils(object):
         new_path = ''
 
         if modification.old_path:
-            old_path = modification.old_path.replace("\\", CommonsConstants.PATH_SEPARATOR)
+            old_path = modification.old_path.replace("\\", CommonsConstantsUtils.PATH_SEPARATOR)
         if modification.new_path:
-            new_path = modification.new_path.replace("\\", CommonsConstants.PATH_SEPARATOR)
+            new_path = modification.new_path.replace("\\", CommonsConstantsUtils.PATH_SEPARATOR)
         if modification.change_type.name == 'DELETE':
             path = old_path
         else:
@@ -96,11 +96,11 @@ class CommitUtils(object):
         Returns:
             str: directory path
         """
-        index = path.rfind(CommonsConstants.PATH_SEPARATOR)
+        index = path.rfind(CommonsConstantsUtils.PATH_SEPARATOR)
         if index > -1:
             directory_str = path[:index]
         else:
-            directory_str = CommonsConstants.PATH_SEPARATOR
+            directory_str = CommonsConstantsUtils.PATH_SEPARATOR
 
         return directory_str
 
@@ -151,6 +151,6 @@ class ViewUtils(object):
             request.session['tag'] = tag_id
             return models.Tag.objects.filter(pk=tag_id).first()
         except Exception as e:
-            logger.exception(e)
+            logger.exception(e.args[0])
             logger.error("Enter in admin session and provide a project and a tag belong to it.")
             raise

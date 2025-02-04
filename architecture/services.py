@@ -3,15 +3,12 @@ import os
 import re
 import shutil
 import subprocess
-from collections import OrderedDict
 
-import numpy as np
 import pandas as pd
 from django.contrib import messages
 from django.core.files import File
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.template import loader
 from django.urls import reverse
 from django.utils import timezone
 from injector import inject
@@ -21,10 +18,9 @@ from architecture.helpers import has_jar_file, delete_not_compiled_version_and_r
     get_compiled_directory_name, build_path_name, sort_files_by_commit_order_asc
 from architecture.models import FileCommits
 from common import constants
-from common.constants import CommonsConstants
+from common.constants import CommonsConstantsUtils
 from common.constants import ExtensionsFile
-from common.utils import ViewUtils
-from contributions.models import Project, ComponentCommit, Commit, Directory, Tag
+from contributions.models import Project, ComponentCommit, Commit, Directory
 from contributions.repositories.commit_repository import CommitRepository
 from contributions.repositories.developer_repository import DeveloperRepository
 from contributions.repositories.directory_repository import DirectoryRepository
@@ -44,9 +40,6 @@ class ArchitectureService:
         self.developer_repository = developer_repository
         self.directory_repository = directory_repository
         self.tag_repository = tag_repository
-        self.__compiled_directory = ''
-        self.__local_repository = ''
-        self.__build_path = ''
 
     def create_files(self, request, project_id):
         logger.info(f'[{ArchitectureService.__name__}] - Starting Create files ...')
@@ -88,8 +81,8 @@ class ArchitectureService:
             os.mkdir(folder_form)
         tag_description = first_commit.tag.description
         try:
-            tag_description = tag_description.replace(CommonsConstants.PATH_SEPARATOR,
-                                                      CommonsConstants.HYPHEN_SEPARATOR)
+            tag_description = tag_description.replace(CommonsConstantsUtils.PATH_SEPARATOR,
+                                                      CommonsConstantsUtils.HYPHEN_SEPARATOR)
             filename = 'commits-' + tag_description + ExtensionsFile.TXT
 
             file = self.update_current_file(filename)
@@ -99,14 +92,14 @@ class ArchitectureService:
 
             f = open(file.__str__(), 'w')
             my_file = File(f)
-            my_file.write(git_local_directory_form + CommonsConstants.END_STR)
-            my_file.write(build_path_form + CommonsConstants.END_STR)
+            my_file.write(git_local_directory_form + CommonsConstantsUtils.END_STR)
+            my_file.write(build_path_form + CommonsConstantsUtils.END_STR)
 
             i = 1
             for commit in commits:
 
-                commit_tag = commit.tag.description.replace(CommonsConstants.PATH_SEPARATOR,
-                                                            CommonsConstants.HYPHEN_SEPARATOR)
+                commit_tag = commit.tag.description.replace(CommonsConstantsUtils.PATH_SEPARATOR,
+                                                            CommonsConstantsUtils.HYPHEN_SEPARATOR)
 
                 if tag_description != commit_tag:
                     my_file.closed
@@ -124,14 +117,14 @@ class ArchitectureService:
                     my_file = File(f)
 
                     files.append(file)
-                    my_file.write(git_local_directory_form + CommonsConstants.END_STR)
-                    my_file.write(build_path_form + CommonsConstants.END_STR)
+                    my_file.write(git_local_directory_form + CommonsConstantsUtils.END_STR)
+                    my_file.write(build_path_form + CommonsConstantsUtils.END_STR)
 
                 if not commit.has_impact_loc and not commit.children_commit:
                     continue
                 my_file.write(
-                    str(i) + CommonsConstants.HYPHEN_SEPARATOR + commit.hash + CommonsConstants.END_STR)
-                logger.info(f'{str(i) + CommonsConstants.HYPHEN_SEPARATOR + commit.hash} saved')
+                    str(i) + CommonsConstantsUtils.HYPHEN_SEPARATOR + commit.hash + CommonsConstantsUtils.END_STR)
+                logger.info(f'{str(i) + CommonsConstantsUtils.HYPHEN_SEPARATOR + commit.hash} saved')
                 i += 1
 
             my_file.closed
@@ -168,43 +161,43 @@ class ArchitectureService:
             4 - There are in main directory (which were defined on project model)
             '''
         file_db = FileCommits.objects.get(pk=file_id)
-        current_project_path = os.getcwd().replace('\\', constants.CommonsConstants.PATH_SEPARATOR)
+        current_project_path = os.getcwd().replace('\\', constants.CommonsConstantsUtils.PATH_SEPARATOR)
         try:
-            file = open(file_db.__str__(), 'r')
-            file_system = File(file)
+            f = open(file_db.__str__(), 'r')
+            file_system = File(f)
 
-            self.__compiled_directory = get_compiled_directory_name(file_db)
+            compiled_directory = get_compiled_directory_name(file_db)
 
-            if not os.path.exists(self.__compiled_directory):
-                os.makedirs(self.__compiled_directory, exist_ok=True)
+            if not os.path.exists(compiled_directory):
+                os.makedirs(compiled_directory, exist_ok=True)
 
             i = 0
             commits_with_errors = []
             error = False
             for commit in file_system:
-                commit = commit.replace(constants.CommonsConstants.END_STR, '')
+                commit = commit.replace(constants.CommonsConstantsUtils.END_STR, '')
                 if i == 0:
-                    self.__local_repository = commit
+                    local_repository = commit
                 elif i == 1:
-                    self.__build_path = commit
+                    build_path = commit
                 else:
                     try:
                         jar_folder = build_path_name(
-                            [current_project_path, self.__compiled_directory,
-                             f'version-{commit.replace(constants.CommonsConstants.PATH_SEPARATOR, "").replace(".", constants.CommonsConstants.HYPHEN_SEPARATOR)}'])
+                            [current_project_path, compiled_directory,
+                             f'version-{commit.replace(constants.CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".", constants.CommonsConstantsUtils.HYPHEN_SEPARATOR)}'])
 
                         if not has_jar_file(jar_folder):
-                            os.chdir(self.__local_repository)
+                            os.chdir(local_repository)
 
                             # Go to version
                             hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace(
-                                constants.CommonsConstants.HYPHEN_SEPARATOR, '')
+                                constants.CommonsConstantsUtils.HYPHEN_SEPARATOR, '')
                             object_commit = self.commit_repository.find_all_commits_by_hash(hash=hash_commit).first()
 
                             if not object_commit or not object_commit.has_impact_loc:
                                 continue
 
-                            self.__checkout_commit(object_commit.hash, self.__local_repository)
+                            self.__checkout_commit(object_commit.hash, local_repository)
 
                             print(os.environ.get('JAVA_HOME'))
                             print(os.environ.get('ANT_HOME'))
@@ -216,20 +209,19 @@ class ArchitectureService:
                             has_error = not object_commit.build()
 
                             # Create jar
-                            jar_folder = build_path_name([current_project_path, self.__compiled_directory,
-                                                          f'version-{object_commit.hash.replace(CommonsConstants.PATH_SEPARATOR, "").replace(".", CommonsConstants.HYPHEN_SEPARATOR)}'])
+                            jar_folder = build_path_name([current_project_path, compiled_directory,
+                                                          f'version-{object_commit.hash.replace(constants.CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".", constants.CommonsConstantsUtils.HYPHEN_SEPARATOR)}'])
                             jar_file = build_path_name([jar_folder,
-                                                        f'version-{object_commit.hash.replace(CommonsConstants.PATH_SEPARATOR, "").replace(".", CommonsConstants.HYPHEN_SEPARATOR)}{ExtensionsFile.JAR}'])
+                                                        f'version-{object_commit.hash.replace(constants.CommonsConstantsUtils.PATH_SEPARATOR, "").replace(".", constants.CommonsConstantsUtils.HYPHEN_SEPARATOR)}{ExtensionsFile.JAR}'])
 
                             os.makedirs(jar_folder, exist_ok=True)
 
-                            object_commit.compile(jar_name=jar_file, build_path=self.__build_path,
-                                                  repository=self.__local_repository)
+                            object_commit.compile(jar_name=jar_file, build_path=build_path, repository=local_repository)
 
                             # Check whether created jar is valid
                             os.chdir(current_project_path)
                             jar = jar_file.replace(current_project_path, '').replace(
-                                CommonsConstants.PATH_SEPARATOR, '',
+                                constants.CommonsConstantsUtils.PATH_SEPARATOR, '',
                                 1).replace('"', '')
                             # 100 KB
 
@@ -246,19 +238,19 @@ class ArchitectureService:
                                 # 102400, 184320
                                 # if os.path.getsize(jar) < 1771200:
                                 commits_with_errors.append(delete_not_compiled_version_and_return_filename(commit,
-                                                                                                           current_project_path + CommonsConstants.PATH_SEPARATOR + self.__compiled_directory,
+                                                                                                           current_project_path + constants.CommonsConstantsUtils.PATH_SEPARATOR + compiled_directory,
                                                                                                            jar))
 
                                 if object_commit:
                                     object_commit.clean_all_commits_metrics()
 
-                                os.chdir(self.__local_repository)
+                                os.chdir(local_repository)
                             else:
                                 has_error = False
 
                                 if not generate_csv(jar_folder):
                                     commits_with_errors.append(delete_not_compiled_version_and_return_filename(commit,
-                                                                                                               current_project_path + CommonsConstants.PATH_SEPARATOR + self.__compiled_directory,
+                                                                                                               current_project_path + constants.CommonsConstantsUtils.PATH_SEPARATOR + compiled_directory,
                                                                                                                jar))
                                     object_commit.set_compilable(status=False)
                                 else:
@@ -266,10 +258,10 @@ class ArchitectureService:
 
                                 object_commit.save()
 
-                            build_path_repository = self.__local_repository + CommonsConstants.PATH_SEPARATOR + self.__build_path
-                            if self.__build_path.count('\\') <= 1 and self.__build_path.count(
-                                    CommonsConstants.PATH_SEPARATOR) <= 1:
-                                build_path_repository = self.__local_repository + CommonsConstants.PATH_SEPARATOR + self.__build_path
+                            build_path_repository = local_repository + constants.CommonsConstantsUtils.PATH_SEPARATOR + build_path
+                            if build_path.count('\\') <= 1 and build_path.count(
+                                    CommonsConstantsUtils.PATH_SEPARATOR) <= 1:
+                                build_path_repository = local_repository + constants.CommonsConstantsUtils.PATH_SEPARATOR + build_path
                             if os.path.exists(build_path_repository):
                                 shutil.rmtree(build_path_repository)
 
@@ -279,7 +271,7 @@ class ArchitectureService:
                         logger.exception(er)
                         messages.error(request, f'Erro: {er}')
                     finally:
-                        os.chdir(self.__local_repository)
+                        os.chdir(local_repository)
 
                 i += 1
         except Exception as e:
@@ -287,28 +279,25 @@ class ArchitectureService:
             messages.error(request, 'Could not create compiled.')
         finally:
             os.chdir(current_project_path)
-            self.__create_file_with_errors(commits_with_errors)
-            file_db.has_compileds = True
-            file_db.save()
-
-    def __create_file_with_errors(self, commits_with_errors: []):
-        if len(commits_with_errors) > 0:
-            try:
-                file = open(self.__compiled_directory.replace('jars', '') + 'log-compilation-errors.txt', 'w+')
-                file_system = File(file)
-                first = True
-                file_system.write(self.__local_repository + CommonsConstants.END_STR)
-                for commit in commits_with_errors:
-                    file_system.write(self.__build_path + CommonsConstants.END_STR)
-                    if first:
-                        file_system.write(commit)
-                        first = False
-                    else:
-                        file_system.write(CommonsConstants.END_STR + commit)
-            except OSError as e:
-                logger.exception('Error: %s - %s.' % (e.filename, e.strerror))
-            finally:
-                file.close()
+            if len(commits_with_errors) > 0:
+                try:
+                    f = open(compiled_directory.replace('jars', '') + 'log-compilation-errors.txt', 'w+')
+                    file_system = File(f)
+                    first = True
+                    file_system.write(local_repository + constants.CommonsConstantsUtils.END_STR)
+                    for commit in commits_with_errors:
+                        file_system.write(build_path + constants.CommonsConstantsUtils.END_STR)
+                        if first:
+                            file_system.write(commit)
+                            first = False
+                        else:
+                            file_system.write(constants.CommonsConstantsUtils.END_STR + commit)
+                except OSError as e:
+                    logger.exception('Error: %s - %s.' % (e.filename, e.strerror))
+                finally:
+                    f.close()
+        file_db.has_compileds = True
+        file_db.save()
 
     def __checkout_commit(self, hash_commit: str, local_repository: str) -> None:
         checkout = subprocess.Popen(f'git reset --hard {hash_commit}',
@@ -319,12 +308,13 @@ class ArchitectureService:
         file = FileCommits.objects.get(pk=file_id)
 
         directory_name = file.__str__().replace(ExtensionsFile.TXT, '')
-        directory_name = directory_name + CommonsConstants.PATH_SEPARATOR + 'jars'
+        directory_name = directory_name + constants.CommonsConstantsUtils.PATH_SEPARATOR + 'jars'
 
         if os.path.exists(directory_name):
-            sorted_files = sort_files_by_commit_order_asc(files=os.listdir(directory_name))
+            arr = os.listdir(directory_name)
+            sorted_files = sorted(arr, key=lambda x: int(x.split(constants.CommonsConstantsUtils.HYPHEN_SEPARATOR)[1]))
             for subdirectory in sorted_files:
-                generate_csv(directory_name + CommonsConstants.PATH_SEPARATOR + subdirectory)
+                generate_csv(directory_name + constants.CommonsConstantsUtils.PATH_SEPARATOR + subdirectory)
 
         return HttpResponseRedirect(reverse('architecture:index', ))
 
@@ -337,14 +327,14 @@ class ArchitectureService:
         file = FileCommits.objects.get(pk=file_id)
 
         directory_name = file.__str__().replace(ExtensionsFile.TXT, '')
-        metrics_directory = directory_name + CommonsConstants.PATH_SEPARATOR + 'jars'
+        metrics_directory = directory_name + constants.CommonsConstantsUtils.PATH_SEPARATOR + 'jars'
 
         if not os.path.exists(metrics_directory):
             os.makedirs(metrics_directory, exist_ok=True)
 
         self.read_pm_file(metrics_directory, file_id)
 
-        error_file_name = directory_name + CommonsConstants.PATH_SEPARATOR + 'log-compilation-errors' + ExtensionsFile.TXT
+        error_file_name = directory_name + constants.CommonsConstantsUtils.PATH_SEPARATOR + 'log-compilation-errors' + ExtensionsFile.TXT
 
         if os.path.exists(error_file_name):
             self.__update_compilable_commits(error_file_name)
@@ -354,74 +344,6 @@ class ArchitectureService:
 
         logger.info(f'[{__name__}] Done calculate metrics from file_id {file_id}')
         return HttpResponseRedirect(reverse('architecture:index', ))
-
-    def calculate_metrics_between_versions(self, request):
-        template = loader.get_template('architecture/metrics_between_versions.html')
-        tag = ViewUtils.load_tag(request)
-        directory = request.POST.get('directory')
-        metrics_by_directories = OrderedDict()
-        metrics = []
-        if directory:
-            if os.path.exists(directory):
-                files = os.listdir(directory)
-                sorted_files = sorted(files, key=lambda x: int(x.split('#')[len(x.split('#')) - 1]))
-                for subdirectory in sorted_files:
-                    generate_csv(directory + CommonsConstants.PATH_SEPARATOR + subdirectory)
-                    version = subdirectory
-                    subdirectory = os.path.join(directory, subdirectory)
-                    print("\n" + subdirectory + "\n----------------------\n")
-                    csv_files = [f for f in os.listdir(subdirectory) if f.endswith(ExtensionsFile.CSV)]
-                    for filename in csv_files:
-                        try:
-                            file = open(os.path.join(subdirectory, filename), "r")
-                            content = file.readlines()
-                            for line in content[1:]:
-                                col = line.split(',')
-                                rmd = col[5].replace(CommonsConstants.END_STR, '')
-                                package = col[0].replace('.', CommonsConstants.PATH_SEPARATOR)
-                                print(line.replace(CommonsConstants.END_STR, ""))
-
-                                if package not in metrics_by_directories:
-                                    metrics_by_directories.setdefault(package, {})
-                                if version not in metrics_by_directories[package]:
-                                    metrics_by_directories[package].setdefault(version, 0.0)
-                                metrics_by_directories[package][version] = rmd
-
-                        finally:
-                            file.close()
-
-                    components_mean = []
-                    dict2 = list(metrics_by_directories.values())
-                    for value in dict2:
-                        if version in value:
-                            components_mean.append(float(value[version]))
-
-                    # ANT
-                    name_version = version.replace('rel#', '').replace('-', '', 1).replace('_', '.').replace('#',
-                                                                                                             '-')
-                    # Lucene
-                    name_version = version.replace('_', '.').replace('#', '-')
-                    # Cassandra
-                    name_version = version.replace('_', '.').replace('#', '-')
-
-                    architectural_quality = np.mean(components_mean)
-                    metrics.append([name_version, architectural_quality])
-
-                    # FIXME this is too naive and just work for this project. Should be fix soon.
-                    # Ant
-                    self.tag_repository.update(Tag, {'delta_rmd_components': architectural_quality})
-
-            my_df_metrics = pd.DataFrame(metrics, columns=['versao', 'D'])
-            my_df = pd.DataFrame(metrics_by_directories)
-            print(my_df)
-            my_df_metrics.to_csv('metrics_by_version.csv', index=True, index_label='idx', header=True)
-            my_df.to_csv(directory.replace(CommonsConstants.PATH_SEPARATOR, '_') + ExtensionsFile.CSV, index=True,
-                         header=True)
-        context = {
-            'title': 'Cálculo de qualidade da arquitetura por versões',
-            'tag': tag,
-        }
-        return HttpResponse(template.render(context, request))
 
     def filter_impactful_commits(self, request, request_params: dict):
         logger.info(f'[{__name__}] Starting to filter metrics with params: [{request_params}]')
@@ -453,7 +375,7 @@ class ArchitectureService:
             if directory_filter > 0:
                 query.setdefault('directory_id', directory_filter)
                 directory_name = self.directory_repository.find_by_primary_key(pk=directory_filter).name.replace(
-                    CommonsConstants.PATH_SEPARATOR, '_')
+                    constants.CommonsConstantsUtils.PATH_SEPARATOR, '_')
 
         if request_params.get('tag_id'):
             tag_filter = int(request_params.get('tag_id'))
@@ -469,7 +391,7 @@ class ArchitectureService:
 
                 query.setdefault('tag__project_id', request.session['project'])
                 tag_name = self.tag_repository.find_by_primary_key(pk=tag_filter).description.replace(
-                    CommonsConstants.PATH_SEPARATOR, '_')
+                    constants.CommonsConstantsUtils.PATH_SEPARATOR, '_')
 
         if request_params.get('developer_id'):
             developer_filter = int(request_params.get('developer_id'))
@@ -523,7 +445,7 @@ class ArchitectureService:
             if directory_filter > 0:
                 commits = sorted(commits, key=lambda x: x.id, reverse=False)
                 metrics_dict = [
-                    [x.commit.id, x.commit.author_experience, x.commit.delta_rmd * CommonsConstants.ROUDING_SCALE,
+                    [x.commit.id, x.commit.author_experience, x.commit.delta_rmd * CommonsConstantsUtils.ROUDING_SCALE,
                      x.commit.total_commits,
                      x.commit.author_seniority, x.commit.u_cloc] for x in commits]
 
@@ -531,7 +453,7 @@ class ArchitectureService:
                 components = ComponentCommit.no_outliers_objects.exclude(delta_rmd=0).filter(**query).order_by(
                     'id')
                 components_metrics = [
-                    [x.id, x.author_experience, x.delta_rmd / x.commit.u_cloc * CommonsConstants.ROUDING_SCALE,
+                    [x.id, x.author_experience, x.delta_rmd / x.commit.u_cloc * CommonsConstantsUtils.ROUDING_SCALE,
                      x.commit.u_cloc] for x in
                     components]
 
@@ -543,20 +465,20 @@ class ArchitectureService:
 
                 name = ''
                 if dev_name:
-                    name += dev_name + CommonsConstants.HYPHEN_SEPARATOR
+                    name += dev_name + constants.CommonsConstantsUtils.HYPHEN_SEPARATOR
                 if directory_name:
-                    name += directory_name + CommonsConstants.HYPHEN_SEPARATOR
+                    name += directory_name + constants.CommonsConstantsUtils.HYPHEN_SEPARATOR
                 if tag_name:
-                    name += tag_name + CommonsConstants.HYPHEN_SEPARATOR
+                    name += tag_name + constants.CommonsConstantsUtils.HYPHEN_SEPARATOR
                 if delta_check:
                     name += delta_check
-                if name.endswith(CommonsConstants.HYPHEN_SEPARATOR):
+                if name.endswith(constants.CommonsConstantsUtils.HYPHEN_SEPARATOR):
                     name = name[:-1]
                 if analysis_check == 'geral':
                     name += 't'
 
                 metrics_dict = [
-                    [x.id, x.author_experience, x.normalized_delta * CommonsConstants.ROUDING_SCALE,
+                    [x.id, x.author_experience, x.normalized_delta * CommonsConstantsUtils.ROUDING_SCALE,
                      x.total_commits,
                      x.author_seniority,
                      x.u_cloc] for x in commits]
@@ -568,7 +490,7 @@ class ArchitectureService:
                         if component_degradation.delta_rmd != 0:
                             components_metrics.append(
                                 [component_degradation.id, component_degradation.author_experience,
-                                 component_degradation.delta_rmd * CommonsConstants.ROUDING_SCALE,
+                                 component_degradation.delta_rmd * CommonsConstantsUtils.ROUDING_SCALE,
                                  commit.u_cloc])
                         else:
                             metrics_count += 1
@@ -623,14 +545,13 @@ class ArchitectureService:
         for subdirectory in sorted_files:
 
             subdirectory = os.path.join(folder, subdirectory)
+            components_db = self.directory_repository.find_all_visible_directories_order_by_id()
             components = []
 
             logger.info("\n" + os.path.join(folder, subdirectory) + "\n----------------------\n")
             commit = None
 
-            csv_files = [f for f in os.listdir(subdirectory) if f.endswith(ExtensionsFile.CSV)]
-
-            for filename in csv_files:
+            for filename in [f for f in os.listdir(subdirectory) if f.endswith(ExtensionsFile.CSV)]:
                 try:
                     logger.info(f'file: {filename}')
 
@@ -645,11 +566,11 @@ class ArchitectureService:
                     commit_rmds = []
 
                     for line in content[1:]:
-                        col = line.split(',')
-                        rmd = float(col[5].replace(CommonsConstants.END_STR, ''))
-                        package = col[0].replace('.', CommonsConstants.PATH_SEPARATOR)
+                        row = line.split(',')
+                        row[5] = row[5].replace(CommonsConstantsUtils.END_STR, '')
+                        row[0] = row[0].replace('.', CommonsConstantsUtils.PATH_SEPARATOR)
 
-                        directory_str = tag.main_directory_prefix + package
+                        directory_str = tag.main_directory_prefix + row[0]
                         directory = Directory.objects.filter(name__exact=directory_str)
 
                         if not directory.exists():
@@ -661,6 +582,7 @@ class ArchitectureService:
                         components.append(directory)
 
                         print(line.replace("\n", ""))
+                        rmd = float(row[5])
 
                         commit_rmds.append([rmd, True if directory.initial_commit == commit else False])
 
@@ -668,6 +590,23 @@ class ArchitectureService:
                     file.close()
                     # Hypothesis 1: processing
                     commit.h1_calculate_commit_degradation(commit_rmds)
+
+                    # TODO: delete
+                    # To save changes in directories
+                    removed_components = [x for x in list(components_db) if x not in components]
+                    add_components = [x for x in components if x not in list(components_db)]
+                    diff_components = removed_components + add_components
+                    n_commits += 1
+                    if len(diff_components) > 0:
+                        components_evolution.append([n_commits, len(diff_components)])
+                        for a_component in diff_components:
+                            if a_component.visible:
+                                a_component.visible = False
+                            else:
+                                a_component.visible = True
+                            a_component.save()
+                    else:
+                        components_evolution.append([n_commits, len(diff_components)])
 
         logger.info(components_evolution)
 
@@ -686,11 +625,11 @@ class ArchitectureService:
             i = 0
             for commit in my_file:
                 if i > 1:
-                    commit = commit.replace(constants.CommonsConstants.END_STR, '')
+                    commit = commit.replace(constants.CommonsConstantsUtils.END_STR, '')
                     try:
                         # Go to version
                         hash_commit = re.search(r'([^0-9\n]+)[a-z]?.*', commit).group(0).replace(
-                            constants.CommonsConstants.HYPHEN_SEPARATOR, '')
+                            constants.CommonsConstantsUtils.HYPHEN_SEPARATOR, '')
                         object_commit = self.commit_repository.find_all_compilable_commits_by_hash(hash=hash_commit)
                         if not object_commit.exists():
                             continue
@@ -703,10 +642,10 @@ class ArchitectureService:
                     except OSError as e:
                         logger.exception('Error: %s - %s.' % (e.filename, e.strerror))
                     except Exception as er:
-                        logger.exception(er)
+                        logger.exception(er.with_traceback())
                 i += 1
         except Exception as e:
-            logger.exception(e)
+            logger.exception(e.with_traceback())
             raise
         finally:
             file.close()

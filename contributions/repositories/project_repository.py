@@ -6,8 +6,8 @@ class ProjectRepository(ModelRepository):
     def __init__(self):
         super(ProjectRepository, self).__init__(Project)
 
-    def find_by_primary_key(self, pk: int) -> Project:  # pragma: no cover
+    def find_by_primary_key(self, pk: int) -> Project:
         return super(ProjectRepository, self).find_by_primary_key(pk=pk)
 
-    def find_project_by_name(self, name: str) -> Project:  # pragma: no cover
+    def find_project_by_name(self, name: str) -> Project:
         return Project.objects.get(project_name=name)
