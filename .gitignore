@@ -1,3 +1,4 @@
+**/terraform.yml
 /.idea
 **/.terraform
 **/.serverless
@@ -29,3 +30,4 @@ data_analysis.ipynb
 architectural_evolution.ipynb
 /versoes-*
 /logs
+/.github/workflows/terraform.yml
