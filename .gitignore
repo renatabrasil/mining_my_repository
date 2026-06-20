@@ -30,4 +30,4 @@ data_analysis.ipynb
 architectural_evolution.ipynb
 /versoes-*
 /logs
-/.github/workflows/terraform.yml
+/terraform.yml
