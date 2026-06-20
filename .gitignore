@@ -9,6 +9,7 @@ functions/.serverless
 */*/__pycache__
 */*/*/__pycache__
 /backup-banco
+/.venv
 /venv
 /lib
 /staticfiles
