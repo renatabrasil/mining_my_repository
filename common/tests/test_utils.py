@@ -29,10 +29,10 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.get_email(input_)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
         result = CommitUtils.get_email(input2)
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_true_path_when_is_modification_when_path_are_different(self):
         # Given
@@ -41,8 +41,8 @@ class CommitUtilsTests(TestCase):
 
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
-        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\RAM2Directory.java",
-                                                   new_path="src\java\org\\apache\lucene\store\\NovoRAMDirectory.java",
+        modification = Modification.objects.create(old_path=r"src\java\org\apache\lucene\store\RAM2Directory.java",
+                                                   new_path=r"src\java\org\apache\lucene\store\NovoRAMDirectory.java",
                                                    change_type=ModificationType.MODIFY, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/NovoRAMDirectory.java"
 
@@ -50,7 +50,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.true_path(modification)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_true_path_when_is_modification_when_path_are_the_same(self):
         # Given
@@ -59,7 +59,7 @@ class CommitUtilsTests(TestCase):
 
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
-        path = "src\java\org\\apache\lucene\store\RAMDirectory.java"
+        path = r"src\java\org\apache\lucene\store\RAMDirectory.java"
 
         modification = Modification.objects.create(old_path=path,
                                                    new_path=path,
@@ -70,7 +70,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.true_path(modification)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_true_path_modification_when_change_type_is_deleted(self):
         # Given
@@ -80,7 +80,7 @@ class CommitUtilsTests(TestCase):
         commit = Commit(hash="TEST", author=Developer(name="Franco"), committer=Developer(name="Roberto"),
                         tag=tag)
 
-        modification = Modification.objects.create(old_path="src\java\org\\apache\lucene\store\Database.java",
+        modification = Modification.objects.create(old_path=r"src\java\org\apache\lucene\store\Database.java",
                                                    new_path=None,
                                                    change_type=ModificationType.DELETE, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/Database.java"
@@ -88,7 +88,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.true_path(modification)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_true_path_modification_when_change_type_is_added(self):
         # Given
@@ -99,7 +99,7 @@ class CommitUtilsTests(TestCase):
                         tag=tag)
 
         modification = Modification.objects.create(old_path=None,
-                                                   new_path="src\java\org\\apache\lucene\store\RAMDirectory.java",
+                                                   new_path=r"src\java\org\apache\lucene\store\RAMDirectory.java",
                                                    change_type=ModificationType.ADD, commit=commit)
         expected_result = "src/java/org/apache/lucene/store/RAMDirectory.java"
 
@@ -107,7 +107,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.true_path(modification)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_true_path_modification_and_return_empty_string_when_no_path_is_given(self):
         # Given
@@ -136,7 +136,7 @@ class CommitUtilsTests(TestCase):
         result = CommitUtils.strip_accents(input_text)
 
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_directory_to_str_of_a_file_in_directory_with_subdirectories(self):
         # Given
@@ -145,7 +145,7 @@ class CommitUtilsTests(TestCase):
         # When
         result = CommitUtils.extract_directory_name_from_full_file_name(file_path)
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_directory_to_str_of_a_file_in_root_directory(self):
         # Given
@@ -154,7 +154,7 @@ class CommitUtilsTests(TestCase):
         # When
         result = CommitUtils.extract_directory_name_from_full_file_name(file_path)
         # Then
-        self.assertEquals(expected_result, result)
+        self.assertEqual(expected_result, result)
 
     def test_is_java_file_true(self):
         # Given
