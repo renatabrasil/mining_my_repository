@@ -16,7 +16,16 @@ RUN pip install --upgrade pip && \
 
 COPY ./config/gunicorn/gunicorn-* /usr/web/config/gunicorn/
 COPY ./docker-entrypoint-app.sh /usr/web/
-COPY ./ /usr/web/app
+COPY architecture /usr/web/app/architecture
+COPY common /usr/web/app/common
+COPY config /usr/web/app/config
+COPY contributions /usr/web/app/contributions
+COPY dataanalysis /usr/web/app/dataanalysis
+COPY infrastructure /usr/web/app/infrastructure
+COPY lambdas /usr/web/app/lambdas
+COPY mining_my_repository /usr/web/app/mining_my_repository
+COPY scripts /usr/web/app/scripts
+COPY manage.py pytest.ini setup.cfg .coveragerc sonar-project.properties /usr/web/app/
 
 RUN chown -R 1001:1001 /usr/web/
 USER 1001:1001

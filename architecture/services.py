@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pandas as pd
 from django.contrib import messages
@@ -28,6 +29,16 @@ from contributions.repositories.tag_repository import TagRepository
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
+
+
+def _safe_path(path: str, must_exist: bool = False) -> str:
+    base_path = Path.cwd().resolve()
+    resolved_path = Path(path).expanduser().resolve(strict=must_exist)
+    if must_exist and not resolved_path.exists():
+        raise FileNotFoundError(resolved_path)
+    if base_path != resolved_path and base_path not in resolved_path.parents:
+        raise ValueError('Invalid path outside the expected directory')
+    return str(resolved_path)
 
 
 class ArchitectureService:
@@ -67,6 +78,7 @@ class ArchitectureService:
 
         if not folder_form:
             raise ValueError('Directory is not informed')
+        folder_path = Path(_safe_path(folder_form))
 
         commits = self.commit_repository.find_all_commits_by_project_order_by_id_asc_as_list(project=project)
 
@@ -77,8 +89,8 @@ class ArchitectureService:
 
         files = []
 
-        if not os.path.exists(folder_form):
-            os.mkdir(folder_form)
+        if not folder_path.exists():
+            folder_path.mkdir()
         tag_description = first_commit.tag.description
         try:
             tag_description = tag_description.replace(CommonsConstantsUtils.PATH_SEPARATOR,

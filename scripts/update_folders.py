@@ -1,5 +1,6 @@
 import re
 import sys
+from pathlib import Path
 
 # python update_folders.py source_file dest_file
 
@@ -15,14 +16,19 @@ import sys
 
 
 # recorta todos eles e poe na pasta de 6
-dest_file = sys.argv[2]
-source_file = sys.argv[1]
+dest_file = Path(sys.argv[2]).expanduser().resolve(strict=True)
+source_file = Path(sys.argv[1]).expanduser().resolve(strict=True)
+if not source_file.is_file() or not dest_file.is_file():
+    raise FileNotFoundError("Both source and destination arguments must be existing files")
 
 
 # This function receives a txt file with packages using . as separator
 def generate_module_list(file, prefix=''):
-    f = open(file, "r")
-    lines = f.readlines()
+    file = Path(file).expanduser().resolve(strict=True)
+    if not file.is_file():
+        raise FileNotFoundError(file)
+    with file.open("r") as f:
+        lines = f.readlines()
     list = []
     for module in lines[2:]:
         if not "Package\n" in module:

@@ -51,7 +51,7 @@ jobs:
           python -m pip install pytest-django pytest-cov
           pytest --cov-config=.coveragerc --cov=./ --cov-report=xml:coverage.xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@f2274c2c340e0c81c8f7dc407b2a477b8935f171 # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           #          files: ./coverage1.xml,./coverage2.xml # optional
@@ -62,7 +62,7 @@ jobs:
       - name: SonarCloud Scan
         if: ${{ env.SONAR_TOKEN != '' }}
         continue-on-error: true
-        uses: SonarSource/sonarqube-scan-action@v7
+        uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
         with:
           args: >
             -Dsonar.python.coverage.reportPaths=coverage.xml
