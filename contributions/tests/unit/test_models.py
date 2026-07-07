@@ -19,6 +19,23 @@ class DeveloperModelTests(TestCase):
 
         self.assertEqual(expected_result, dev.__str__())
 
+    def test_should_normalize_developer_data_when_create_is_called(self):
+        dev = Developer.create(name=" Joao Ávila ", email="JOAO@EXAMPLE.COM", login="JoaoA")
+
+        self.assertEqual("Joao Avila", dev.name)
+        self.assertEqual("joao@example.com", dev.email)
+        self.assertEqual("joaoa", dev.login)
+
+    def test_should_update_author_from_submitted_by_message(self):
+        dev = Developer.create(name="Original Author", email="original@example.com", login="original")
+        message = "Fix parser\n\nSubmitted by: Maria Silva <maria@apache.org>"
+
+        dev.format_data(message, is_consider_submitted_by=True)
+
+        self.assertEqual("Maria Silva", dev.name)
+        self.assertEqual("maria@apache.org", dev.email)
+        self.assertEqual("maria", dev.login)
+
 
 class ProjectModelTests(TestCase):
 
@@ -85,6 +102,13 @@ class TagModelTests(TestCase):
 
         self.assertListEqual([], result)
 
+    def test_should_trim_minor_versions(self):
+        tag_major = self.create_tag(max_minor_version_description=" 1.1, 1.2 ,1.3 ", project=self.project1)
+
+        result = tag_major.minors
+
+        self.assertListEqual(["1.1", "1.2", "1.3"], result)
+
     def test_should_return_major_versions_of_a_project(self):
         self.assertListEqual([1, 2, 3], list(Tag.line_major_versions(self.project2.id)))
 
@@ -100,6 +124,13 @@ class TagModelTests(TestCase):
         result = tag.pre_build_commands
 
         self.assertListEqual(["ant clean", "ant update", "ant compile"], result)
+
+    def test_should_trim_pre_build_commands(self):
+        tag = self.create_tag(prepare_build_command=" ant clean , ant compile ", project=self.project1)
+
+        result = tag.pre_build_commands
+
+        self.assertListEqual(["ant clean", "ant compile"], result)
 
     def test__str__(self):
         tag2 = self.create_tag(description='rel/1.2', project=self.project2, major=True)

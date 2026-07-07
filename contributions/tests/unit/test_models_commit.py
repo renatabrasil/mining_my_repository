@@ -195,3 +195,58 @@ class CommitModelTests(TransactionTestCase):
         # Then
         self.assertAlmostEqual(2.8, commit.author_experience, 1)
         self.assertEqual(3, commit.total_commits)
+
+    def test_should_clean_commit_metrics(self):
+        commit = Commit.objects.create(hash="METRICS", author=self.developer2, committer=self.developer2,
+                                       tag=self.tag, compilable=True, mean_rmd_components=10.0,
+                                       std_rmd_components=2.0, delta_rmd_components=3.0,
+                                       normalized_delta=0.5)
+
+        commit.clean_metrics()
+
+        self.assertFalse(commit.compilable)
+        self.assertEqual(0.0, commit.mean_rmd_components)
+        self.assertEqual(0.0, commit.std_rmd_components)
+        self.assertEqual(0.0, commit.delta_rmd_components)
+        self.assertEqual(0.0, commit.normalized_delta)
+
+    def test_should_update_compilable_status(self):
+        commit = Commit.objects.create(hash="COMPILABLE", author=self.developer2, committer=self.developer2,
+                                       tag=self.tag, compilable=False)
+
+        commit.set_compilable(True)
+
+        self.assertTrue(commit.compilable)
+
+    def test_should_identify_newcomer_author_by_seniority(self):
+        newcomer_commit = Commit(author=self.developer2, committer=self.developer2, tag=self.tag,
+                                  author_seniority=365)
+        experienced_commit = Commit(author=self.developer2, committer=self.developer2, tag=self.tag,
+                                    author_seniority=366)
+
+        self.assertTrue(newcomer_commit.is_author_newcomer)
+        self.assertFalse(experienced_commit.is_author_newcomer)
+
+    def test_should_identify_newcomer_author_when_commit_has_submitted_by(self):
+        commit = Commit(author=self.developer2, committer=self.developer2, tag=self.tag,
+                        author_seniority=1000, has_submitted_by=True)
+
+        self.assertTrue(commit.is_author_newcomer)
+
+    def test_should_return_existing_parent_commits_from_parent_hashes(self):
+        parent = Commit.objects.create(hash="PARENT", author=self.developer2, committer=self.developer2,
+                                       tag=self.tag)
+        child = Commit.objects.create(hash="CHILD", parents_str="PARENT,UNKNOWN", author=self.developer2,
+                                      committer=self.developer2, tag=self.tag)
+
+        self.assertListEqual([parent], child.parents)
+
+    def test_should_link_parent_to_child_after_child_commit_is_saved(self):
+        parent = Commit.objects.create(hash="SIGNAL_PARENT", author=self.developer2, committer=self.developer2,
+                                       tag=self.tag)
+        child = Commit.objects.create(hash="SIGNAL_CHILD", parents_str="SIGNAL_PARENT", author=self.developer2,
+                                      committer=self.developer2, tag=self.tag)
+
+        parent.refresh_from_db()
+
+        self.assertEqual(child, parent.children_commit)
