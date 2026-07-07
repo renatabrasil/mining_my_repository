@@ -1,10 +1,12 @@
 import sys
+from pathlib import Path
 
-path = sys.argv[1]
+path = Path(sys.argv[1]).expanduser().resolve(strict=True)
+if not path.is_file():
+    raise FileNotFoundError(path)
 
-f = open(path, 'r')
-filedata = f.read()
-f.close()
+with path.open('r') as f:
+    filedata = f.read()
 
 # openJPA 2.0.0
 # newdata = filedata.replace("-SNAPSHOT","").replace("<version>3.0.1</version>","<version>3.0.0</version>")
@@ -25,6 +27,5 @@ newdata = filedata.replace("-SNAPSHOT", "").replace("<version>3.2.0</version>", 
 # replace("<description>Maven components parent</description>","  <packaging>pom</packaging>\n  <description>Maven components parent</description>")
 
 
-f = open(path, 'w')
-f.write(newdata)
-f.close()
+with path.open('w') as f:
+    f.write(newdata)

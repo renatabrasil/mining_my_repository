@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 from collections import OrderedDict
+from pathlib import Path
 
 # third-party
 import numpy as np
@@ -45,6 +46,24 @@ project_repository = ProjectRepository()
 developer_repository = DeveloperRepository()
 directory_repository = DirectoryRepository()
 tag_repository = TagRepository()
+
+
+def _safe_path(path: str, must_exist: bool = False) -> str:
+    base_path = Path.cwd().resolve()
+    resolved_path = Path(path).expanduser().resolve(strict=must_exist)
+    if must_exist and not resolved_path.exists():
+        raise FileNotFoundError(resolved_path)
+    if base_path != resolved_path and base_path not in resolved_path.parents:
+        raise ValueError('Invalid path outside the expected directory')
+    return str(resolved_path)
+
+
+def _safe_child_path(parent: str, child: str, must_exist: bool = False) -> str:
+    parent_path = Path(parent).expanduser().resolve(strict=True)
+    child_path = (parent_path / child).resolve(strict=must_exist)
+    if parent_path != child_path and parent_path not in child_path.parents:
+        raise ValueError('Invalid path outside the expected directory')
+    return str(child_path)
 
 
 @require_http_methods(["GET", "POST"])
@@ -527,17 +546,19 @@ def quality_between_versions(request):
     metrics_by_directories = OrderedDict()
     metrics = []
     if directory:
-        if os.path.exists(directory):
-            arr = os.listdir(directory)
+        directory_path = Path(_safe_path(directory, must_exist=True))
+        if directory_path.exists():
+            arr = [path.name for path in directory_path.iterdir()]
             sorted_files = sorted(arr, key=lambda x: int(x.split('#')[len(x.split('#')) - 1]))
             for subdirectory in sorted_files:
-                __generate_csv__(directory + "/" + subdirectory)
                 version = subdirectory
-                subdirectory = os.path.join(directory, subdirectory)
-                print("\n" + subdirectory + "\n----------------------\n")
-                for filename in [f for f in os.listdir(subdirectory) if f.endswith(".csv")]:
+                subdirectory_path = Path(_safe_child_path(str(directory_path), subdirectory, must_exist=True))
+                __generate_csv__(str(subdirectory_path))
+                print("\n" + str(subdirectory_path) + "\n----------------------\n")
+                for filename in [path.name for path in subdirectory_path.iterdir() if path.name.endswith(".csv")]:
                     try:
-                        f = open(os.path.join(subdirectory, filename), "r")
+                        csv_file = _safe_child_path(str(subdirectory_path), filename, must_exist=True)
+                        f = open(csv_file, "r")
                         content = f.readlines()
                         for line in content[1:]:
                             row = line.split(',')
