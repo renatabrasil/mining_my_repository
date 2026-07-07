@@ -1,11 +1,15 @@
+import os
+
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+
+from .base import *
 
 DEBUG = False
 
 # Observability
 sentry_sdk.init(
-    dsn="https://76f8b2c1a0f54883bcd435787eb68e5a@o1099084.ingest.sentry.io/6123558",
+    dsn=os.getenv("SENTRY_DSN"),
     integrations=[DjangoIntegration()],
     debug=False,
     environment="production",
@@ -17,5 +21,5 @@ sentry_sdk.init(
 
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
-    send_default_pii=True
+    send_default_pii=os.getenv("SENTRY_SEND_DEFAULT_PII", "false").lower() == "true"
 )
